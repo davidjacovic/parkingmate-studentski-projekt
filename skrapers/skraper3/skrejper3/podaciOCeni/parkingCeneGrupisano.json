@@ -1,0 +1,1809 @@
+[
+    {
+        "location": "Sanatorij Emona  (Kolodvorska ulica)",
+        "tariffs": [
+            {
+                "tariffZone": "P-1",
+                "workingHours": "pon.ned.",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "22.00-6.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "1.20",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Metelkova ulica",
+        "tariffs": [
+            {
+                "tariffZone": "P-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "22.00-6.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "1.20",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-1 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "45.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Krekov trg",
+        "tariffs": [
+            {
+                "tariffZone": "P-1 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "45.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Be�igrad (Gospodarsko razstavi�?e)",
+        "tariffs": [
+            {
+                "tariffZone": "P-2",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00 -7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.80",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Mirje (Lepi pot)",
+        "tariffs": [
+            {
+                "tariffZone": "P-2",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00 -7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.80",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-1 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "45.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Trg mladinskih delovnih brigad",
+        "tariffs": [
+            {
+                "tariffZone": "P-2",
+                "workingHours": "pon-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.80",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Tivoli I.* (park Tivoli)",
+        "tariffs": [
+            {
+                "tariffZone": "P-2",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "22.00-6.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.80",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "B-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "5.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-1 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "45.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Tivoli II. * (hala Tivoli)",
+        "tariffs": [
+            {
+                "tariffZone": "P-2",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "22.00-6.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.80",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "B-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "5.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-1 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "45.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "BS/4. ( Dunajska cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P-2",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.80",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-2 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "40.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Trg prekomorskih brigad",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "�ale I. (glavni vhod)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "�ale II. (�martinski park)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "�ale III. (Zavod za rehabilitacijo invalidov)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "�ale IV.  (Ko�eljeva cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "�ale V. (Toma?evska cesta",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Kranj?eva ulica (POP TV)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "�tembalova ulica",
+        "tariffs": [
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Gosarjeva ulica (FDV)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB L**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "letno",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Pov�etova Ulica",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Sloven?eva ulica",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Dolenjska cesta (streli�?e)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "22.00-6.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Tacen (Kajaka�ka cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "6.00-22.00 ure",
+                "nightTariff": "22.00-06.00",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Pokopali�?e Polje (Zadobrov�ka cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Komanova ulica",
+        "tariffs": [
+            {
+                "tariffZone": "P-3 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "28.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Pot Roberta Blinca",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Pokopali�?e Vi? (Vi�ka cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Bokalci (Cesta na Bokalce)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-petek",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "ZOO (Ve?na pot)",
+        "tariffs": [
+            {
+                "tariffZone": "P-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "prvi dve uri",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "0.70",
+                "dailyUnit": "vsaka naslednja",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "P+R Dolgi most (Tr�a�ka cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P+R",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "24 ur od nakupa",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "1.30",
+                "unifiedUnit": "za 24 ur"
+            },
+            {
+                "tariffZone": "B-2",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "3.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "P+R Je�ica (Obvozna cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P+R",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "24 ur od nakupa",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "1.30",
+                "unifiedUnit": "za 24 ur"
+            }
+        ]
+    },
+    {
+        "location": "P+R Barje (Barjanska cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "P+R",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "24 ur od nakupa",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "1.30",
+                "unifiedUnit": "za 24 ur"
+            },
+            {
+                "tariffZone": "B-2",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "3.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "�RC Sto�ice*  (parkirna hi�a)   (Cesta Janeza Porente � vhod 5 ali �tajerska cesta � vhod � 1)",
+        "tariffs": [
+            {
+                "tariffZone": "P+R",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "24 ur od nakupa",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "1.30",
+                "unifiedUnit": "za 24 ur"
+            },
+            {
+                "tariffZone": "H-1(B)",
+                "workingHours": "pon-ned",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "1.20",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "B-2",
+                "workingHours": "pon-ned",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "3.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-2 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "40.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "P+R  Studenec (parkirna hi�a)",
+        "tariffs": [
+            {
+                "tariffZone": "P+R",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "24 ur od nakupa",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "1.30",
+                "unifiedUnit": "za 24 ur"
+            },
+            {
+                "tariffZone": "P-1 AB**",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "45.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "P+R Stane�i?e",
+        "tariffs": [
+            {
+                "tariffZone": "P+R",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "24 ur od nakupa",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "1.30",
+                "unifiedUnit": "za 24 ur"
+            },
+            {
+                "tariffZone": "P-osebni",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "za 1 dan do",
+                "dailyPriceWithVAT": "5.00",
+                "dailyUnit": "za 24 ur ali en dan",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "P-BV-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "za 1 dan do",
+                "dailyPriceWithVAT": "10.00",
+                "dailyUnit": "za 24 ur ali en dan",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "P+R Letali�ka",
+        "tariffs": [
+            {
+                "tariffZone": "P+R",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "24 ur od nakupa",
+                "dailyPriceWithVAT": "(ni)",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "1.30",
+                "unifiedUnit": "za 24 ur"
+            }
+        ]
+    },
+    {
+        "location": "Trg osvobodilne fronte",
+        "tariffs": [
+            {
+                "tariffZone": "SH-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "80.00",
+                "unifiedUnit": "na mesec"
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Parkirna hi�a Kozolec",
+        "tariffs": [
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Osebni avto",
+        "tariffs": [
+            {
+                "tariffZone": "H-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "1.50",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "(ni)",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Abonenti fizi?ne osebe",
+        "tariffs": [
+            {
+                "tariffZone": "H-2",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "132.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Abonenti pravne osebe",
+        "tariffs": [
+            {
+                "tariffZone": "H-3",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "220.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Abonenti stanovalci",
+        "tariffs": [
+            {
+                "tariffZone": "H-4",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "70.00",
+                "unifiedUnit": "na mesec"
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Parkirna hi�a Kongresni trg",
+        "tariffs": [
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Osebni avto",
+        "tariffs": [
+            {
+                "tariffZone": "H-1 A",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-24.00 ure",
+                "nightTariff": "24.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "1.70",
+                "dailyUnit": "Do 3 ure/na uro",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "2.50",
+                "dailyUnit": "Nad 3 ure/na uro",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Abonenti pravne osebe**",
+        "tariffs": [
+            {
+                "tariffZone": "H-3",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "220.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Abonenti stanovalci",
+        "tariffs": [
+            {
+                "tariffZone": "H-4",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "70.00",
+                "unifiedUnit": "na mesec"
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Parkirna hi�a Rog",
+        "tariffs": [
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Osebni avto",
+        "tariffs": [
+            {
+                "tariffZone": "H-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "1.50",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "(ni)",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Abonenti fizi?ne osebe",
+        "tariffs": [
+            {
+                "tariffZone": "H-2",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "132.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Abonenti pravne osebe",
+        "tariffs": [
+            {
+                "tariffZone": "H-3",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "220.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Abonenti stanovalci",
+        "tariffs": [
+            {
+                "tariffZone": "H-4",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "70.00",
+                "unifiedUnit": "na mesec"
+            },
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Parkirna hi�a Ilirija",
+        "tariffs": [
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Osebni avto",
+        "tariffs": [
+            {
+                "tariffZone": "H-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "7.00-19.00 ure",
+                "nightTariff": "19.00-7.00 ure",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "1.50",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "2.00",
+                "nightUnit": "na no?",
+                "unifiedPriceWithVAT": "(ni)",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Abonenti fizi?ne osebe",
+        "tariffs": [
+            {
+                "tariffZone": "H-2",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "132.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Abonenti pravne osebe",
+        "tariffs": [
+            {
+                "tariffZone": "H-3",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "(ni)",
+                "nightUnit": "(ni)",
+                "unifiedPriceWithVAT": "220.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Abonenti stanovalci",
+        "tariffs": [
+            {
+                "tariffZone": "H-4",
+                "workingHours": "pon-ned",
+                "dailyTariff": "(ni)",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "mese?no",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "70.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Je�ica (Obvozna cesta)",
+        "tariffs": [
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Tovorno vozilo",
+        "tariffs": [
+            {
+                "tariffZone": "T-1",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "0.00-24.00 ure",
+                "nightTariff": "",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "2.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Tovorno vozilo",
+        "tariffs": [
+            {
+                "tariffZone": "T-2",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "0.00-24.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "14.00",
+                "unifiedUnit": "na dan"
+            }
+        ]
+    },
+    {
+        "location": "Tovorno vozilo s prikolico",
+        "tariffs": [
+            {
+                "tariffZone": "T-3",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "0.00-24.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "170.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Tovorno vozilo brez prikolice",
+        "tariffs": [
+            {
+                "tariffZone": "T-4",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "0.00-24.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "116.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Po?itni�ka prikolica",
+        "tariffs": [
+            {
+                "tariffZone": "T-5",
+                "workingHours": "pon.-ned.",
+                "dailyTariff": "0.00-24.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "162.00",
+                "unifiedUnit": "na mesec"
+            }
+        ]
+    },
+    {
+        "location": "Bratislavska cesta (parkiri�?e za avtobuse)",
+        "tariffs": [
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Avtobus",
+        "tariffs": [
+            {
+                "tariffZone": "B-2",
+                "workingHours": "pon-ned",
+                "dailyTariff": "6.00-20.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "3.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Lesko�kova Cesta (parkiri�?e za avtobuse)",
+        "tariffs": [
+            {
+                "tariffZone": "",
+                "workingHours": "",
+                "dailyTariff": "",
+                "nightTariff": "",
+                "unifiedTariff": "",
+                "dailyPriceWithVAT": "",
+                "dailyUnit": "",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    },
+    {
+        "location": "Avtobus",
+        "tariffs": [
+            {
+                "tariffZone": "B-2",
+                "workingHours": "pon-ned",
+                "dailyTariff": "6.00-20.00 ure",
+                "nightTariff": "(ni)",
+                "unifiedTariff": "(ni)",
+                "dailyPriceWithVAT": "3.00",
+                "dailyUnit": "na uro",
+                "nightPriceWithVAT": "",
+                "nightUnit": "",
+                "unifiedPriceWithVAT": "",
+                "unifiedUnit": ""
+            }
+        ]
+    }
+]
