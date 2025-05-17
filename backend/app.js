@@ -4,7 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 require('dotenv').config();
-console.log('Mongo URL:', process.env.MONGO_URL);
+//console.log('Mongo URL:', process.env.MONGO_URL);
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
@@ -27,7 +27,7 @@ db.once('open', () => {
 
 // Session configuration
 app.use(session({
-  secret: 'work hard', // Consider using process.env.SESSION_SECRET in production
+  secret: 'work hard',
   resave: true,
   saveUninitialized: false,
   store: MongoStore.create({
@@ -35,7 +35,7 @@ app.use(session({
     collectionName: 'sessions'
   }),
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 // 1 day
+    maxAge: 1000 * 60 * 60 * 24 
   }
 }));
 
@@ -88,8 +88,5 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
-
-
-
 
 module.exports = app;
