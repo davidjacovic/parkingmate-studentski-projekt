@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var parking_locationController = require('../controllers/parking_locationController.js');
+var parking_locationController = require('../controllers/parkingLocationController.js');
 
 /*
  * GET

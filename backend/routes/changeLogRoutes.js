@@ -1,6 +1,6 @@
 var express = require('express');
 var router = express.Router();
-var change_logController = require('../controllers/change_logController.js');
+var change_logController = require('../controllers/changeLogController.js');
 
 /*
  * GET

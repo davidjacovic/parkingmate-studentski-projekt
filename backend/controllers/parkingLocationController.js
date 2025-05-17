@@ -1,4 +1,4 @@
-var Parking_locationModel = require('../models/parking_locationModel.js');
+var Parking_locationModel = require('../models/parkingLocationModel.js');
 
 /**
  * parking_locationController.js
