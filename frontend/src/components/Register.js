@@ -10,40 +10,43 @@ function Register() {
   const [loading, setLoading] = useState(false);
 
   async function handleRegister(e) {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const data = {
+      username,
+      email,
+      password,
+      registration_number: registrationNumber,
+    };
 
-  const data = {
-    username,
-    email,
-    password,
-    credit_card_number: creditCard,
-    registration_number: registrationNumber,
-  };
-
-  try {
-    const res = await fetch('http://localhost:3002/users', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    const result = await res.json();
-    if (res.ok) {
-      window.location.href = '/login'; 
-    } else {
-      setError('Registration failed: ' + (result.message || 'Unknown error'));
+    if (creditCard.trim() !== '') {
+      data.credit_card_number = creditCard.trim();
     }
-  } catch (err) {
-    setError('Registration failed: ' + err.message);
-  } finally {
-    setLoading(false);
+
+
+    try {
+      const res = await fetch('http://localhost:3002/users', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        window.location.href = '/login';
+      } else {
+        setError('Registration failed: ' + (result.message || 'Unknown error'));
+      }
+    } catch (err) {
+      setError('Registration failed: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
 
   return (
@@ -95,10 +98,9 @@ function Register() {
             type="text"
             id="creditCard"
             className="form-control"
-            placeholder="Enter your credit card number"
+            placeholder="Enter your credit card number (optional)"
             value={creditCard}
             onChange={e => setCreditCard(e.target.value)}
-            required
           />
         </div>
 
@@ -121,6 +123,12 @@ function Register() {
           {loading ? 'Registering...' : 'Register'}
         </button>
       </form>
+
+      <div className="text-center mt-3">
+        <span>Already have an account? </span>
+        <a href="/login">Log in here</a>
+      </div>
+
     </div>
   );
 }

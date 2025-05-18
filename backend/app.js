@@ -110,7 +110,7 @@ function authenticateToken(req, res, next) {
 // Mounting routers
 app.use('/', indexRouter);
 app.use('/vehicles', authenticateToken, vehicleRouter);
-app.use('/users', authenticateToken, usersRouter);
+app.use('/users', usersRouter);
 app.use('/tariffs', tariffRouter);
 app.use('/subscribers', authenticateToken, subscribersRouter);
 app.use('/reviews', reviewsRouter);

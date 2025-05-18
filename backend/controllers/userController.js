@@ -13,16 +13,23 @@ module.exports = {
   try {
     console.log('Register request body:', req.body);
 
-    var user = new UserModel({
+    // Create base user data
+    const userData = {
       username: req.body.username,
       email: req.body.email,
       password_hash: req.body.password,
-      credit_card_number: req.body.credit_card_number,
       created_at: new Date(),
       updated_at: new Date(),
       user_type: 'user',
       hidden: false,
-    });
+    };
+
+    // Add credit_card_number only if provided
+    if (req.body.credit_card_number) {
+      userData.credit_card_number = req.body.credit_card_number;
+    }
+
+    var user = new UserModel(userData);
 
     const savedUser = await user.save();
     console.log('User saved:', savedUser._id);
@@ -44,10 +51,7 @@ module.exports = {
 
   } catch (err) {
     console.error('Error during registration:', err);
-    return res.status(500).json({
-      message: 'Error during registration',
-      error: err.message || err,
-    });
+    return res.status(500).json({ error: 'Registration failed.' });
   }
 },
 
