@@ -5,6 +5,8 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 require('dotenv').config();
 //console.log('Mongo URL:', process.env.MONGO_URL);
+const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET || 'jwtdefault';
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
@@ -79,14 +81,40 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+//JWT
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  console.log('Authorization header:', authHeader);
+
+  const token = authHeader && authHeader.split(' ')[1];
+  console.log('Extracted token:', token);
+
+  if (!token) {
+    console.log('No token found in request');
+    return res.status(401).json({ message: 'Access token missing' });
+  }
+
+  jwt.verify(token, SECRET, (err, user) => {
+    if (err) {
+      console.log('Token verification failed:', err.message);
+      return res.status(403).json({ message: 'Invalid or expired token' });
+    }
+    console.log('Token verified successfully:', user);
+    req.user = user;
+    next();
+  });
+}
+
+
+
 // Mounting routers
 app.use('/', indexRouter);
-app.use('/vehicles', vehicleRouter);
-app.use('/users', usersRouter);
+app.use('/vehicles', authenticateToken, vehicleRouter);
+app.use('/users', authenticateToken, usersRouter);
 app.use('/tariffs', tariffRouter);
-app.use('/subscribers', subscribersRouter);
+app.use('/subscribers', authenticateToken, subscribersRouter);
 app.use('/reviews', reviewsRouter);
-app.use('/payments', paymentRouter);
+app.use('/payments', authenticateToken, paymentRouter);
 app.use('/parkingLocations', parkingLocationRouter);
 
 // Catch 404 and forward to error handler

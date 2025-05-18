@@ -10,41 +10,41 @@ function Register() {
   const [loading, setLoading] = useState(false);
 
   async function handleRegister(e) {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    const data = {
-      username,
-      email,
-      password,
-      credit_card_number: creditCard,
-      registration_number: registrationNumber,
-    };
+  const data = {
+    username,
+    email,
+    password,
+    credit_card_number: creditCard,
+    registration_number: registrationNumber,
+  };
 
-    try {
-      const res = await fetch('http://localhost:3002/users', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+  try {
+    const res = await fetch('http://localhost:3002/users', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-      const result = await res.json();
-
-      if (res.ok && result.user && result.user._id) {
-        window.location.href = '/login';
-      } else {
-        setError('Registration failed: ' + (result.message || 'Unknown error'));
-      }
-    } catch (err) {
-      setError('Registration failed: ' + err.message);
-    } finally {
-      setLoading(false);
+    const result = await res.json();
+    if (res.ok) {
+      window.location.href = '/login'; 
+    } else {
+      setError('Registration failed: ' + (result.message || 'Unknown error'));
     }
+  } catch (err) {
+    setError('Registration failed: ' + err.message);
+  } finally {
+    setLoading(false);
   }
+}
+
 
   return (
     <div className="container mt-5">
