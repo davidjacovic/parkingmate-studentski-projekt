@@ -1,18 +1,62 @@
 var mongoose = require('mongoose');
 var bcrypt = require('bcrypt');
 var Schema   = mongoose.Schema;
-
 var userSchema = new Schema({
-    username: String,
-    atribut: String,
-    email: String,
-    password_hash: String,
-    phone_number: String,
-     credit_card_number: String, 
-    created_at: Date,
-    updated_at: Date,
-    user_type: { type: String, enum: ['admin', 'user'] },
-    hidden: Boolean
+    username: {
+        type: String,
+        required: [true, 'Username is required'],
+        unique: true,
+        trim: true,
+        minlength: [3, 'Username must be at least 3 characters'],
+        maxlength: [30, 'Username can be max 30 characters'],
+    },
+    atribut: {
+        type: String,
+        trim: true,
+        maxlength: [100, 'Atribut can be max 100 characters'],
+        // optional
+    },
+    email: {
+        type: String,
+        required: [true, 'Email is required'],
+        unique: true,
+        trim: true,
+        lowercase: true,
+        match: [/\S+@\S+\.\S+/, 'Email is invalid'], //email regex validation
+    },
+    password_hash: {
+        type: String,
+        required: [true, 'Password hash is required'],
+    },
+    phone_number: {
+        type: String,
+        trim: true,
+        match: [/^\+?[0-9]{7,15}$/, 'Phone number is invalid'],  //phone number regex validation
+        // optional
+    },
+    credit_card_number: {
+        type: String,
+        trim: true,
+        match: [/^\d{13,19}$/, 'Credit card number must be between 13 and 19 digits'],
+        // optional
+    },
+    created_at: {
+        type: Date,
+        default: Date.now,
+    },
+    updated_at: {
+        type: Date,
+        default: Date.now,
+    },
+    user_type: {
+        type: String,
+        enum: ['admin', 'user'],
+        default: 'user',
+    },
+    hidden: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 userSchema.pre('save', async function(next) {
