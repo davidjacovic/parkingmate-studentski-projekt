@@ -1,0 +1,44 @@
+import React, { useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { UserContext } from '../userContext';
+
+function Header() {
+    const { user, setUserContext } = useContext(UserContext);
+    const navigate = useNavigate();
+
+    function handleLogout() {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        setUserContext(null);
+        navigate('/login');
+    }
+
+    return (
+        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
+            <h2 style={{ margin: 0 }}>
+                <Link to="/" style={{ textDecoration: 'none', color: '#333' }}>
+                    Smart Parking
+                </Link>
+            </h2>
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {user ? (
+                    <>
+                        <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>Profile</Link>
+                        <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
+                            Pay Parking
+                        </Link>
+
+                        <button onClick={handleLogout} style={{ textDecoration: 'none', color: '#007bff' }}>Logout</button>
+                    </>
+                ) : (
+                    <>
+                        <Link to="/login">Login</Link>
+                        <Link to="/register">Register</Link>
+                    </>
+                )}
+            </nav>
+        </header>
+    );
+}
+
+export default Header;

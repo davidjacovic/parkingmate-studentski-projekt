@@ -6,6 +6,7 @@ var paymentSchema = new Schema({
     amount: mongoose.Types.Decimal128,
     method: String,
     payment_status: { type: String, enum: ['pending', 'completed', 'failed'] },
+    duration: Number,
     hidden: Boolean,
     created: Date,
     modified: Date,

@@ -29,7 +29,7 @@ module.exports = {
     show: function (req, res) {
         var id = req.params.id;
 
-        VehicleModel.findOne({_id: id}, function (err, vehicle) {
+        VehicleModel.findOne({ _id: id }, function (err, vehicle) {
             if (err) {
                 return res.status(500).json({
                     message: 'Error when getting vehicle.',
@@ -70,35 +70,37 @@ module.exports = {
     /**
      * vehicleController.update()
      */
-    update: function (req, res) {
-        var id = req.params.id;
+    update: async function (req, res) {
+        const id = req.params.id;
 
-        VehicleModel.findOne({_id: id}, function (err, vehicle) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting vehicle',
-                    error: err
-                });
-            }
+        try {
+            const updates = {};
+            const allowedFields = ['model', 'registration_number', 'vehicle_type'];
 
-            if (!vehicle) {
-                return res.status(404).json({
-                    message: 'No such vehicle'
-                });
-            }
-
-            
-            vehicle.save(function (err, vehicle) {
-                if (err) {
-                    return res.status(500).json({
-                        message: 'Error when updating vehicle.',
-                        error: err
-                    });
+            allowedFields.forEach((field) => {
+                if (req.body[field]) {
+                    updates[field] = req.body[field];
                 }
-
-                return res.json(vehicle);
             });
-        });
+
+            if (updates.registration_number && !/^[A-Za-z0-9]+$/.test(updates.registration_number)) {
+                return res.status(400).json({ message: 'Registracioni broj može sadržati samo slova i brojeve.' });
+            }
+
+            updates.modified = new Date();
+
+            const updatedVehicle = await VehicleModel.findByIdAndUpdate(id, { $set: updates }, { new: true }).lean();
+
+            if (!updatedVehicle) {
+                return res.status(404).json({ message: 'No such vehicle' });
+            }
+
+            return res.json(updatedVehicle);
+        }
+        catch (err) {
+            console.error('Vehicle update error:', err);
+            return res.status(500).json({ message: 'Error when updating vehicle.', error: err });
+        }
     },
 
     /**
