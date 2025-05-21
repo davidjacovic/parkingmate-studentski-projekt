@@ -117,7 +117,8 @@ data class ParkingTariffInfo(
 )
 
 fun main() {
-    val inputPath = "C:/Users/CHP/Desktop/FERI II/2. letnik/2.semestar/PROJEKAT PARKINGMATE/sve ostalo/skrejper3/parkingCeneGrupisano.json"
+    val inputPath = "C:/Users/CHP/Desktop/FERI II/2. letnik/2.semestar/PROJEKAT PARKINGMATE/github/parkingmate-studentski-projekt/skrapers/skraper3/skrejper3/podaciOCeni/parkingCeneGrupisano.json"
+
     val jsonString = File(inputPath).readText()
 
     val json = Json { ignoreUnknownKeys = true }
