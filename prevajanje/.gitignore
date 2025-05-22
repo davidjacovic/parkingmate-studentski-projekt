@@ -1,0 +1,28 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+.idea/libraries/
+
+# Gradle
+/build/
+.gradle/
+
+# Kotlin
+/out/
+.kotlinc/
+.kotlin_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VSCode (optional)
+.vscode/
+
+# Eclipse (optional)
+.classpath
+.project
