@@ -3,6 +3,9 @@ const VehicleModel = require('../models/vehicleModel');
 
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET;
+/*
+* dodata validacija iz modela u funkciju create
+*/
 
 /**
  * userController.js
@@ -10,30 +13,52 @@ const SECRET = process.env.JWT_SECRET;
  * @description :: Server-side logic for managing users.
  */
 module.exports = {
-    
+
     create: async function (req, res) {
         try {
             console.log('Register request body:', req.body);
+
+            const { username, email, password, credit_card_number, phone_number } = req.body;
+
+            // Validacije
+            if (!username || username.trim().length < 3 || username.trim().length > 30) {
+                return res.status(400).json({ message: 'Username must be between 3 and 30 characters.' });
+            }
+
+            if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+                return res.status(400).json({ message: 'Invalid email format.' });
+            }
+
+            if (!password || password.length < 6) {
+                return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+            }
+
+            if (credit_card_number && !/^\d{13,19}$/.test(credit_card_number)) {
+                return res.status(400).json({ message: 'Credit card number must be 13 to 19 digits.' });
+            }
+
+            if (phone_number && !/^\+?[0-9]{7,15}$/.test(phone_number)) {
+                return res.status(400).json({ message: 'Phone number is invalid.' });
+            }
+
             const userData = {
-                username: req.body.username,
-                email: req.body.email,
-                password_hash: req.body.password,
+                username: username.trim(),
+                email: email.toLowerCase(),
+                password_hash: password,
                 created_at: new Date(),
                 updated_at: new Date(),
                 user_type: 'user',
                 hidden: false,
             };
 
-            if (req.body.credit_card_number) {
-                userData.credit_card_number = req.body.credit_card_number;
-            }
+            if (credit_card_number) userData.credit_card_number = credit_card_number;
+            if (phone_number) userData.phone_number = phone_number;
 
-            var user = new UserModel(userData);
-
+            const user = new UserModel(userData);
             const savedUser = await user.save();
             console.log('User saved:', savedUser._id);
 
-            var vehicle = new VehicleModel({
+            const vehicle = new VehicleModel({
                 registration_number: req.body.registration_number,
                 user: savedUser._id,
                 created: new Date(),
@@ -53,6 +78,7 @@ module.exports = {
             return res.status(500).json({ error: 'Registration failed.' });
         }
     },
+
 
     showRegister: function (req, res) {
         res.render('user/register');
