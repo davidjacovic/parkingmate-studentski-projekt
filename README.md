@@ -2,7 +2,6 @@
 
 Repozitorij za spremljanje kode študentskega projekta.
 
-## Viri
+# Grafični prikaz sheme
 
-1. [Vir 1](https://www.lpt.si/parkirisca/informacije-za-parkiranje/prikaz-zasedenosti-parkirisc)  
-2. [Vir 2](https://data.europa.eu/data/datasets/parkirisca-v-mestni-obcini-ljubljana?locale=en)
+![ER-parkiralisca](https://github.com/user-attachments/assets/0595ace7-3076-4ab0-9161-32232bfdfd49)
