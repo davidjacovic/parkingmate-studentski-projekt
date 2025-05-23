@@ -2,6 +2,6 @@
 
 Repozitorij za spremljanje kode študentskega projekta.
 
-# Določitev entitet in njihovih atributov
+# Grafični prikaz sheme
 
-![1000021994](https://github.com/user-attachments/assets/b9659353-08f7-41eb-a1b3-9bdc38f712d7)
+![ER-parkiralisca](https://github.com/user-attachments/assets/0595ace7-3076-4ab0-9161-32232bfdfd49)
