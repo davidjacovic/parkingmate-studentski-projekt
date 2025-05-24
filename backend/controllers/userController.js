@@ -1,4 +1,6 @@
 var UserModel = require('../models/userModel.js');
+var VehicleModel = require('../models/vehicleModel.js');
+
 
 /**
  * userController.js
@@ -7,65 +9,64 @@ var UserModel = require('../models/userModel.js');
  */
 module.exports = {
 
-    /**
-     * userController.list()
-     */
-    list: function (req, res) {
-        UserModel.find(function (err, users) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting user.',
-                    error: err
-                });
-            }
+    create: async function (req, res) {
+  try {
+    console.log('Register request body:', req.body);
 
-            return res.json(users);
-        });
-    },
+    // Create base user data
+    const userData = {
+      username: req.body.username,
+      email: req.body.email,
+      password_hash: req.body.password,
+      created_at: new Date(),
+      updated_at: new Date(),
+      user_type: 'user',
+      hidden: false,
+    };
 
-    /**
-     * userController.show()
-     */
-    show: function (req, res) {
-        var id = req.params.id;
+    // Add credit_card_number only if provided
+    if (req.body.credit_card_number) {
+      userData.credit_card_number = req.body.credit_card_number;
+    }
 
-        UserModel.findOne({_id: id}, function (err, user) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting user.',
-                    error: err
-                });
-            }
+    var user = new UserModel(userData);
 
-            if (!user) {
-                return res.status(404).json({
-                    message: 'No such user'
-                });
-            }
+    const savedUser = await user.save();
+    console.log('User saved:', savedUser._id);
 
-            return res.json(user);
-        });
-    },
+    var vehicle = new VehicleModel({
+      registration_number: req.body.registration_number,
+      user: savedUser._id,
+      created: new Date(),
+      modified: new Date(),
+    });
 
-    /**
-     * userController.create()
-     */
-    create: function (req, res) {
-        var user = new UserModel({
+    const savedVehicle = await vehicle.save();
+    console.log('Vehicle saved:', savedVehicle._id);
 
-        });
+    return res.status(201).json({
+      user: savedUser,
+      vehicle: savedVehicle,
+    });
 
-        user.save(function (err, user) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when creating user',
-                    error: err
-                });
-            }
+  } catch (err) {
+    console.error('Error during registration:', err);
+    return res.status(500).json({
+      message: 'Error during registration',
+      error: err.message || err,
+    });
+  }
+},
 
-            return res.status(201).json(user);
-        });
-    },
+
+
+  showRegister: function (req, res) {
+    res.render('user/register');
+  },
+
+  showLogin: function (req, res) {
+    res.render('user/login');
+  },
 
     /**
      * userController.update()
@@ -117,5 +118,21 @@ module.exports = {
 
             return res.status(204).json();
         });
+    },
+
+    login: function (req, res) {
+  UserModel.authenticate(req.body.username, req.body.password, function (err, user) {
+    if (err || !user) {
+      console.log('Login failed:', err || 'User not found');
+      return res.status(401).json({ message: 'Wrong username or password' });
     }
+
+    console.log('Login successful for user:', user.username);
+
+    return res.json({
+      user: user
+    });
+  });
+}
+
 };

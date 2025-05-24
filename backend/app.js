@@ -8,9 +8,23 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const cors = require('cors')
 
 
 const app = express();
+
+//CORS
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:3002'];
+app.use(cors({
+  credentials: true,
+  origin(origin, callback) {
+    if (!origin) return callback(null, true); // allow REST clients like Postman with no origin
+    if (!allowedOrigins.includes(origin)) {
+      return callback(new Error('The CORS policy does not allow access from the specified Origin.'), false);
+    }
+    return callback(null, true);
+  }
+}));
 
 // Database connection
 mongoose.set('strictQuery', false);
