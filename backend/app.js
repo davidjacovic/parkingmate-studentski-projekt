@@ -101,12 +101,12 @@ function authenticateToken(req, res, next) {
 
 // Mounting routers
 app.use('/', indexRouter);
-app.use('/vehicles', vehicleRouter);
+app.use('/vehicles', authenticateToken, vehicleRouter);
 app.use('/users', usersRouter);
 app.use('/tariffs', tariffRouter);
-app.use('/subscribers', subscribersRouter);
-app.use('/reviews', reviewsRouter);
-app.use('/payments', paymentRouter);
+app.use('/subscribers',authenticateToken,  subscribersRouter);
+app.use('/reviews', authenticateToken, reviewsRouter);
+app.use('/payments', authenticateToken, paymentRouter);
 app.use('/parkingLocations', parkingLocationRouter);
 
 // Catch 404 and forward to error handler
