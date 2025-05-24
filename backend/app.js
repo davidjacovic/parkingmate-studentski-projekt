@@ -8,9 +8,25 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const cors = require('cors')
+const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET;
 
 
 const app = express();
+
+//CORS
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:3002'];
+app.use(cors({
+  credentials: true,
+  origin(origin, callback) {
+    if (!origin) return callback(null, true); // allow REST clients like Postman with no origin
+    if (!allowedOrigins.includes(origin)) {
+      return callback(new Error('The CORS policy does not allow access from the specified Origin.'), false);
+    }
+    return callback(null, true);
+  }
+}));
 
 // Database connection
 mongoose.set('strictQuery', false);
@@ -67,14 +83,30 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'Access token not found' });
+
+  jwt.verify(token, SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid or expired token' });
+    req.user = user;
+    next();
+  });
+}
+
+
+
 // Mounting routers
 app.use('/', indexRouter);
-app.use('/vehicles', vehicleRouter);
+app.use('/vehicles', authenticateToken, vehicleRouter);
 app.use('/users', usersRouter);
 app.use('/tariffs', tariffRouter);
-app.use('/subscribers', subscribersRouter);
-app.use('/reviews', reviewsRouter);
-app.use('/payments', paymentRouter);
+app.use('/subscribers',authenticateToken,  subscribersRouter);
+app.use('/reviews', authenticateToken, reviewsRouter);
+app.use('/payments', authenticateToken, paymentRouter);
 app.use('/parkingLocations', parkingLocationRouter);
 
 // Catch 404 and forward to error handler

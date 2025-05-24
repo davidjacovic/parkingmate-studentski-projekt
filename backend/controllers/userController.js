@@ -1,4 +1,8 @@
 var UserModel = require('../models/userModel.js');
+var VehicleModel = require('../models/vehicleModel.js');
+require('dotenv').config();
+const SECRET = process.env.JWT_SECRET;
+const jwt = require('jsonwebtoken');
 
 /**
  * userController.js
@@ -7,115 +11,139 @@ var UserModel = require('../models/userModel.js');
  */
 module.exports = {
 
-    /**
-     * userController.list()
-     */
-    list: function (req, res) {
-        UserModel.find(function (err, users) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting user.',
-                    error: err
-                });
-            }
 
-            return res.json(users);
-        });
-    },
+  create: async function (req, res) {
+    try {
+      console.log('Register request body:', req.body);
 
-    /**
-     * userController.show()
-     */
-    show: function (req, res) {
-        var id = req.params.id;
+      // Create base user data
+      const userData = {
+        username: req.body.username,
+        email: req.body.email,
+        password_hash: req.body.password,
+        created_at: new Date(),
+        updated_at: new Date(),
+        user_type: 'user',
+        hidden: false,
+      };
 
-        UserModel.findOne({_id: id}, function (err, user) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting user.',
-                    error: err
-                });
-            }
+      // Add credit_card_number only if provided
+      if (req.body.credit_card_number) {
+        userData.credit_card_number = req.body.credit_card_number;
+      }
 
-            if (!user) {
-                return res.status(404).json({
-                    message: 'No such user'
-                });
-            }
+      var user = new UserModel(userData);
 
-            return res.json(user);
-        });
-    },
+      const savedUser = await user.save();
+      console.log('User saved:', savedUser._id);
 
-    /**
-     * userController.create()
-     */
-    create: function (req, res) {
-        var user = new UserModel({
+      var vehicle = new VehicleModel({
+        registration_number: req.body.registration_number,
+        user: savedUser._id,
+        created: new Date(),
+        modified: new Date(),
+      });
 
-        });
+      const savedVehicle = await vehicle.save();
+      console.log('Vehicle saved:', savedVehicle._id);
 
-        user.save(function (err, user) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when creating user',
-                    error: err
-                });
-            }
+      return res.status(201).json({
+        user: savedUser,
+        vehicle: savedVehicle,
+      });
 
-            return res.status(201).json(user);
-        });
-    },
-
-    /**
-     * userController.update()
-     */
-    update: function (req, res) {
-        var id = req.params.id;
-
-        UserModel.findOne({_id: id}, function (err, user) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting user',
-                    error: err
-                });
-            }
-
-            if (!user) {
-                return res.status(404).json({
-                    message: 'No such user'
-                });
-            }
-
-            
-            user.save(function (err, user) {
-                if (err) {
-                    return res.status(500).json({
-                        message: 'Error when updating user.',
-                        error: err
-                    });
-                }
-
-                return res.json(user);
-            });
-        });
-    },
-
-    /**
-     * userController.remove()
-     */
-    remove: function (req, res) {
-        var id = req.params.id;
-
-        UserModel.findByIdAndRemove(id, function (err, user) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when deleting the user.',
-                    error: err
-                });
-            }
-
-            return res.status(204).json();
-        });
+    } catch (err) {
+      console.error('Error during registration:', err);
+      return res.status(500).json({
+        message: 'Error during registration',
+        error: err.message || err,
+      });
     }
+  },
+
+
+
+  showRegister: function (req, res) {
+    res.render('user/register');
+  },
+
+  showLogin: function (req, res) {
+    res.render('user/login');
+  },
+
+  /**
+   * userController.update()
+   */
+  update: function (req, res) {
+    var id = req.params.id;
+
+    UserModel.findOne({ _id: id }, function (err, user) {
+      if (err) {
+        return res.status(500).json({
+          message: 'Error when getting user',
+          error: err
+        });
+      }
+
+      if (!user) {
+        return res.status(404).json({
+          message: 'No such user'
+        });
+      }
+
+
+      user.save(function (err, user) {
+        if (err) {
+          return res.status(500).json({
+            message: 'Error when updating user.',
+            error: err
+          });
+        }
+
+        return res.json(user);
+      });
+    });
+  },
+
+  /**
+   * userController.remove()
+   */
+  remove: function (req, res) {
+    var id = req.params.id;
+
+    UserModel.findByIdAndRemove(id, function (err, user) {
+      if (err) {
+        return res.status(500).json({
+          message: 'Error when deleting the user.',
+          error: err
+        });
+      }
+
+      return res.status(204).json();
+    });
+  },
+
+  login: function (req, res) {
+    UserModel.authenticate(req.body.username, req.body.password, function (err, user) {
+      if (err || !user) {
+        console.log('Login failed:', err || 'User not found');
+        return res.status(401).json({ message: 'Wrong username or password' });
+      }
+
+      const token = jwt.sign(
+        { userId: user._id, username: user.username, email: user.email },
+        SECRET,
+        { expiresIn: '1h' }
+      );
+
+      console.log('Login successful for user:', user.username);
+      console.log('JWT token generated:', token);
+
+      return res.json({
+        user: user,
+        token: token
+      });
+    });
+  }
+
 };
