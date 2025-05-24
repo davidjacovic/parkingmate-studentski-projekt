@@ -1,8 +1,8 @@
 var mongoose = require('mongoose');
 var Schema   = mongoose.Schema;
 
-var parkingLocationSchema = new Schema({
-     name: String,
+var parking_LocationSchema = new Schema({
+    name: String,
     address: String,
     latitude: String,
     longitude: String,
@@ -22,4 +22,4 @@ var parkingLocationSchema = new Schema({
     subscriber: { type: Schema.Types.ObjectId, ref: 'Subscriber' }
 });
 
-module.exports = mongoose.model('parkingLocation', parkingLocationSchema);
+module.exports = mongoose.model('parking_Location', parking_LocationSchema);

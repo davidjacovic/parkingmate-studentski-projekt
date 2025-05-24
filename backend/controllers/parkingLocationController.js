@@ -1,121 +1,123 @@
-var ParkinglocationModel = require('../models/parkingLocationModel.js');
+var Parking_locationModel = require('../models/parkingLocationModel.js');
 
 /**
- * parkingLocationController.js
+ * parking_locationController.js
  *
- * @description :: Server-side logic for managing parkingLocations.
+ * @description :: Server-side logic for managing parking_locations.
  */
 module.exports = {
 
     /**
-     * parkingLocationController.list()
+     * parking_locationController.list()
      */
     list: function (req, res) {
-        ParkinglocationModel.find(function (err, parkingLocations) {
+        Parking_locationModel.find(function (err, parking_locations) {
             if (err) {
                 return res.status(500).json({
-                    message: 'Error when getting parkingLocation.',
+                    message: 'Error when getting parking_location.',
                     error: err
                 });
             }
 
-            return res.json(parkingLocations);
+            return res.json(parking_locations);
         });
     },
 
     /**
-     * parkingLocationController.show()
+     * parking_locationController.show()
      */
     show: function (req, res) {
         var id = req.params.id;
 
-        ParkinglocationModel.findOne({_id: id}, function (err, parkingLocation) {
+        Parking_locationModel.findOne({_id: id}, function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
-                    message: 'Error when getting parkingLocation.',
+                    message: 'Error when getting parking_location.',
                     error: err
                 });
             }
 
-            if (!parkingLocation) {
+            if (!parking_location) {
                 return res.status(404).json({
-                    message: 'No such parkingLocation'
+                    message: 'No such parking_location'
                 });
             }
 
-            return res.json(parkingLocation);
+            return res.json(parking_location);
         });
     },
 
     /**
-     * parkingLocationController.create()
+     * parking_locationController.create()
      */
     create: function (req, res) {
-        var parkingLocation = new ParkinglocationModel({
+        var parking_location = new Parking_locationModel({
 
         });
 
-        parkingLocation.save(function (err, parkingLocation) {
+        parking_location.save(function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
-                    message: 'Error when creating parkingLocation',
+                    message: 'Error when creating parking_location',
                     error: err
                 });
             }
 
-            return res.status(201).json(parkingLocation);
+            return res.status(201).json(parking_location);
         });
     },
 
     /**
-     * parkingLocationController.update()
+     * parking_locationController.update()
      */
     update: function (req, res) {
         var id = req.params.id;
 
-        ParkinglocationModel.findOne({_id: id}, function (err, parkingLocation) {
+        Parking_locationModel.findOne({_id: id}, function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
-                    message: 'Error when getting parkingLocation',
+                    message: 'Error when getting parking_location',
                     error: err
                 });
             }
 
-            if (!parkingLocation) {
+            if (!parking_location) {
                 return res.status(404).json({
-                    message: 'No such parkingLocation'
+                    message: 'No such parking_location'
                 });
             }
 
             
-            parkingLocation.save(function (err, parkingLocation) {
+            parking_location.save(function (err, parking_location) {
                 if (err) {
                     return res.status(500).json({
-                        message: 'Error when updating parkingLocation.',
+                        message: 'Error when updating parking_location.',
                         error: err
                     });
                 }
 
-                return res.json(parkingLocation);
+                return res.json(parking_location);
             });
         });
     },
 
     /**
-     * parkingLocationController.remove()
+     * parking_locationController.remove()
      */
     remove: function (req, res) {
         var id = req.params.id;
 
-        ParkinglocationModel.findByIdAndRemove(id, function (err, parkingLocation) {
+        Parking_locationModel.findByIdAndRemove(id, function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
-                    message: 'Error when deleting the parkingLocation.',
+                    message: 'Error when deleting the parking_location.',
                     error: err
                 });
             }
 
             return res.status(204).json();
         });
-    }
+    },
+
+
 };

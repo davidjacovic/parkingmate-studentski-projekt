@@ -29,7 +29,7 @@ module.exports = {
     show: function (req, res) {
         var id = req.params.id;
 
-        TariffModel.findOne({_id: id}, function (err, tariff) {
+        TariffModel.findOne({ _id: id }, function (err, tariff) {
             if (err) {
                 return res.status(500).json({
                     message: 'Error when getting tariff.',
@@ -73,7 +73,7 @@ module.exports = {
     update: function (req, res) {
         var id = req.params.id;
 
-        TariffModel.findOne({_id: id}, function (err, tariff) {
+        TariffModel.findOne({ _id: id }, function (err, tariff) {
             if (err) {
                 return res.status(500).json({
                     message: 'Error when getting tariff',
@@ -87,7 +87,7 @@ module.exports = {
                 });
             }
 
-            
+
             tariff.save(function (err, tariff) {
                 if (err) {
                     return res.status(500).json({
@@ -117,5 +117,16 @@ module.exports = {
 
             return res.status(204).json();
         });
+    },
+    
+    byLocation: async (req, res) => {
+        try {
+            const locationId = req.params.id;
+            const tariffs = await Tariff.find({ parking_location: locationId }).sort({ created: -1 });
+            res.json(tariffs);
+        } catch (err) {
+            res.status(500).json({ message: 'Failed to fetch tariffs' });
+        }
     }
+
 };

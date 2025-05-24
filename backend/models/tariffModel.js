@@ -2,7 +2,7 @@ var mongoose = require('mongoose');
 var Schema   = mongoose.Schema;
 
 var tariffSchema = new Schema({
-     tariff_type: String,
+    tariff_type: String,
     tariff_from: String,
     tariff_to: String,
     price_with_tax: mongoose.Types.Decimal128,
