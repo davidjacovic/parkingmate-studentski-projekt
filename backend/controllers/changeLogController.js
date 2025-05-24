@@ -32,7 +32,7 @@ module.exports = {
         ChangelogModel.findOne({_id: id}, function (err, changeLog) {
             if (err) {
                 return res.status(500).json({
-                    message: 'Error when getting changeLog.',
+                    message: 'Error while getting changeLog.',
                     error: err
                 });
             }
