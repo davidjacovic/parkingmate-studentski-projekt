@@ -24,6 +24,10 @@ function Header() {
                 {user ? (
                     <>
                         <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>Profile</Link>
+                        <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
+                            Pay Parking
+                        </Link>
+
                         <button onClick={handleLogout} style={{ textDecoration: 'none', color: '#007bff' }}>Logout</button>
                     </>
                 ) : (
