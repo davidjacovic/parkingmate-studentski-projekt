@@ -27,6 +27,11 @@ function Header() {
                         <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
                             Pay Parking
                         </Link>
+                        <Link to="/proximity" style={{ textDecoration: 'none', color: '#007bff' }}>Nearby parkings</Link>
+                        <Link to="/coverage" style={{ textDecoration: 'none', color: '#007bff' }}>
+                            Analiza pokrivenosti
+                        </Link>
+
 
                         <button onClick={handleLogout} style={{ textDecoration: 'none', color: '#007bff' }}>Logout</button>
                     </>

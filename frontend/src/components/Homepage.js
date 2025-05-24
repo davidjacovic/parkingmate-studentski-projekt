@@ -1,12 +1,18 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { UserContext } from '../userContext';
 import { Link } from 'react-router-dom';
+import { findNearestParking } from '../utils/geoUtils';
+import MapView from './MyMapView';
+
 
 function Homepage() {
     const { user } = useContext(UserContext);
     const [locations, setLocations] = useState([]);
     const [error, setError] = useState('');
+    const [userLocation, setUserLocation] = useState(null);
+    const [nearestParking, setNearestParking] = useState(null);
 
+    // Dohvati parking lokacije
     useEffect(() => {
         fetch('http://localhost:3002/parkingLocations')
             .then(res => {
@@ -20,11 +26,76 @@ function Homepage() {
             });
     }, []);
 
+    // Dohvati korisničku lokaciju
+    useEffect(() => {
+        if (!navigator.geolocation) {
+            setError('Geolokacija nije podržana u vašem pretraživaču.');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setUserLocation([position.coords.longitude, position.coords.latitude]);
+            },
+            () => {
+                setError('Dozvolite pristup lokaciji da biste videli najbliže parking mesto.');
+            }
+        );
+    }, []);
+
+    // Nađi najbliži parking
+    useEffect(() => {
+        if (userLocation && locations.length > 0) {
+            const spots = locations.map(loc => ({
+                id: loc._id,
+                coordinates: [loc.longitude, loc.latitude]
+            }));
+
+            const nearestId = findNearestParking(userLocation, spots);
+            const nearestLoc = locations.find(loc => loc._id === nearestId);
+            setNearestParking(nearestLoc);
+        }
+    }, [userLocation, locations]);
+
     return (
         <div className="text-center mt-5">
             <h1>HOME PAGE</h1>
 
             {error && <p style={{ color: 'red' }}>{error}</p>}
+
+            {nearestParking && (
+                <>
+                    {/* ✅ DODATA MAPA */}
+                    <MapView
+                        userLocation={userLocation}
+                        parkingLocations={locations}
+                        nearestId={nearestParking._id}
+                    />
+                    <div style={{
+                        marginBottom: '2rem',
+                        padding: '1rem',
+                        border: '2px solid green',
+                        borderRadius: '8px',
+                        maxWidth: '600px',
+                        marginLeft: 'auto',
+                        marginRight: 'auto'
+                    }}>
+                        <h2>Najbliže parking mesto</h2>
+                        <h4>{nearestParking.name}</h4>
+                        <p><strong>Adresa:</strong> {nearestParking.address}</p>
+                        <a
+                            href={`https://www.google.com/maps?q=${nearestParking.latitude},${nearestParking.longitude}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Otvori u Google mapi"
+                        >
+                            📍 Otvori u Google mapama
+                        </a>
+                    </div>
+
+
+                </>
+            )}
 
             <div style={{ maxWidth: '900px', margin: '2rem auto', textAlign: 'left' }}>
                 <h2>Spisak ulica i parking mesta</h2>
