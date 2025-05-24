@@ -32,12 +32,12 @@ function Login() {
 
       const data = await res.json();
 
-      if (data.user && data.user._id) {
+      if (data && data.user && data.user._id) {
+        localStorage.setItem('token', data.token);
         navigate('/');
       } else {
         setError('Login failed: Invalid user data');
       }
-
     } catch (err) {
       setError('Login failed: ' + err.message);
     } finally {
