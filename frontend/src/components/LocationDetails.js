@@ -1,10 +1,65 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import 'leaflet-routing-machine';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+    iconUrl: require('leaflet/dist/images/marker-icon.png'),
+    shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+});
+
+
+function Routing({ from, to }) {
+    const map = useMap();
+    const routingControlRef = useRef(null);
+
+    useEffect(() => {
+        if (!from || !to || !map) return;
+
+        const routingControl = L.Routing.control({
+            waypoints: [
+                L.latLng(from[0], from[1]),
+                L.latLng(to[0], to[1]),
+            ],
+            lineOptions: {
+                styles: [{ color: 'blue', opacity: 0.6, weight: 5 }],
+            },
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: true,
+            showAlternatives: false,
+        }).addTo(map);
+
+        routingControlRef.current = routingControl;
+
+        return () => {
+            try {
+                if (map && routingControlRef.current && map.hasLayer(routingControlRef.current)) {
+                    routingControlRef.current.remove();
+                }
+                routingControlRef.current = null;
+            } catch (err) {
+                console.warn('Routing cleanup error:', err);
+            }
+        };
+
+
+    }, [map, from, to]);
+
+    return null;
+}
+
 
 function LocationDetails() {
     const { id } = useParams();
     const [location, setLocation] = useState(null);
     const [error, setError] = useState('');
+    const [userLocation, setUserLocation] = useState(null);
 
     useEffect(() => {
         fetch(`http://localhost:3002/parkingLocations/${id}`)
@@ -19,6 +74,14 @@ function LocationDetails() {
             });
     }, [id]);
 
+    useEffect(() => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(
+            pos => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+            err => console.error(err)
+        );
+    }, []);
+
     if (error) return <p style={{ color: 'red' }}>{error}</p>;
     if (!location) return <p>Učitavanje...</p>;
 
@@ -26,6 +89,31 @@ function LocationDetails() {
         <div style={{ maxWidth: '600px', margin: '2rem auto', textAlign: 'left' }}>
             <h2>{location.name}</h2>
             <p><strong>Adresa:</strong> {location.address}</p>
+            <p>
+                <strong>Regularna mesta:</strong> Slobodnih: {location.available_regular_spots} / Ukupno: {location.total_regular_spots} <br />
+                <strong>Invalidska mesta:</strong> Slobodnih: {location.available_invalid_spots} / Ukupno: {location.total_invalid_spots} <br />
+                <strong>Električna mesta:</strong> Slobodnih: {location.available_electric_spots} / Ukupno: {location.total_electric_spots} <br />
+                <strong>Autobuska mesta:</strong> Slobodnih: {location.available_bus_spots} / Ukupno: {location.total_bus_spots}
+            </p>
+
+            {userLocation && (
+                <div style={{ height: '400px', width: '100%', marginTop: '2rem' }}>
+                    <MapContainer center={[location.latitude, location.longitude]} zoom={15} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer
+                            attribution='&copy; OpenStreetMap contributors'
+                            url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                        />
+                        <Marker position={[location.latitude, location.longitude]}>
+                            <Popup>{location.name}</Popup>
+                        </Marker>
+                        <Marker position={userLocation}>
+                            <Popup>Vaša lokacija</Popup>
+                        </Marker>
+
+                        <Routing from={userLocation} to={[location.latitude, location.longitude]} />
+                    </MapContainer>
+                </div>
+            )}
         </div>
     );
 }
