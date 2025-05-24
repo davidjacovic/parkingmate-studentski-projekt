@@ -2,29 +2,15 @@ var express = require('express');
 var router = express.Router();
 var paymentController = require('../controllers/paymentController.js');
 
-/*
- * GET
- */
+router.get('/addresses/list', paymentController.addresses);
+router.get('/addresses/search', paymentController.searchAddresses);
+router.get('/user-info', paymentController.getUserPaymentInfo);
+router.get('/user/credit-card', paymentController.getUserCreditCard);
+router.post('/calculate-and-pay', paymentController.createAndCalculatePayment);
 router.get('/', paymentController.list);
-
-/*
- * GET
- */
 router.get('/:id', paymentController.show);
-
-/*
- * POST
- */
 router.post('/', paymentController.create);
-
-/*
- * PUT
- */
 router.put('/:id', paymentController.update);
-
-/*
- * DELETE
- */
 router.delete('/:id', paymentController.remove);
 
 module.exports = router;

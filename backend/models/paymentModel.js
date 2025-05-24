@@ -2,10 +2,11 @@ var mongoose = require('mongoose');
 var Schema   = mongoose.Schema;
 
 var paymentSchema = new Schema({
-     date: Date,
+    date: Date,
     amount: mongoose.Types.Decimal128,
     method: String,
     payment_status: { type: String, enum: ['pending', 'completed', 'failed'] },
+    duration: Number,
     hidden: Boolean,
     created: Date,
     modified: Date,
