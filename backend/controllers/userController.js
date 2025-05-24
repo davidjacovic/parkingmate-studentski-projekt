@@ -144,6 +144,79 @@ module.exports = {
         token: token
       });
     });
-  }
+  },
+  
+  getProfile: async function (req, res) {
+        try {
+            const authHeader = req.headers.authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return res.status(401).json({ message: 'Unauthorized' });
+            }
+
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, SECRET);
+
+            const user = await UserModel.findById(decoded.userId).lean();
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            const vehicle = await VehicleModel.findOne({ user: user._id }).lean();
+
+            return res.json({
+                ...user,
+                vehicle,
+            });
+        } catch (err) {
+            console.error('Error getting profile:', err);
+            return res.status(500).json({ message: 'Server error' });
+        }
+    },
+
+    updateProfile: async function (req, res) {
+        try {
+            const token = req.headers.authorization?.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            const allowedFields = ['email', 'phone_number', 'credit_card_number', 'username'];
+            const updates = {};
+
+            allowedFields.forEach((field) => {
+                if (req.body[field]) {
+                    updates[field] = req.body[field];
+                }
+            });
+
+            const emailRegex = /^\S+@\S+\.\S+$/;
+            const phoneRegex = /^(\+382\d{6,9}|06\d{6,8})$/;
+            const cardRegex = /^[A-Za-z0-9]{16}$/;
+
+            if (updates.email && !emailRegex.test(updates.email)) {
+                return res.status(400).json({ message: 'Neispravan email format.' });
+            }
+
+            if (updates.phone_number && !phoneRegex.test(updates.phone_number)) {
+                return res.status(400).json({ message: 'Neispravan broj telefona. Dozvoljeni formati: +382xxxxxxx ili 06xxxxxxx' });
+            }
+
+            if (updates.credit_card_number && !cardRegex.test(updates.credit_card_number)) {
+                return res.status(400).json({ message: 'Broj kartice mora imati tačno 16 cifara.' });
+            }
+
+            updates.updated_at = new Date();
+
+            const updatedUser = await UserModel.findByIdAndUpdate(
+                decoded.userId,
+                { $set: updates },
+                { new: true }
+            ).lean();
+
+            res.json(updatedUser);
+        } catch (err) {
+            console.error('Update error:', err);
+            res.status(500).json({ message: 'Greška pri ažuriranju profila.' });
+        }
+    }
+
 
 };

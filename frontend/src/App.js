@@ -5,6 +5,8 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Logout from "./components/Logout";
 import Homepage from "./components/Homepage";
+import Header from "./components/Header";
+import Profil from "./components/Profil";
  
 function App() {
   const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
@@ -21,11 +23,13 @@ function App() {
         setUserContext: updateUserData
       }}>
         <div className="App">
+          <Header /> 
           <Routes>
             <Route path="/" element={<Homepage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/logout" element={<Logout />} />
+            <Route path="/profile" element={<Profil />} />
           </Routes>
         </div>
       </UserContext.Provider>
