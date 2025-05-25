@@ -36,7 +36,6 @@ function Profile() {
             });
     }, []);
 
-
     const handleFieldSave = async () => {
         if (!fieldValue || fieldValue === userData[editField]) {
             setEditField(null);
@@ -61,8 +60,7 @@ function Profile() {
             const updatedUser = await response.json();
             setUserData((prev) => ({ ...prev, ...updatedUser }));
             setEditField(null);
-        }
-        catch (err) {
+        } catch (err) {
             console.error(err);
             alert('Greška pri čuvanju izmene.');
         }
@@ -103,35 +101,30 @@ function Profile() {
     };
 
     if (error) {
-        return <p style={{ textAlign: 'center', marginTop: '2rem' }}>{error}</p>;
+        return <p>{error}</p>;
     }
 
     if (!userData) {
-        return <p style={{ textAlign: 'center', marginTop: '2rem' }}>Loading...</p>;
+        return <p>Loading...</p>;
     }
 
     const renderEditableField = (label, fieldName, value) => (
         <p>
             <strong>{label}:</strong>{' '}
             {editField === fieldName ? (
-                <>
-                    <input
-                        value={fieldValue}
-                        onChange={(e) => setFieldValue(e.target.value)}
-                        onBlur={handleFieldSave}
-                        autoFocus
-                    />
-                </>
+                <input
+                    value={fieldValue}
+                    onChange={(e) => setFieldValue(e.target.value)}
+                    onBlur={handleFieldSave}
+                    autoFocus
+                />
             ) : (
                 <>
                     {value || 'Nije uneto'}{' '}
-                    <span
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => {
-                            setEditField(fieldName);
-                            setFieldValue(value || '');
-                        }}
-                    >
+                    <span onClick={() => {
+                        setEditField(fieldName);
+                        setFieldValue(value || '');
+                    }}>
                         ✏️
                     </span>
                 </>
@@ -148,24 +141,19 @@ function Profile() {
         <p>
             <strong>{label}:</strong>{' '}
             {editVehicleField === fieldName ? (
-                <>
-                    <input
-                        value={vehicleFieldValue}
-                        onChange={(e) => setVehicleFieldValue(e.target.value)}
-                        onBlur={handleVehicleFieldSave}
-                        autoFocus
-                    />
-                </>
+                <input
+                    value={vehicleFieldValue}
+                    onChange={(e) => setVehicleFieldValue(e.target.value)}
+                    onBlur={handleVehicleFieldSave}
+                    autoFocus
+                />
             ) : (
                 <>
                     {value || 'Nije uneto'}{' '}
-                    <span
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => {
-                            setEditVehicleField(fieldName);
-                            setVehicleFieldValue(value || '');
-                        }}
-                    >
+                    <span onClick={() => {
+                        setEditVehicleField(fieldName);
+                        setVehicleFieldValue(value || '');
+                    }}>
                         ✏️
                     </span>
                 </>
@@ -173,35 +161,26 @@ function Profile() {
         </p>
     );
 
-
     return (
-        <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1rem', border: '1px solid #ddd', borderRadius: '8px' }}>
-            <h2 style={{ textAlign: 'center' }}>User Profile</h2>
-            <div style={{ marginTop: '1rem' }}>
-                {renderEditableField('Username', 'username', userData.username)}
-                {renderEditableField('Email', 'email', userData.email)}
-                {renderEditableField('Phone', 'phone_number', userData.phone_number)}
-                {renderEditableField('Card', 'credit_card_number', maskCard(userData.credit_card_number))}
+        <div>
+            <h2>User Profile</h2>
+            {renderEditableField('Username', 'username', userData.username)}
+            {renderEditableField('Email', 'email', userData.email)}
+            {renderEditableField('Phone', 'phone_number', userData.phone_number)}
+            {renderEditableField('Card', 'credit_card_number', maskCard(userData.credit_card_number))}
 
+            <p><strong>Role:</strong> {userData.user_type}</p>
+            <p><strong>Created:</strong> {new Date(userData.created_at).toLocaleDateString()}</p>
+            <p><strong>Last Updated:</strong> {new Date(userData.updated_at).toLocaleDateString()}</p>
 
-                <p><strong>Role:</strong> {userData.user_type}</p>
-                <p><strong>Created:</strong> {new Date(userData.created_at).toLocaleDateString()}</p>
-                <p><strong>Last Updated:</strong> {new Date(userData.updated_at).toLocaleDateString()}</p>
-
-                {/* Vozilo sekcija */}
-                <div style={{ marginTop: '1rem' }}>
-                    <h3>Vehicle Information</h3>
-                    {renderEditableVehicleField('Model', 'model', userData.vehicle?.model)}
-                    {renderEditableVehicleField('Registration', 'registration_number', userData.vehicle?.registration_number)}
-                    {renderEditableVehicleField('Type', 'vehicle_type', userData.vehicle?.vehicle_type)}
-                    <p><strong>Created:</strong> {userData.vehicle?.created ? new Date(userData.vehicle.created).toLocaleDateString() : 'Nije uneto'}</p>
-                    <p><strong>Modified:</strong> {userData.vehicle?.modified ? new Date(userData.vehicle.modified).toLocaleDateString() : 'Nije uneto'}</p>
-                </div>
-            </div>
+            <h3>Vehicle Information</h3>
+            {renderEditableVehicleField('Model', 'model', userData.vehicle?.model)}
+            {renderEditableVehicleField('Registration', 'registration_number', userData.vehicle?.registration_number)}
+            {renderEditableVehicleField('Type', 'vehicle_type', userData.vehicle?.vehicle_type)}
+            <p><strong>Created:</strong> {userData.vehicle?.created ? new Date(userData.vehicle.created).toLocaleDateString() : 'Nije uneto'}</p>
+            <p><strong>Modified:</strong> {userData.vehicle?.modified ? new Date(userData.vehicle.modified).toLocaleDateString() : 'Nije uneto'}</p>
         </div>
     );
-
 }
 
 export default Profile;
-
