@@ -7,7 +7,6 @@ import { Link } from 'react-router-dom';
 import userIconImg from '../assets/man-location.png';
 
 
-
 // Popravi ikonice da se pravilno prikazuju
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({

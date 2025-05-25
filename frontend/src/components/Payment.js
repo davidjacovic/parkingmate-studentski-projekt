@@ -8,7 +8,6 @@ function Payment() {
     const [vehiclePlate, setVehiclePlate] = useState('');
     const [duration, setDuration] = useState('');
     const [price, setPrice] = useState(null);
-    const [startTime, setStartTime] = useState('');
 
     useEffect(() => {
         const controller = new AbortController();
@@ -108,28 +107,26 @@ function Payment() {
         }
     };
 
-
     return (
-        <div style={{ padding: '20px' }}>
+        <div>
             <h2>Search Parking Location</h2>
             <input
                 type="text"
                 placeholder="Start typing name..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                style={{ width: '300px', padding: '8px' }}
             />
             {suggestions.length > 0 && (
-                <ul style={{ border: '1px solid #ccc', maxHeight: '150px', overflowY: 'auto', margin: 0, padding: 0 }}>
+                <ul>
                     {suggestions.map((location, idx) => (
-                        <li key={idx} onClick={() => handleSelect(location)} style={{ listStyle: 'none', padding: '8px', cursor: 'pointer', borderBottom: '1px solid #eee' }}>
+                        <li key={idx} onClick={() => handleSelect(location)}>
                             {location.name}
                         </li>
                     ))}
                 </ul>
             )}
 
-            <div style={{ marginTop: '20px' }}>
+            <div>
                 <label htmlFor="creditCard">Credit Card</label><br />
                 <input
                     type="text"
@@ -137,11 +134,10 @@ function Payment() {
                     value={creditCard}
                     onChange={(e) => setCreditCard(e.target.value)}
                     placeholder="Enter your credit card number"
-                    style={{ width: '300px', padding: '8px' }}
                 />
             </div>
 
-            <div style={{ marginTop: '10px' }}>
+            <div>
                 <label htmlFor="vehiclePlate">Vehicle Plate</label><br />
                 <input
                     type="text"
@@ -149,11 +145,10 @@ function Payment() {
                     value={vehiclePlate}
                     onChange={(e) => setVehiclePlate(e.target.value)}
                     placeholder="Enter your license plate"
-                    style={{ width: '300px', padding: '8px' }}
                 />
             </div>
 
-            <div style={{ marginTop: '10px' }}>
+            <div>
                 <label htmlFor="duration">Duration (hours, min 1)</label><br />
                 <input
                     type="number"
@@ -162,19 +157,15 @@ function Payment() {
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
                     placeholder="Enter duration"
-                    style={{ width: '300px', padding: '8px' }}
                 />
             </div>
 
-            <button
-                onClick={handlePay}
-                style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: '#fff', border: 'none', cursor: 'pointer' }}
-            >
+            <button onClick={handlePay}>
                 Calculate Payment
             </button>
 
             {price && (
-                <div style={{ marginTop: '20px' }}>
+                <div>
                     <strong>Total Price:</strong> {price}
                 </div>
             )}
