@@ -450,7 +450,11 @@ class Scanner(private val automaton: DFA, private val stream: InputStream) {
         return Token(symbol, lexeme, startRow, startColumn)
     }
 }
-
+/*
+*
+*  ==========IZVOZ V GEOJSON==========
+*
+* */
 data class Point(val x: Double, val y: Double)
 
 fun segmentsIntersect(a1: Point, a2: Point, b1: Point, b2: Point): Point? {
