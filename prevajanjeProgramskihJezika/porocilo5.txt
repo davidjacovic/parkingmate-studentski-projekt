@@ -1,0 +1,210 @@
+DESET TESTNIH PRIMEROV 
+
+# PRVI PRIMER
+
+city MyCity {
+    building A {
+        box ( 1.0 , 1.0 , 2.0 , 4.0 )
+    } ;
+    building B {
+        box ( 1.0 , 6.0 , 2.0 , 8.0 )
+    } ;
+    building C {
+        box ( 4.0 , 4.0 , 6.0 , 6.0 )
+    } ;
+    building D {
+        box ( 4.0 , 1.0 , 7.0 , 2.0 )
+    } ;
+    road a {
+        line ( 3.0 , 1.0 , 3.0 , 8.0 )
+    } ;
+    road b {
+        bend ( 3.0 , 4.0 , 1.0 , 5.0 , 90.0 )
+    } ;
+    road c {
+        line ( 3.0 , 3.0 , 8.0 , 3.0 )
+    } ;
+    road d {
+        bend ( 8.0 , 7.0 , 3.0 , 6.0 , 90.0 )
+    } ;
+}
+
+
+# DRUGI PRIMER
+
+city MyCity {
+    building A {
+        box ( 1.0 , 1.0 , 3.0 , 3.0 )
+    } ;
+    building B {
+        box ( 1.0 , 4.0 , 3.0 , 6.0 )
+    } ;
+    building C {
+        box ( 1.0 , 8.0 , 3.0 , 10.0 )
+    } ;
+    building D {
+        box ( 6.0 , 1.0 , 8.0 , 3.0 )
+    } ;
+    building E {
+        box ( 6.0 , 4.0 , 8.0 , 6.0 )
+    } ;
+    building F {
+        box ( 6.0 , 8.0 , 8.0 , 10.0 )
+    } ;
+}
+
+
+# TRETJI PRIMER
+
+city MyCity {
+    building A {
+        box ( 1.0 , 1.0 , 3.0 , 3.0 )
+    } ;
+    building B {
+        box ( 1.0 , 4.0 , 3.0 , 6.0 )
+    } ;
+    building C {
+        box ( 1.0 , 8.0 , 3.0 , 10.0 )
+    } ;
+    building D {
+        box ( 6.0 , 1.0 , 8.0 , 3.0 )
+    } ;
+    building E {
+        box ( 6.0 , 4.0 , 8.0 , 6.0 )
+    } ;
+    building F {
+        box ( 6.0 , 8.0 , 8.0 , 10.0 )
+    } ;
+    road a {
+        line ( 4.5 , 1.0 , 4.5 , 10.0 )
+    } ;
+}
+
+
+# ČETRTI PRIMER
+
+let x = 5.0 ;
+
+city MyCity {
+    building A {
+        box ( 1.0 , x , 3.0 , 8.0 )
+    } ;
+    building B {
+        box ( 1.0 , 1.0 , 3.0 , 4.0 )
+    } ;
+    building C {
+        box ( 6.0 , 1.0 , 9.0 , 4.0 )
+    } ;
+    building D {
+        box ( 6.0 , 8.0 , 8.0 , 9.0 )
+    } ;
+    road a {
+        line ( 5.0 , 9.0 , 5.0 , 1.0 )
+    } ;
+    road b {
+        line ( 5.0 , 9.0 , 1.0 , 9.0 )
+    } ;
+    road a {
+        line ( 5.0 , 6.0 , 9.0 , 6.0 )
+    } ;
+}
+
+
+# PETI PRIMER
+
+let x = 5.0 ;
+let y = new ( 10.0 , 10.0 ) ;
+
+city MyCity {
+    park A {
+        box ( 2.0 , 2.0 , y , )
+    } ;
+    road a {
+        polyline ( 2.0 , 2.0 , 5.0 , 3.0 , 7.0 , 8.0 , y , )
+    } ;
+}
+
+
+# ŠESTI PRIMER
+
+let x = 3.0 ;
+let y = new ( 10.0 , 10.0 ) ;
+
+city MyCity {
+    park A {
+        box ( 1.0 , 1.0 , x , x )
+    } ;
+    building B {
+        box ( ( 2.0 + 2.0 ) , ( 1.0 * 4.0 ) , 6.0 , 6.0 )
+    } ;
+    building C {
+        box ( 7.0 , 7.0 , 9.0 , 9.0 )
+    } ;
+    marker a {
+        mark ( 2.0 , 2.0 )
+    } ;
+    marker a {
+        mark ( 5.0 , 5.0 )
+    } ;
+    marker a {
+        mark ( 8.0 , 8.0 )
+    } ;
+}
+
+
+# SEDMI PRIMER
+
+let x = 3.0 ;
+let y = new ( 10.0 , 10.0 ) ;
+
+city MyCity {
+    park A {
+        box ( 1.0 , 1.0 , x , x )
+    } ;
+    building B {
+        box ( ( 2.0 + 2.0 ) , ( 1.0 * 4.0 ) , 6.0 , 6.0 )
+    } ;
+    building C {
+        circ ( 9.0 , 9.0 , 2.0 )
+    } ;
+}
+
+
+# OSMI PRIMER
+
+let x = 3.0 ;
+let y = new ( 10.0 , 10.0 ) ;
+
+city MyCity {
+    road A {
+        line ( 2.0 , 2.0 , 3.0 , 3.0 )
+        line ( 2.0 , 3.0 , 3.0 , 2.0 )
+    } ;
+}
+
+
+# DEVET PRIMER
+
+let x = 2.0 ;
+let y = new ( 3.0 , 3.0 ) ;
+
+city MyCity {
+    road A {
+        line ( x , x , y , )
+        line ( x , ( x + 1 ) , 3.0 , x )
+        line ( 2.2 , 1.0 , 2.2 , 4.0 )
+    } ;
+}
+
+
+# DESET PRIMER
+
+let x = 2.0 ;
+let y = new ( 3.0 , 3.0 ) ;
+
+city MyCity {
+    building A {
+        box ( 1.0 , 1.0 , 7.0 , 2.0 , 4.0 , 6.0 , 1.0 , 8.0 )
+        box ( 9.0 , 9.0 , 8.0 , 1.0 , 7.0 , 4.0 , 6.0 , 13.0 )
+    } ;
+}
