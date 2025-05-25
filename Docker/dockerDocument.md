@@ -142,3 +142,12 @@ docker-compose restart # ponovni zagon vseh storitev
 docker-compose logs  # prikaz logov
 docker ps  # prikaz aktivnih kontejnerjev in portov
 ```
+
+
+## Ustvarjanje Azure navidezne naprave
+
+Za dostop do Azure storitev brezplačno sem sledil naslednjim korakom:
+1. Najprej sem obiskal stran: [https://azure.microsoft.com/en-us/free/students/](https://azure.microsoft.com/en-us/free/students/)
+2. Po kliku na gumb *Start free* se je odprla stran za vnos študentskega računa.
+3. Potrdil sem svojo identiteto in dokončal registracijo.
+4. Po uspešni prijavi sem prejel 100 $ kredita in dostop do različnih Azure storitev (vključno z Virtual Machines).
