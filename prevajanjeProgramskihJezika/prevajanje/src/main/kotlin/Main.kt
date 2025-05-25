@@ -1,7 +1,6 @@
 package org.example
 
-import com.sun.jdi.connect.Connector
-import jdk.incubator.vector.VectorOperators
+import kotlin.math.*
 import java.io.InputStream
 import java.io.File
 
@@ -375,6 +374,7 @@ object CityAutomaton : DFA {
 }
 
 data class Token(val symbol: Int, val lexeme: String, val startRow: Int, val startColumn: Int)
+
 /*
 *
 *   ===================SCANNER===================
@@ -451,6 +451,343 @@ class Scanner(private val automaton: DFA, private val stream: InputStream) {
     }
 }
 
+data class Point(val x: Double, val y: Double)
+
+fun segmentsIntersect(a1: Point, a2: Point, b1: Point, b2: Point): Point? {
+    val d = (a1.x - a2.x) * (b1.y - b2.y) - (a1.y - a2.y) * (b1.x - b2.x)
+    if (d == 0.0) return null // Paralelne
+
+    val xi = ((b1.x - b2.x) * (a1.x * a2.y - a1.y * a2.x) - (a1.x - a2.x) * (b1.x * b2.y - b1.y * b2.x)) / d
+    val yi = ((b1.y - b2.y) * (a1.x * a2.y - a1.y * a2.x) - (a1.y - a2.y) * (b1.x * b2.y - b1.y * b2.x)) / d
+    val inter = Point(xi, yi)
+
+    fun between(p: Point, q: Point, r: Point): Boolean {
+        return minOf(p.x, q.x) <= r.x && r.x <= maxOf(p.x, q.x) &&
+                minOf(p.y, q.y) <= r.y && r.y <= maxOf(p.y, q.y)
+    }
+
+    return if (between(a1, a2, inter) && between(b1, b2, inter)) inter else null
+}
+
+fun extractPoints(command: Commands): List<Point> {
+    val coords = command.coordinates.values
+    val points = mutableListOf<Point>()
+    for (i in 0 until coords.size - 1 step 2) {
+        val x = coords[i]
+        val y = coords[i + 1]
+        if (x != null && y != null) {
+            points.add(Point(x, y))
+        }
+    }
+    return points
+}
+
+fun findIntersections(lines: List<Commands>): List<Point> {
+    val points = mutableListOf<Point>()
+
+    // Helper: ekstrakcija tačaka iz komandne geometrije
+    fun extractPoints(command: Commands): List<Point> {
+        val coords = command.coordinates.values
+        val points = mutableListOf<Point>()
+        for (i in coords.indices step 2) {
+            val x = coords[i]
+            val y = coords.getOrNull(i + 1)
+            if (x != null && y != null) {
+                points.add(Point(x, y))
+            }
+        }
+        return points
+    }
+
+    for (i in 0 until lines.size) {
+        val line1 = extractPoints(lines[i])
+        for (j in i + 1 until lines.size) {
+            val line2 = extractPoints(lines[j])
+            for (k in 0 until line1.size - 1) {
+                val a1 = line1[k]
+                val a2 = line1[k + 1]
+                for (l in 0 until line2.size - 1) {
+                    val b1 = line2[l]
+                    val b2 = line2[l + 1]
+                    val inter = segmentsIntersect(a1, a2, b1, b2)
+                    if (inter != null) points.add(inter)
+                }
+            }
+        }
+    }
+
+    return points
+}
+
+
+fun pointToGeoJSON(p: Point): String = """
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [${p.x}, ${p.y}]
+      },
+      "properties": {
+        "marker": "intersection"
+      }
+    }
+""".trimIndent()
+
+fun createParallelLine(x1: Double, y1: Double, x2: Double, y2: Double, distance: Double): Pair<Point, Point> {
+    // Vektor pravca
+    val dx = x2 - x1
+    val dy = y2 - y1
+
+    // Dužina linije
+    val length = hypot(dx, dy)
+    if (length == 0.0) throw IllegalArgumentException("Pocetna i krajnja tacka su iste!")
+
+    // Jedinični vektor normale (okomit na pravac)
+    val nx = -dy / length
+    val ny = dx / length
+
+    // Pomera originalne tačke za datu udaljenost u pravcu normale
+    val newStart = Point(x1 + nx * distance, y1 + ny * distance)
+    val newEnd = Point(x2 + nx * distance, y2 + ny * distance)
+
+    return Pair(newStart, newEnd)
+}
+
+class City(val name: String, val elements: List<Elt> = listOf()) {
+    fun toGeoJSON(): String {
+        val elementFeatures = elements.map { it.toGeoJSON() }
+
+        val allLines = elements.flatMap { it.commands }
+            .filterNotNull()
+            .filter { it.type in listOf("line", "polyline", "bend", "circ" , "box") }
+
+        val intersectionPoints = findIntersections(allLines)
+        val intersectionFeatures = intersectionPoints.map { pointToGeoJSON(it) }
+
+        val allFeatures = elementFeatures + intersectionFeatures
+
+        return """
+        {
+          "type": "FeatureCollection",
+          "features": [
+            ${allFeatures.joinToString(",\n")}
+          ]
+        }
+        """.trimIndent()
+    }
+}
+
+
+class Elt(val name: String, val type: String, val commands: List<Commands?> = listOf()) {
+    fun toGeoJSON(): String {
+        val geometries = commands.filterNotNull().map { it.toGeoJSON() }
+
+        return when (geometries.size) {
+            0 -> throw Error("Element has no geometry")
+            1 -> """
+                {
+                  "type": "Feature",
+                  "geometry": ${geometries[0]},
+                  "properties": {
+                    "name": "$name",
+                    "type": "$type"
+                  }
+                }
+            """.trimIndent()
+
+            else -> {
+                val joined = geometries.joinToString(",\n")
+                """
+                {
+                  "type": "Feature",
+                  "geometry": {
+                    "type": "GeometryCollection",
+                    "geometries": [
+                      $joined
+                    ]
+                  },
+                  "properties": {
+                    "name": "$name",
+                    "type": "$type"
+                  }
+                }
+                """.trimIndent()
+            }
+        }
+    }
+}
+
+class Commands(val type: String, val coordinates: Coordinates) {
+    fun createCircle(cx: Double, cy: Double, radius: Double, segments: Int = 64): String {
+        val points = mutableListOf<String>()
+        for (i in 0..segments) {
+            val angle = 2 * PI * i / segments
+            val x = cx + radius * cos(angle)
+            val y = cy + radius * sin(angle)
+            points.add("[${"%.6f".format(x)}, ${"%.6f".format(y)}]")
+        }
+        // Zatvaranje kruga (ponavljanje prve tačke)
+        points.add(points.first())
+        val joinedCoords = points.joinToString(", ")
+        return """
+            {
+              "type": "Polygon",
+              "coordinates": [
+                [ $joinedCoords ]
+              ]
+            }
+        """.trimIndent()
+    }
+
+    fun createBendLine(
+        x1: Double, y1: Double,
+        x2: Double, y2: Double,
+        angleDeg: Double,
+        segments: Int = 20
+    ): String {
+        val mx = (x1 + x2) / 2
+        val my = (y1 + y2) / 2
+
+        val dx = x2 - x1
+        val dy = y2 - y1
+        val length = hypot(dx, dy)
+
+        val angleRad = Math.toRadians(angleDeg)
+
+        val h = tan(angleRad / 2) * (length / 2)
+
+        val nx = -dy / length
+        val ny = dx / length
+
+        val cx = mx + nx * h
+        val cy = my + ny * h
+
+        var startAngle = atan2(y1 - cy, x1 - cx)
+        var endAngle = atan2(y2 - cy, x2 - cx)
+
+        if (endAngle < startAngle) {
+            endAngle += 2 * PI
+        }
+
+        val radius = (length / 2) / cos(angleRad / 2)
+
+        val points = mutableListOf<List<Double>>()
+
+        for (i in 0..segments) {
+            val t = i.toDouble() / segments
+            val angle = startAngle + t * (endAngle - startAngle)
+            val px = cx + radius * cos(angle)
+            val py = cy + radius * sin(angle)
+            points.add(listOf("%.6f".format(px).toDouble(), "%.6f".format(py).toDouble()))
+        }
+
+        val coordinatesStr = points.joinToString(", ") { "[${it[0]}, ${it[1]}]" }
+
+        return """
+            {
+            "type": "LineString",
+            "coordinates": [ $coordinatesStr ]
+            }
+    """.trimIndent()
+    }
+
+
+    fun toGeoJSON(): String {
+        val points = mutableListOf<String>()
+        for (i in coordinates.values.indices step 2) {
+            val x = coordinates.values[i]
+            val y = coordinates.values.getOrNull(i + 1)
+            if (x != null && y != null) {
+                points.add("[$x, $y]")
+            }
+        }
+
+        val joined = points.joinToString(", ")
+
+        return when {
+            type == "box" && coordinates.values.size == 8 -> """
+            {
+              "type": "Polygon",
+              "coordinates": [
+                [ $joined, [${coordinates.values[0]}, ${coordinates.values[1]}] ]
+              ]
+            }
+        """.trimIndent()
+
+            type == "box" && coordinates.values.size == 4 -> {
+                val v = coordinates.values[0]
+                val s = coordinates.values[1]
+                val d = coordinates.values[2]
+                val k = coordinates.values[3]
+                """
+            {
+              "type": "Polygon",
+              "coordinates": [
+                [[$v, $s], [$v, $k], [$d, $k], [$d, $s], [$v, $s]]
+              ]
+            }
+            """.trimIndent()
+            }
+
+            type == "line" && coordinates.values.size == 4 -> """
+            {
+              "type": "LineString",
+              "coordinates": [ $joined ]
+            }
+        """.trimIndent()
+
+            type == "polyline" && coordinates.values.size >= 6 -> """
+            {
+              "type": "LineString",
+              "coordinates": [ $joined ]
+            }
+        """.trimIndent()
+
+            type == "bend" && coordinates.values.size == 5 -> {
+                val v = coordinates.values[0]
+                val s = coordinates.values[1]
+                val d = coordinates.values[2]
+                val k = coordinates.values[3]
+                val n = coordinates.values[4]
+                if (v != null && s != null && d != null && k != null && n != null) {
+                    createBendLine(v, s, d, k, n)
+                } else throw Error("Invalid coordinates for bend")
+            }
+
+            // NOVO: podrška za krug
+
+            type == "circ" && coordinates.values.size == 3 -> {
+                val cx = coordinates.values[0]
+                val cy = coordinates.values[1]
+                val radius = coordinates.values[2]
+                if (cx != null && cy != null && radius != null) {
+                    createCircle(cx, cy, radius)
+                } else throw Error("Invalid coordinates for circle")
+            }
+
+            type == "mark" && coordinates.values.size == 2 -> {
+                val cx = coordinates.values[0]
+                val cy = coordinates.values[1]
+                return """{
+                    "type": "Point",
+                    "coordinates": [${cx}, ${cy}]
+                }
+                """
+
+            }
+
+            else -> throw Error("Invalid command type: $type")
+        }
+    }
+}
+
+class Coordinates(val values: List<Double?>) {
+    fun toGeoJSON(): String {
+        val temp = values[1]
+        return "[${temp} ${values.drop(1).forEach { ", $it" }}]"
+    }
+}
+
 /*
 *
 *   ===================PARSER===================
@@ -458,6 +795,10 @@ class Scanner(private val automaton: DFA, private val stream: InputStream) {
 */
 class Parser(private val scanner: Scanner) {
     private var currentToken: Token? = scanner.getToken()
+    val dictionaryNum: MutableMap<String?, Double> = mutableMapOf()
+    val dictionaryString: MutableMap<String?, String?> = mutableMapOf()
+    val dictionaryPairs: MutableMap<String?, Pair<Double?, Double?>> = mutableMapOf()
+    var pair: Boolean = false
 
     private fun advance() {
         currentToken = try {
@@ -473,529 +814,408 @@ class Parser(private val scanner: Scanner) {
         }
     }
 
-    fun Program(): Boolean {
-        if (!(Declarations() && CityBlock())){
-            return false
+    fun Program(): City {
+        while (currentToken?.lexeme == "let") {
+            Let()
         }
-
-        if (currentToken != null) {
-            error("Expected end of input but found ${currentToken!!.lexeme}")
-            return false
-        } else return true
+        return CityBlock()
     }
 
-    private fun Declarations() : Boolean {
+    private fun Declarations(): Boolean {
         Let()
         return true
     }
 
-    private fun Let(): Boolean {
-        if (!(Syntax() && ValueType())){
-            return false
+    private fun Let() {
+        val variable_name = Syntax() // Pretpostavljamo da je ovo String?
+        val list = ValueType()
+        val keyword = list[0]
+        val values = list.drop(1)
+
+        if (keyword == "num") {
+            // Samo ako je brojčana vrednost
+            try {
+                val value = values.firstOrNull()?.toDouble()
+                if (value != null) {
+                    dictionaryNum[variable_name] = value
+                }
+            } catch (e: NumberFormatException) {
+                throw Error("Cannot convert to number: ${values.firstOrNull()}")
+            }
+        } else if (keyword == "new") {
+            // Samo ako je brojčana vrednost
+            try {
+                val value = values[0]?.toDouble()
+                val value2 = values[1]?.toDouble()
+                if (value != null && value2 != null) {
+                    val vals = Pair(value, value2)
+                    dictionaryPairs[variable_name] = vals
+                }
+            } catch (e: NumberFormatException) {
+                throw Error("Cannot convert to number: ${values.firstOrNull()}")
+            }
+        } else if (keyword == "link") {
+            val link = values[0]
+            dictionaryString[variable_name] = values.firstOrNull()
         }
+
         if (currentToken?.symbol == SEMICOLON) {
             advance()
-            return true
-        } else return false
+        } else throw Error("Missing semicolon.")
     }
 
-    private fun Syntax(): Boolean {
+
+    private fun Syntax(): String? {
         if (currentToken?.lexeme == "let") {
             advance()
             if (currentToken?.symbol == IDENTIFIER) {
+                val variable = currentToken?.lexeme
                 advance()
                 if (currentToken?.lexeme == "=") {
                     advance()
-                    return true
-                } else return false
-            } else return false
-        } else return false
+                    return variable
+                } else throw Error("Variable must have value assignment.")
+            } else throw Error("Variable name expected.")
+        } else throw Error("Let keyword expected.")
     }
 
-    private fun ValueType(): Boolean {
+    private fun ValueType(): List<String?> {
+        val list = mutableListOf<String?>()
         if (currentToken?.lexeme == "new") {
             advance()
             if (currentToken?.lexeme == "(") {
                 advance()
-                if (!Argument()){
-                    return false
-                } else if (currentToken?.lexeme == ",") {
+                val arg1 = Argument()
+                if (currentToken?.lexeme == ",") {
                     advance()
-                    if (!Argument()){
-                        return false
-                    } else if (currentToken?.lexeme == ")") {
-                        advance()
-                        return true
-                    } else return false
-                } else return false
-            } else return false
-        } else if (Argument()){
-            return true
-        } else if (CallP()){
-            return true
-        } else if (Link()){
-            return true
-        } else return false
-    }
-
-    private fun Link(): Boolean {
-        if (currentToken?.lexeme == "link") {
-            advance()
-            if (currentToken?.lexeme == "(") {
-                advance()
-                if (currentToken?.symbol == IDENTIFIER) { //treba LINK_TOKEN
-                    advance()
+                    val arg2 = Argument()
                     if (currentToken?.lexeme == ")") {
                         advance()
-                        return true
-                    } else return false
-                } else return false
-            } else return false
-        } else return false
+                        list.add("new")
+                        list.add(arg1.toString())
+                        list.add(arg2.toString())
+                        return list
+                    } else throw Error("Unexpected argument.")
+                } else throw Error("Missing separator ','.")
+            } else throw Error("Missing opening parenthesis '('.")
+        } else if (currentToken?.symbol == INT || currentToken?.symbol == REAL_NUM || (currentToken?.symbol == IDENTIFIER && currentToken?.lexeme != "link") || currentToken?.symbol == PLUS || currentToken?.symbol == MINUS || currentToken?.symbol == LPAREN) {
+            val arg = Argument()
+            list.add("num")
+            list.add(arg.toString())
+            return list
+        } else throw Error("Unexpected lexeme '${currentToken?.lexeme}'.")
     }
 
-    private fun CallP(): Boolean {
-        if (currentToken?.lexeme == "call") {
-            advance()
-            if (currentToken?.symbol == IDENTIFIER) {
-                advance()
-                if (Parameter()) {
-                    if (currentToken?.lexeme == ";") {
-                        advance()
-                        return true
-                    } else return false
-                } else return false
-            } else return false
-        }else return false
-    }
-
-    private fun Parameter(): Boolean {
+    private fun Parameter(): Coordinates {
         if (currentToken?.lexeme == "(") {
             advance()
-            if (Arguments()) {
-                if (currentToken?.lexeme == ")") {
-                    advance()
-                    return true
-                } else return false
-            } else return false
-        } else return false
+            val args = Arguments()
+            if (currentToken?.lexeme == ")") {
+                advance()
+                return args
+            } else throw error("Unmatched parenthesis")
+        } else throw error("Invalid parameter")
     }
 
-    private fun Arguments(): Boolean {
-        return (Argument() && ArgumentsTail())
+    private fun Arguments(): Coordinates {
+        val list = mutableListOf<Double?>()
+        list.add(Argument())
+        val tail = ArgumentsTail()
+        list.addAll(tail)
+        return Coordinates(list)
     }
 
-    private fun ArgumentsTail(): Boolean {
+    private fun ArgumentsTail(): MutableList<Double?> {
+        val list = mutableListOf<Double?>()
         if (currentToken?.lexeme == ",") {
             advance()
-            if (!Argument()) {
-                return false
-            } else return ArgumentsTail()
-        } else return true
+            val left = Argument()
+            list.add(left)
+            val tail = ArgumentsTail()
+            list.addAll(tail)
+            return list
+        } else return list
     }
 
-    private fun Argument(): Boolean {
+    private fun Argument(): Double? {
         return Additive()
     }
 
-    private fun Additive(): Boolean {
-        return Multiplicative() && AdditivePrim()
+    private fun Additive(): Double? {
+        val left = Multiplicative()
+        return AdditivePrim(left)
     }
 
-    private fun AdditivePrim(): Boolean {
-        if (currentToken?.lexeme == "+" || currentToken?.lexeme == "-") {
+    private fun AdditivePrim(multiplicative: Double?): Double? {
+        if (currentToken?.lexeme == "+") {
             advance()
-            return Multiplicative() && AdditivePrim()
-        } else return true
-    }
-
-    private fun Multiplicative(): Boolean {
-        return Unary() && MultiplicativePrim()
-    }
-
-    private fun MultiplicativePrim(): Boolean {
-        if (currentToken?.lexeme == "*" || currentToken?.lexeme == "/") {
+            return AdditivePrim(Multiplicative()?.let { multiplicative?.plus(it) })
+        } else if (currentToken?.lexeme == "-") {
             advance()
-            return Unary() && MultiplicativePrim()
-        } else return true
+            return AdditivePrim(Multiplicative()?.let { multiplicative?.minus(it) })
+        } else return multiplicative
     }
 
-    private fun Unary(): Boolean {
-        if (currentToken?.lexeme == "+" || currentToken?.lexeme == "-") {
+    private fun Multiplicative(): Double? {
+        val left = Unary()
+        return MultiplicativePrim(left)
+    }
+
+    private fun MultiplicativePrim(unary: Double?): Double? {
+        if (currentToken?.lexeme == "*") {
+            advance()
+            return MultiplicativePrim(Unary()?.let { unary?.times(it) })
+        } else if (currentToken?.lexeme == "/") {
+            advance()
+            return MultiplicativePrim(Unary()?.let { unary?.div(it) })
+        } else return unary
+    }
+
+    private fun Unary(): Double? {
+        if (currentToken?.lexeme == "+") {
             advance()
             return Primary()
+        } else if (currentToken?.lexeme == "-") {
+            advance()
+            return Primary()?.let { -it }
         } else return Primary()
     }
 
-    private fun Primary(): Boolean {
-        if (currentToken?.symbol == INT || currentToken?.symbol == IDENTIFIER) {
+    private fun Primary(): Double? {
+        var name: String? = "y"
+        if (currentToken?.symbol == INT || currentToken?.symbol == REAL_NUM) {
+            val num = currentToken?.lexeme?.toDouble()
             advance()
-            return true
+            return num
+        } else if(currentToken?.symbol == RPAREN && pair == true){
+            pair = false
+            return dictionaryPairs[name]?.second ?: 0.0
+        } else if (currentToken?.symbol == IDENTIFIER) {
+            name = currentToken?.lexeme
+            advance()
+            if (name in dictionaryNum) {
+                return dictionaryNum[name]
+            } else if (name in dictionaryPairs){
+                pair = true
+                return dictionaryPairs[name]?.first ?: 0.0
+            }else throw error("Invalid identifier '$name'")
         } else if (currentToken?.lexeme == "(") {
             advance()
-            if (Additive()){
-                if (currentToken?.lexeme == ")") {
-                    advance()
-                    return true
-                } else return false
-            } else return false
-        } else return false
+            val value = Additive()
+            if (currentToken?.lexeme == ",") {
+                advance()
+                return value
+            }
+            if (currentToken?.lexeme == ")") {
+                advance()
+                return value
+            } else throw error("Unmatched parenthesis")
+
+        } else throw error("Invalid primary")
     }
 
-    private fun CityBlock(): Boolean {
+    private fun CityBlock(): City {
         if (currentToken?.lexeme == "city") {
             advance()
-            return City()
-        } else return false
+            val city = City()
+            return city
+        } else throw error("Invalid city block")
     }
 
-    private fun City(): Boolean {
+    private fun City(): City {
         if (currentToken?.symbol == IDENTIFIER) {
+            val name = currentToken?.lexeme
             advance()
-            return Body()
-        } else return false
+            val body = Body()
+            val city = name?.let { City(it, body) }
+            return city!!
+        } else throw error("Invalid syntax city.")
     }
 
-    private fun Body(): Boolean {
+    private fun Body(): List<Elt> {
         if (currentToken?.symbol == LCURLY) {
             advance()
-            if (Elements()){
-                if (currentToken?.symbol == RCURLY){
-                    advance()
-                    return true
-                } else return false
-            } else return false
-        } else return false
+            val elts = Elements()
+            if (currentToken?.symbol == RCURLY) {
+                advance()
+                return elts
+            } else throw error("Unmatched parenthesis")
+        } else throw error("Invalid city body")
     }
 
-    private fun Elements(): Boolean {
-        return Element() && ElementsTail()
+    private fun Elements(): List<Elt> {
+        val list = mutableListOf<Elt>()
+        val element = Element()
+        list.add(element)
+        val tail = ElementsTail()
+        list.addAll(tail)
+        return list
     }
 
-    private fun ElementsTail(): Boolean {
-        Element() && ElementsTail()
-        return true
+    private fun ElementsTail(): MutableList<Elt> {
+        val list = mutableListOf<Elt>()
+        if (currentToken?.symbol == RCURLY) {
+            return list
+        }
+        var element = Element()
+        list.add(element)
+        if (currentToken?.lexeme == "building" || currentToken?.lexeme == "road" || currentToken?.lexeme == "park" || currentToken?.lexeme == "river" || currentToken?.lexeme == "tree"  || currentToken?.lexeme == "junction" || currentToken?.lexeme == "marker" || currentToken?.lexeme == "parking") {
+            val tail = ElementsTail()
+            list.addAll(tail)
+            return list
+        } else return list
     }
 
-    private fun Element(): Boolean {
-        if (Block()){
-            return true
-        } else if (Command()) {
-            return true
-        } else if (Loop()) {
-            return true
-        } else if (DefineP()) {
-            return true
-        } else if (Marker()) {
-            return true
-        } else if (Conditions()) {
-            return true
-        } else return false
+    private fun Element(): Elt {
+        val elt = Block()
+        return elt
+
     }
 
-    private fun Block(): Boolean {
-        if (BlockTypeWid()){
+    private fun Block(): Elt {
+        if (currentToken?.lexeme == "building" || currentToken?.lexeme == "road" || currentToken?.lexeme == "park" || currentToken?.lexeme == "river" || currentToken?.lexeme == "marker" || currentToken?.lexeme == "parking") {
+            val type = currentToken?.lexeme
+            advance()
             if (currentToken?.symbol == IDENTIFIER) {
+                val name = currentToken?.lexeme
                 advance()
                 if (currentToken?.symbol == LCURLY) {
                     advance()
-                    if (BlockStatementList()) {
-                        if (currentToken?.symbol == RCURLY) {
+                    val list = BlockStatementList()
+                    if (currentToken?.symbol == RCURLY) {
+                        advance()
+                        if (currentToken?.symbol == SEMICOLON) {
                             advance()
-                            if (currentToken?.symbol == SEMICOLON) {
-                                advance()
-                                return true
-                            } else return false
-                        } else return false
-                    } else return false
-                } else return false
-            } else return false
+                            if (type != null && name != null && list.isNotEmpty()) {
+                                val el = Elt(type, name, list)
+                                return el
+                            } else throw error("Invalid element")
+                        } else throw error("Missing semicolon")
+                    } else throw error("Unmatched parenthesis")
+                } else throw error("Missing parenthesis")
+            } else throw error("Invalid element")
         } else if (currentToken?.lexeme == "tree") {
+            val type = currentToken?.lexeme
             advance()
             if (currentToken?.symbol == LCURLY) {
                 advance()
-                if (BlockStatementList()) {
-                    if (currentToken?.symbol == RCURLY) {
-                        advance()
-                        if (currentToken?.symbol == SEMICOLON) {
-                            advance()
-                            return true
-                        } else return false
-                    } else return false
-                } else return false
-            } else return false
-        } else if (currentToken?.lexeme == "junction") {
-            advance()
-            if (currentToken?.symbol == LCURLY) {
-                advance()
-                if (BlockStatementList()) {
-                    if (currentToken?.symbol == RCURLY) {
-                        advance()
-                        if (currentToken?.symbol == SEMICOLON) {
-                            advance()
-                            return true
-                        } else return false
-                    } else return false
-                } else return false
-            } else return false
-        } else return false
-    }
-
-    private fun BlockStatementList(): Boolean {
-        BlockStatement() && BlockStatementList()
-        return true
-    }
-
-    private fun BlockStatement(): Boolean {
-        if (Command()) {
-            return true
-        } else if (Let()) {
-            return true
-        } else if (CallP()) {
-            return true
-        } else if (Loop()) {
-            return true
-        } else if (Meta()) {
-            return true
-        } else if (Conditions()) {
-            return true
-        } else return false
-    }
-
-    private fun BlockTypeWid(): Boolean {
-        if (currentToken?.lexeme == "building") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "road") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "park") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "river") {
-            advance()
-            return true
-        } else return false
-    }
-
-    private fun Command(): Boolean {
-        return CommandType() && Parameter()
-    }
-
-    private fun CommandType(): Boolean {
-        if (currentToken?.lexeme == "line") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "bend") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "box") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "circ") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "polyline") {
-            advance()
-            return true
-        } else if (currentToken?.lexeme == "polyspline") {
-            advance()
-            return true
-        } else return false
-    }
-
-    private fun Loop(): Boolean {
-        if (LoopList() && Body()) {
-            if (currentToken?.symbol == SEMICOLON){
-                advance()
-                return true
-            } else return false
-        } else return false
-    }
-
-    private fun LoopList(): Boolean {
-        if (ForLoop()) {
-            return true
-        } else if (ForeachLoop()) {
-            return true
-        } else return false
-    }
-
-    private fun ForLoop(): Boolean {
-        if (currentToken?.lexeme == "for") {
-            advance()
-            if (currentToken?.symbol == IDENTIFIER) {
-                advance()
-                if (currentToken?.symbol == ASSIGN) {
+                val list = BlockStatementList()
+                if (currentToken?.symbol == RCURLY) {
                     advance()
-                    if (currentToken?.symbol == INT) {
-                        advance()
-                        if (currentToken?.lexeme == "to") {
-                            advance()
-                            if (currentToken?.symbol == INT) {
-                                advance()
-                                return true
-                            } else return false
-                        } else return false
-                    } else return false
-                } else return false
-            } else return false
-        } else return false
-    }
-
-    private fun ForeachLoop(): Boolean {
-        if (currentToken?.lexeme == "foreach") {
-            advance()
-            if (currentToken?.symbol == IDENTIFIER) {
-                advance()
-                if (currentToken?.lexeme == "in") {
-                    advance()
-                    if (currentToken?.symbol == IDENTIFIER) {
-                        advance()
-                        return true
-                    } else return false
-                } else return false
-            } else return false
-        } else return false
-    }
-
-    private fun Meta(): Boolean {
-        if (currentToken?.lexeme == "set") {
-            advance()
-            if (currentToken?.symbol == LPAREN) {
-                advance()
-                if (currentToken?.symbol == IDENTIFIER) {
-                    advance()
-                    if (currentToken?.symbol == COMMA) {
-                        advance()
-                        if (Additive()) {
-                            if (currentToken?.symbol == RPAREN) {
-                                advance()
-                                if (currentToken?.symbol == SEMICOLON) {
-                                    advance()
-                                    return true
-                                } else return false
-                            } else return false
-                        } else return false
-                    } else return false
-                } else return false
-            } else return false
-        } else return false
-    }
-
-    private fun Conditions(): Boolean {
-        if (currentToken?.lexeme == "if") {
-            advance()
-            if (currentToken?.symbol == LPAREN) {
-                advance()
-                if (Condition()) {
-                    if (currentToken?.symbol == RPAREN) {
-                        advance()
-                        if (Body()) {
-                            if (ElseStatement()){
-                                return true
-                            } else return false
-                        } else return false
-                    } else return false
-                } else return false
-            } else return false
-        } else return false
-    }
-
-    private fun Condition(): Boolean {
-        if (Additive() && Compare() && Additive()) {
-            return true
-        } else return CallP()
-    }
-
-    private fun Compare(): Boolean {
-        if (currentToken?.symbol == LESS) {
-            advance()
-            return true
-        } else if (currentToken?.symbol == LESS_EQUAL) {
-            advance()
-            return true
-        } else if (currentToken?.symbol == EQUAL) {
-            advance()
-            return true
-        } else if (currentToken?.symbol == NOT_EQUAL) {
-            advance()
-            return true
-        } else if (currentToken?.symbol == BIGGER_EQUAL) {
-            advance()
-            return true
-        } else if (currentToken?.symbol == BIGGER) {
-            advance()
-            return true
-        } else return false
-    }
-
-    private fun ElseStatement(): Boolean {
-        if (currentToken?.lexeme == "else") {
-            advance()
-            if (Body()){
-                if (currentToken?.symbol == SEMICOLON) {
-                    advance()
-                    return true
-                } else return false
-            } else return false
-        } else return true
-    }
-
-    private fun DefineP(): Boolean {
-        if (currentToken?.lexeme == "procedure") {
-            advance()
-            if (currentToken?.symbol == IDENTIFIER) {
-                advance()
-                if (Parameter() && Body()) {
                     if (currentToken?.symbol == SEMICOLON) {
                         advance()
-                        return true
-                    } else return false
-                } else return false
-            } else return false
-        } else return false
-    }
-
-    private fun Marker(): Boolean {
-        if (currentToken?.lexeme == "marker") {
+                        val name = "/"
+                        if (type != null && list.isNotEmpty()) {
+                            val el = Elt(type, name, list)
+                            return el
+                        } else throw error("Invalid element")
+                    } else throw error("Missing semicolon")
+                } else throw error("Unmatched parenthesis")
+            } else throw error("Missing parenthesis")
+        } else if (currentToken?.lexeme == "junction") {
+            val type = currentToken?.lexeme
             advance()
-            return MarkerTail()
-        } else return false
-    }
-
-    private fun MarkerTail(): Boolean {
-        if (currentToken?.symbol == IDENTIFIER) {
-            advance()
-            if (Parameter() && MarkerBody()) {
-                if (currentToken?.symbol == SEMICOLON) {
-                    advance()
-                    return true
-                } else return false
-            } else return false
-        } else if (Parameter() && MarkerBody()) {
-            if (currentToken?.symbol == SEMICOLON) {
+            if (currentToken?.symbol == LCURLY) {
                 advance()
-                return true
-            } else return false
-        } else return false
+                val list = BlockStatementList()
+                if (currentToken?.symbol == RCURLY) {
+                    advance()
+                    if (currentToken?.symbol == SEMICOLON) {
+                        advance()
+                        val name = "/"
+                        if (type != null && list.isNotEmpty()) {
+                            val el = Elt(type, name, list)
+                            return el
+                        } else throw error("Invalid element")
+                    } else throw error("Missing semicolon")
+                } else throw error("Unmatched parenthesis")
+            } else throw error("Missing parenthesis")
+        } else throw error("Invalid element")
     }
 
-    private fun MarkerBody(): Boolean {
-        Body()
-        return true
-    }
-
-    fun parse(): Boolean {
-        if (Program()) {
-            println("bravo ti ga tebi")
-            return true
-        } else {
-            println("jebiga...")
-            return false
+    private fun BlockStatementList(): List<Commands?> {
+        val list = mutableListOf<Commands?>()
+        list.add(BlockStatement())
+        if (currentToken?.lexeme == "line" || currentToken?.lexeme == "bend" || currentToken?.lexeme == "box" || currentToken?.lexeme == "circ" || currentToken?.lexeme == "polyline" || currentToken?.lexeme == "polyspline" || currentToken?.lexeme == "mark") {
+            list.addAll(BlockStatementList())
         }
+        return list
+    }
+
+    private fun BlockStatement(): Commands? {
+        while (currentToken?.lexeme == "let") {
+            val let = Let()
+        }
+        if (currentToken?.lexeme == "line" || currentToken?.lexeme == "bend" || currentToken?.lexeme == "box" || currentToken?.lexeme == "circ" || currentToken?.lexeme == "polyline" || currentToken?.lexeme == "polyspline" || currentToken?.lexeme == "mark") {
+            return Command()
+        } else throw error("Invalid block statement")
+    }
+
+    private fun BlockTypeWid(): String? {
+        if (currentToken?.lexeme == "building") {
+            val identifier = currentToken?.lexeme
+            advance()
+            return identifier
+        } else if (currentToken?.lexeme == "road") {
+            val identifier = currentToken?.lexeme
+            advance()
+            return identifier
+        } else if (currentToken?.lexeme == "park") {
+            val identifier = currentToken?.lexeme
+            advance()
+            return identifier
+        } else if (currentToken?.lexeme == "river") {
+            val identifier = currentToken?.lexeme
+            advance()
+            return identifier
+        } else throw error("Invalid block type")
+    }
+
+    private fun Command(): Commands? {
+        val type = CommandType()
+        val params = Parameter()
+        val command = type?.let { Commands(it, params) }
+        return command
+    }
+
+    private fun CommandType(): String? {
+        if (currentToken?.lexeme == "line") {
+            val type = currentToken?.lexeme
+            advance()
+            return type
+        } else if (currentToken?.lexeme == "bend") {
+            val type = currentToken?.lexeme
+            advance()
+            return type
+        } else if (currentToken?.lexeme == "box") {
+            val type = currentToken?.lexeme
+            advance()
+            return type
+        } else if (currentToken?.lexeme == "circ") {
+            val type = currentToken?.lexeme
+            advance()
+            return type
+        } else if (currentToken?.lexeme == "polyline") {
+            val type = currentToken?.lexeme
+            advance()
+            return type
+        } else if (currentToken?.lexeme == "polyspline") {
+            val type = currentToken?.lexeme
+            advance()
+            return type
+        } else if (currentToken?.lexeme == "mark") {
+            val type = currentToken?.lexeme
+            advance()
+            return type
+        } else throw error("Invalid command type")
+    }
+
+    fun parse(): City {
+        val city = Program()
+        return city
     }
 }
+
 
 fun tokenName(symbol: Int) = when (symbol) {
     CITY -> "CITY"
@@ -1100,7 +1320,8 @@ fun printTokens(scanner: Scanner) {
 
 
 fun main() {
-    val filename = "C:\\Users\\keser\\parkingmate-studentski-projekt\\git2\\parkingmate-studentski-projekt\\prevajanje\\src\\main\\input.txt"
+    val filename =
+        "C:\\Users\\keser\\parkingmate-studentski-projekt\\git2\\parkingmate-studentski-projekt\\prevajanje\\src\\main\\input.txt"
 
     val file = File(filename)
     if (!file.exists()) {
@@ -1112,9 +1333,7 @@ fun main() {
     val scanner = Scanner(CityAutomaton, inputStream)
     val parser = Parser(scanner)
 
-    if (parser.parse()) {
-        println("accept")
-    } else println("error")
+    val result = parser.parse()
+    println(result.toGeoJSON())
 
-    //printTokens(scanner)
 }
