@@ -365,3 +365,27 @@ Za dostop do Azure storitev brezplačno sem sledil naslednjim korakom:
 
     Kapaciteta je 64 GiB in je razvidno v stolpcu **Size(GiB)** 
     Disk ima 64 gibibajtov (GiB) prostora, kar ustreza približno 68,7 GB.
+
+
+3. Kje preverimo stanje trenutne porabe virov v naši naročnini ("Azure for students") ?
+
+    Na home page kjer vidimo vse naše naprave i vire izberemo opcijo *Subscriptions*
+    ![Slika 28](ustvarjanjeVM/slika16VM.png)
+
+    Ko smo opcijo *Subscription* izbrali, se otvori seznam kjer izbiramo naše naročnine
+    ![Slika 28](ustvarjanjeVM/slika17VM.png)
+
+    Izberemo naročnino in v oknu ki se odpre izberemo opcijo **Cost management** znotraj katere poiščemo **Cost analysis**
+    ![Slika 28](ustvarjanjeVM/slika18VM.png)
+    Graf prikazuje pregled trenutne porabe virov v naročnini "Azure for Students" za izbrano časovno obdobje. Podatki vključujejo stroške po posameznih storitvah, ki omogočajo spremljanje in optimizacijo porabe virov v oblaku, torej tukaj lahko vidimo:
+
+    - **Dejanski stroški do danes**: **€0.40**
+    - **Napovedani stroški do konca meseca**: **€0.70**
+    - **Nastavljen proračun**: *ni določen*
+    - **Temno zelena**: dejanski stroški
+    - **Svetlo zelena**: napovedani stroški (če se poraba nadaljuje v istem tempu)
+    
+    - Virtual Network €0.40   
+    - Bandwidth < €0.01  
+    - Storage  €0.00  
+    - Virtual Machines €0.00   
