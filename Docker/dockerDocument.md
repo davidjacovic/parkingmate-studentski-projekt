@@ -302,3 +302,90 @@ Za dostop do Azure storitev brezplačno sem sledil naslednjim korakom:
     
     Enak postopek tudi jaz kod vodja izvedem za Saro
     ![Slika 24](ustvarjanjeVM/slika10VM.png)
+
+## Analiza in raziskovanje portala Azrue
+
+1. Kje in kako omogočite "port forwarding"?
+
+    Port forwarding oziroma posredovanje vrat omogočimo med ustvarjanjem navidezne naprave v Azure portalu. Izberemo možnost:
+    - **Allow selected ports**
+    - Nato pa označimo, katere vtičnice želimo odpreti (v našem primeru **SSH (22)**).
+
+    To omogoča dostop do navidezne naprave iz zunanjega sveta prek izbranih vrat.
+
+    Ko smo ustvarili novo navidezno napravo v oddelku **Network** poiščemo **Network setting**, kaj nam prikaže naslednjo stran
+    ![Slika 25](ustvarjanjeVM/slika11VM.png)
+    Klikom na gumb *Create port rule* dobimo izbiro med Inbound in Outbound vtičnicom
+    ![Slika 26](ustvarjanjeVM/slika12VM.png)
+    Saj naša aplikacija teče na vtičnicah 3002(backend) in 3000 (frontend), moram ustvariti nov *Inbound port rule*
+
+    ![Slika 27](ustvarjanjeVM/slika13VM.png)
+
+    
+- **Source: Any**  
+    To pomeni, da dovolimo dostop iz vseh naslovov IP. Če želimo dostop omejiti, lahko izberemo "IP Addresses" in določimo le določene IP-je, ki imajo pravico dostopa. V našem projekto je privzeta vrednost Any
+
+- **Source port ranges: \***  
+    Z vrednostjo * dovolimo promet iz vseh možnih izvornih portov.
+    To pomeni, da lahko povezava pride iz kateregakoli izhodnega  porta na napravi odjemalca.
+    Običajno se izhodni porti na strani uporabnika dodeljujejo naključno, zato je pustiti to polje kot * priporočeno
+
+- **Destination: Any**  
+    Dovolimo, da se pravilo nanaša na vse interne IP-je naprave. To pomeni ne omejujem dostopa na določen IP znotraj Azure naprave — dovoli na vse.
+
+- **Service: Custom**
+    Dovoli nam da ročno izberemo število vtičnice in protokol
+
+- **Destination port ranges: 3000**  
+    Ta nastavitev določa, na katerem portu navidezne naprave bo dovoljen dostop iz zunanjega sveta.
+
+- **Protocol: TCP**  
+    Izberemo protokol TCP, ki je običajen za HTTP promet.
+
+- **Action: Allow**  
+    Nastavimo, da se promet dovoli (ne zavrne), če ustreza kriteriju.
+
+- **Priority: 310**  
+     Vsako pravilo ima prioriteto. Nižja številka pomeni višjo prioriteto.
+
+- **Name: AllowAnyCustom3000Inbound**  
+    Ime pravila, ki ga lahko sami določimo.
+
+    Podobno pravilo lahko ustvarimo tudi za backend aplikacijo na portu 3002, le da tam nastavimo `Destination port ranges: 3002` in prioriteto.
+   ![Slika 28](ustvarjanjeVM/slika14VM.png)
+
+2. Kakšen tip diska je bil dodan vaši navidezni napravi in kakšna je njegova kapaciteta ?
+
+    Ko smo ustvarili novo navidezno napravo v oddelku **Settings** poiščemo **Disk**, kaj nam prikaže naslednjo stran
+
+    ![Slika 28](ustvarjanjeVM/slika15VM.png)
+
+    Tip diska je Premium SSD LRS, to preverimo v stolpcu **Storage type**
+    To pomeni, da gre za visoko zmogljiv SSD disk z lokalno redundanco (LRS = Locally Redundant Storage), kar zagotavlja zanesljivost znotraj ene regije. *Premium* pomeni, da gre za disk višje zmogljivosti z večjo zanesljivostjo in hitrostjo. To pomeni, da je disk replikiran trikrat znotraj iste fizične lokacije (regije). Če ena fizična naprava odpove, se podatki še vedno nahajajo na drugi znotraj iste regije.
+
+    Kapaciteta je 64 GiB in je razvidno v stolpcu **Size(GiB)** 
+    Disk ima 64 gibibajtov (GiB) prostora, kar ustreza približno 68,7 GB.
+
+
+3. Kje preverimo stanje trenutne porabe virov v naši naročnini ("Azure for students") ?
+
+    Na home page kjer vidimo vse naše naprave i vire izberemo opcijo *Subscriptions*
+    ![Slika 28](ustvarjanjeVM/slika16VM.png)
+
+    Ko smo opcijo *Subscription* izbrali, se otvori seznam kjer izbiramo naše naročnine
+    ![Slika 28](ustvarjanjeVM/slika17VM.png)
+
+    Izberemo naročnino in v oknu ki se odpre izberemo opcijo **Cost management** znotraj katere poiščemo **Cost analysis**
+    ![Slika 28](ustvarjanjeVM/slika18VM.png)
+    Graf prikazuje pregled trenutne porabe virov v naročnini "Azure for Students" za izbrano časovno obdobje. Podatki vključujejo stroške po posameznih storitvah, ki omogočajo spremljanje in optimizacijo porabe virov v oblaku, torej tukaj lahko vidimo:
+
+    - **Dejanski stroški do danes**: **€0.40**
+    - **Napovedani stroški do konca meseca**: **€0.70**
+    - **Nastavljen proračun**: *ni določen*
+    - **Temno zelena**: dejanski stroški
+    - **Svetlo zelena**: napovedani stroški (če se poraba nadaljuje v istem tempu)
+    
+    - Virtual Network €0.40   
+    - Bandwidth < €0.01  
+    - Storage  €0.00  
+    - Virtual Machines €0.00   
