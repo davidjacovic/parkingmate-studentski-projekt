@@ -1,5 +1,7 @@
 package org.example
 
+import com.sun.jdi.connect.Connector
+import jdk.incubator.vector.VectorOperators
 import java.io.InputStream
 import java.io.File
 
@@ -77,7 +79,7 @@ object CityAutomaton : DFA {
     override var finalStates = setOf(
         5, 8, 10, 14, 17, 18, 19, 20, 21, 22, 23, 24,
         26, 27, 28, 30, 38, 47, 50, 53, 57, 67, 69, 72, 74, 75, 79, 82,
-        86, 90, 98, 107, 110, 117, 123, 124, 125, 126, 127, 128, 130, 131,
+        86, 90, 98, 107, 110, 117, 123, 124, 125, 126, 127, 128, 129, 130, 131,
         132, 133, 140, 150
     )
 
@@ -373,7 +375,11 @@ object CityAutomaton : DFA {
 }
 
 data class Token(val symbol: Int, val lexeme: String, val startRow: Int, val startColumn: Int)
-
+/*
+*
+*   ===================SCANNER===================
+*
+*/
 class Scanner(private val automaton: DFA, private val stream: InputStream) {
     private var last: Int? = null
     private var row = 1
@@ -445,6 +451,552 @@ class Scanner(private val automaton: DFA, private val stream: InputStream) {
     }
 }
 
+/*
+*
+*   ===================PARSER===================
+*
+*/
+class Parser(private val scanner: Scanner) {
+    private var currentToken: Token? = scanner.getToken()
+
+    private fun advance() {
+        currentToken = try {
+            scanner.getToken()
+        } catch (e: NoSuchElementException) {
+            null
+        }
+    }
+
+    private fun expectLexeme(expected: String) {
+        if (currentToken?.lexeme != expected) {
+            error("Expected '$expected' but found '${currentToken?.lexeme}'")
+        }
+    }
+
+    fun Program(): Boolean {
+        if (!(Declarations() && CityBlock())){
+            return false
+        }
+
+        if (currentToken != null) {
+            error("Expected end of input but found ${currentToken!!.lexeme}")
+            return false
+        } else return true
+    }
+
+    private fun Declarations() : Boolean {
+        Let()
+        return true
+    }
+
+    private fun Let(): Boolean {
+        if (!(Syntax() && ValueType())){
+            return false
+        }
+        if (currentToken?.symbol == SEMICOLON) {
+            advance()
+            return true
+        } else return false
+    }
+
+    private fun Syntax(): Boolean {
+        if (currentToken?.lexeme == "let") {
+            advance()
+            if (currentToken?.symbol == IDENTIFIER) {
+                advance()
+                if (currentToken?.lexeme == "=") {
+                    advance()
+                    return true
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun ValueType(): Boolean {
+        if (currentToken?.lexeme == "new") {
+            advance()
+            if (currentToken?.lexeme == "(") {
+                advance()
+                if (!Argument()){
+                    return false
+                } else if (currentToken?.lexeme == ",") {
+                    advance()
+                    if (!Argument()){
+                        return false
+                    } else if (currentToken?.lexeme == ")") {
+                        advance()
+                        return true
+                    } else return false
+                } else return false
+            } else return false
+        } else if (Argument()){
+            return true
+        } else if (CallP()){
+            return true
+        } else if (Link()){
+            return true
+        } else return false
+    }
+
+    private fun Link(): Boolean {
+        if (currentToken?.lexeme == "link") {
+            advance()
+            if (currentToken?.lexeme == "(") {
+                advance()
+                if (currentToken?.symbol == IDENTIFIER) { //treba LINK_TOKEN
+                    advance()
+                    if (currentToken?.lexeme == ")") {
+                        advance()
+                        return true
+                    } else return false
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun CallP(): Boolean {
+        if (currentToken?.lexeme == "call") {
+            advance()
+            if (currentToken?.symbol == IDENTIFIER) {
+                advance()
+                if (Parameter()) {
+                    if (currentToken?.lexeme == ";") {
+                        advance()
+                        return true
+                    } else return false
+                } else return false
+            } else return false
+        }else return false
+    }
+
+    private fun Parameter(): Boolean {
+        if (currentToken?.lexeme == "(") {
+            advance()
+            if (Arguments()) {
+                if (currentToken?.lexeme == ")") {
+                    advance()
+                    return true
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun Arguments(): Boolean {
+        return (Argument() && ArgumentsTail())
+    }
+
+    private fun ArgumentsTail(): Boolean {
+        if (currentToken?.lexeme == ",") {
+            advance()
+            if (!Argument()) {
+                return false
+            } else return ArgumentsTail()
+        } else return true
+    }
+
+    private fun Argument(): Boolean {
+        return Additive()
+    }
+
+    private fun Additive(): Boolean {
+        return Multiplicative() && AdditivePrim()
+    }
+
+    private fun AdditivePrim(): Boolean {
+        if (currentToken?.lexeme == "+" || currentToken?.lexeme == "-") {
+            advance()
+            return Multiplicative() && AdditivePrim()
+        } else return true
+    }
+
+    private fun Multiplicative(): Boolean {
+        return Unary() && MultiplicativePrim()
+    }
+
+    private fun MultiplicativePrim(): Boolean {
+        if (currentToken?.lexeme == "*" || currentToken?.lexeme == "/") {
+            advance()
+            return Unary() && MultiplicativePrim()
+        } else return true
+    }
+
+    private fun Unary(): Boolean {
+        if (currentToken?.lexeme == "+" || currentToken?.lexeme == "-") {
+            advance()
+            return Primary()
+        } else return Primary()
+    }
+
+    private fun Primary(): Boolean {
+        if (currentToken?.symbol == INT || currentToken?.symbol == IDENTIFIER) {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "(") {
+            advance()
+            if (Additive()){
+                if (currentToken?.lexeme == ")") {
+                    advance()
+                    return true
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun CityBlock(): Boolean {
+        if (currentToken?.lexeme == "city") {
+            advance()
+            return City()
+        } else return false
+    }
+
+    private fun City(): Boolean {
+        if (currentToken?.symbol == IDENTIFIER) {
+            advance()
+            return Body()
+        } else return false
+    }
+
+    private fun Body(): Boolean {
+        if (currentToken?.symbol == LCURLY) {
+            advance()
+            if (Elements()){
+                if (currentToken?.symbol == RCURLY){
+                    advance()
+                    return true
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun Elements(): Boolean {
+        return Element() && ElementsTail()
+    }
+
+    private fun ElementsTail(): Boolean {
+        Element() && ElementsTail()
+        return true
+    }
+
+    private fun Element(): Boolean {
+        if (Block()){
+            return true
+        } else if (Command()) {
+            return true
+        } else if (Loop()) {
+            return true
+        } else if (DefineP()) {
+            return true
+        } else if (Marker()) {
+            return true
+        } else if (Conditions()) {
+            return true
+        } else return false
+    }
+
+    private fun Block(): Boolean {
+        if (BlockTypeWid()){
+            if (currentToken?.symbol == IDENTIFIER) {
+                advance()
+                if (currentToken?.symbol == LCURLY) {
+                    advance()
+                    if (BlockStatementList()) {
+                        if (currentToken?.symbol == RCURLY) {
+                            advance()
+                            if (currentToken?.symbol == SEMICOLON) {
+                                advance()
+                                return true
+                            } else return false
+                        } else return false
+                    } else return false
+                } else return false
+            } else return false
+        } else if (currentToken?.lexeme == "tree") {
+            advance()
+            if (currentToken?.symbol == LCURLY) {
+                advance()
+                if (BlockStatementList()) {
+                    if (currentToken?.symbol == RCURLY) {
+                        advance()
+                        if (currentToken?.symbol == SEMICOLON) {
+                            advance()
+                            return true
+                        } else return false
+                    } else return false
+                } else return false
+            } else return false
+        } else if (currentToken?.lexeme == "junction") {
+            advance()
+            if (currentToken?.symbol == LCURLY) {
+                advance()
+                if (BlockStatementList()) {
+                    if (currentToken?.symbol == RCURLY) {
+                        advance()
+                        if (currentToken?.symbol == SEMICOLON) {
+                            advance()
+                            return true
+                        } else return false
+                    } else return false
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun BlockStatementList(): Boolean {
+        BlockStatement() && BlockStatementList()
+        return true
+    }
+
+    private fun BlockStatement(): Boolean {
+        if (Command()) {
+            return true
+        } else if (Let()) {
+            return true
+        } else if (CallP()) {
+            return true
+        } else if (Loop()) {
+            return true
+        } else if (Meta()) {
+            return true
+        } else if (Conditions()) {
+            return true
+        } else return false
+    }
+
+    private fun BlockTypeWid(): Boolean {
+        if (currentToken?.lexeme == "building") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "road") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "park") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "river") {
+            advance()
+            return true
+        } else return false
+    }
+
+    private fun Command(): Boolean {
+        return CommandType() && Parameter()
+    }
+
+    private fun CommandType(): Boolean {
+        if (currentToken?.lexeme == "line") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "bend") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "box") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "circ") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "polyline") {
+            advance()
+            return true
+        } else if (currentToken?.lexeme == "polyspline") {
+            advance()
+            return true
+        } else return false
+    }
+
+    private fun Loop(): Boolean {
+        if (LoopList() && Body()) {
+            if (currentToken?.symbol == SEMICOLON){
+                advance()
+                return true
+            } else return false
+        } else return false
+    }
+
+    private fun LoopList(): Boolean {
+        if (ForLoop()) {
+            return true
+        } else if (ForeachLoop()) {
+            return true
+        } else return false
+    }
+
+    private fun ForLoop(): Boolean {
+        if (currentToken?.lexeme == "for") {
+            advance()
+            if (currentToken?.symbol == IDENTIFIER) {
+                advance()
+                if (currentToken?.symbol == ASSIGN) {
+                    advance()
+                    if (currentToken?.symbol == INT) {
+                        advance()
+                        if (currentToken?.lexeme == "to") {
+                            advance()
+                            if (currentToken?.symbol == INT) {
+                                advance()
+                                return true
+                            } else return false
+                        } else return false
+                    } else return false
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun ForeachLoop(): Boolean {
+        if (currentToken?.lexeme == "foreach") {
+            advance()
+            if (currentToken?.symbol == IDENTIFIER) {
+                advance()
+                if (currentToken?.lexeme == "in") {
+                    advance()
+                    if (currentToken?.symbol == IDENTIFIER) {
+                        advance()
+                        return true
+                    } else return false
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun Meta(): Boolean {
+        if (currentToken?.lexeme == "set") {
+            advance()
+            if (currentToken?.symbol == LPAREN) {
+                advance()
+                if (currentToken?.symbol == IDENTIFIER) {
+                    advance()
+                    if (currentToken?.symbol == COMMA) {
+                        advance()
+                        if (Additive()) {
+                            if (currentToken?.symbol == RPAREN) {
+                                advance()
+                                if (currentToken?.symbol == SEMICOLON) {
+                                    advance()
+                                    return true
+                                } else return false
+                            } else return false
+                        } else return false
+                    } else return false
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun Conditions(): Boolean {
+        if (currentToken?.lexeme == "if") {
+            advance()
+            if (currentToken?.symbol == LPAREN) {
+                advance()
+                if (Condition()) {
+                    if (currentToken?.symbol == RPAREN) {
+                        advance()
+                        if (Body()) {
+                            if (ElseStatement()){
+                                return true
+                            } else return false
+                        } else return false
+                    } else return false
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun Condition(): Boolean {
+        if (Additive() && Compare() && Additive()) {
+            return true
+        } else return CallP()
+    }
+
+    private fun Compare(): Boolean {
+        if (currentToken?.symbol == LESS) {
+            advance()
+            return true
+        } else if (currentToken?.symbol == LESS_EQUAL) {
+            advance()
+            return true
+        } else if (currentToken?.symbol == EQUAL) {
+            advance()
+            return true
+        } else if (currentToken?.symbol == NOT_EQUAL) {
+            advance()
+            return true
+        } else if (currentToken?.symbol == BIGGER_EQUAL) {
+            advance()
+            return true
+        } else if (currentToken?.symbol == BIGGER) {
+            advance()
+            return true
+        } else return false
+    }
+
+    private fun ElseStatement(): Boolean {
+        if (currentToken?.lexeme == "else") {
+            advance()
+            if (Body()){
+                if (currentToken?.symbol == SEMICOLON) {
+                    advance()
+                    return true
+                } else return false
+            } else return false
+        } else return true
+    }
+
+    private fun DefineP(): Boolean {
+        if (currentToken?.lexeme == "procedure") {
+            advance()
+            if (currentToken?.symbol == IDENTIFIER) {
+                advance()
+                if (Parameter() && Body()) {
+                    if (currentToken?.symbol == SEMICOLON) {
+                        advance()
+                        return true
+                    } else return false
+                } else return false
+            } else return false
+        } else return false
+    }
+
+    private fun Marker(): Boolean {
+        if (currentToken?.lexeme == "marker") {
+            advance()
+            return MarkerTail()
+        } else return false
+    }
+
+    private fun MarkerTail(): Boolean {
+        if (currentToken?.symbol == IDENTIFIER) {
+            advance()
+            if (Parameter() && MarkerBody()) {
+                if (currentToken?.symbol == SEMICOLON) {
+                    advance()
+                    return true
+                } else return false
+            } else return false
+        } else if (Parameter() && MarkerBody()) {
+            if (currentToken?.symbol == SEMICOLON) {
+                advance()
+                return true
+            } else return false
+        } else return false
+    }
+
+    private fun MarkerBody(): Boolean {
+        Body()
+        return true
+    }
+
+    fun parse(): Boolean {
+        if (Program()) {
+            println("bravo ti ga tebi")
+            return true
+        } else {
+            println("jebiga...")
+            return false
+        }
+    }
+}
+
 fun tokenName(symbol: Int) = when (symbol) {
     CITY -> "CITY"
     CALL -> "CALL"
@@ -505,6 +1057,7 @@ fun printTokens(scanner: Scanner) {
                 val keywordSymbol = when (token.lexeme) {
                     "city" -> CITY
                     "call" -> CALL
+                    "circ" -> CIRC
                     "let" -> LET
                     "link" -> LINK
                     "line" -> LINE
@@ -547,7 +1100,7 @@ fun printTokens(scanner: Scanner) {
 
 
 fun main() {
-    val filename = "src/input.txt"
+    val filename = "C:\\Users\\keser\\parkingmate-studentski-projekt\\git2\\parkingmate-studentski-projekt\\prevajanje\\src\\main\\input.txt"
 
     val file = File(filename)
     if (!file.exists()) {
@@ -557,6 +1110,11 @@ fun main() {
 
     val inputStream = file.inputStream()
     val scanner = Scanner(CityAutomaton, inputStream)
+    val parser = Parser(scanner)
 
-    printTokens(scanner)
+    if (parser.parse()) {
+        println("accept")
+    } else println("error")
+
+    //printTokens(scanner)
 }
