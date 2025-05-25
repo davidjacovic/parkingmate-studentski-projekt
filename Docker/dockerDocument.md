@@ -151,3 +151,64 @@ Za dostop do Azure storitev brezplačno sem sledil naslednjim korakom:
 2. Po kliku na gumb *Start free* se je odprla stran za vnos študentskega računa.
 3. Potrdil sem svojo identiteto in dokončal registracijo.
 4. Po uspešni prijavi sem prejel 100 $ kredita in dostop do različnih Azure storitev (vključno z Virtual Machines).
+
+## Ustvarjanje Azure navidezne naprave
+
+1. Sedaj, ko sem ustvaril račun, sem obiskal povezavo:  
+[https://portal.azure.com/#view/Microsoft_Azure_Billing/FreeServicesBlade](https://portal.azure.com/#view/Microsoft_Azure_Billing/FreeServicesBlade) ter na plošči **Linux Virtual Machine** kliknil gumb *Create* 
+![Slika 17](ustvarjanjeVM/slika1VM.png)
+
+
+2. Ob kliku na gumb *Create* iz koraka 1, se naj odpre naslednja stran, kjer sem izbral lastnosti navidezne naprave:  
+![Slika 18](ustvarjanjeVM/slika2VM.png)
+
+    Tukaj lahko vidimo:
+    - tip naročnine (**Subscription**)
+    - ime vira (**Resource group**)
+    - ime navidezne naprave (**Virtual machine name**),
+    - regijo (**Region**) 
+    - operacijski sistem virtualne mašine (**Image**)
+
+    Ime naprave je usklajeno z imenom projekta pri Projektnem praktikumu.  
+    Operacijski sistem naprave je **Linux**, distribucije **Ubuntu Server 22.04 LTS – x64 Gen2**. Izbrali smo **Ubuntu Server 22.04 LTS – x64 Gen2**, saj gre za stabilno in pogosto uporabljano distribucijo Linuxa, ki je primerna za uporabo v produkcijskem okolju in dobro podprta z orodji, kot je Docker. Različica LTS (Long Term Support) zagotavlja dolgotrajno podporo in varnostne posodobitve.
+
+    Gremo naprej s nastavitami:  
+    ![Slika 18](ustvarjanjeVM/slika3VM.png)
+    Tukaj lahko vidimo:
+    - Velikost naprave (**Size**) – *Standard_B1s - 1 vCPU, 1GiB memory*,
+    - Način autentikacije administratorja (**Authentication type**) - (*Username in Password*)
+    - **Inbound port rules** - (*Allow selected ports*)
+    - **Inbound port** - *SSH(22)*
+
+    ### Zakaj uporabljamo SSH?
+    SSH (Secure Shell) je varen protokol za oddaljeni dostop do strežnika. Omogoča nam, da se povežemo z našo navidezno napravo preko ukazne vrstice in jo upravljamo, kot da bi bili fizično pred njo.
+    Uporaba SSH je pomembna, ker:
+    - zagotavlja varno komunikacijo preko omrežja,
+    - omogoča enostavno upravljanje naprave brez potrebe po grafičnem vmesniku,
+    - omogoča prenos datotek in izvajanje ukazov na daljavo.
+
+    ### Prijava na navidezno napravo preko SSH
+
+    Ko imamo omogočen **SSH port (22)** in nastavljene ustrezne pravice, se lahko na napravo prijavimo z ukazom:
+
+    ```bash
+    ssh uporabnik@ip-naslov-vm
+    ```
+
+    3. Ko sem vse to izbral bom stistnil gumb *Review + Create*, in se potem bo odprlo naslednje okno
+       ![Slika 19](ustvarjanjeVM/slika4VM.png)
+    
+        Tukaj vidimo osnovne informacije o naši napravi
+        - Naročnino (**Subscription**)
+        - Skupina virov (**Resource group**)
+        - Ime navidezne naprave (**Virtual machine name**)
+        - Območje (**Region**)
+        - Operacijski sistem (**Image**)
+        - Velikost (**Size**)
+        - Tip autentikacije (**Authentication type**)
+        - Uporabniško ime ob ustvarjanju navidezne naprave (**Username**)
+        - Public inbound port (**Public inbound port**)
+    
+    4. Ob pritisku na gumb *Create* na sliki v koraku 3, bo se naša navidezna naprava ustvarila, kaj je potrjeno z sporočilom
+    ![Slika 20](ustvarjanjeVM/slika5VM.png)
+    
