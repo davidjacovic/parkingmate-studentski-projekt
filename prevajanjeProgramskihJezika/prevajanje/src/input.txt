@@ -1,0 +1,16 @@
+city MyCity {
+    let buildings = 5;
+    new park1, park2;
+    link http://example.com/path?query=123;
+    for i to 10 {
+        set building = building + 1;
+    }
+    if i < 5 {
+        call procedureX();
+    } else {
+        call procedureY();
+    }
+    foreach tree in park1 {
+        set tree = tree - 1;
+    }
+}
