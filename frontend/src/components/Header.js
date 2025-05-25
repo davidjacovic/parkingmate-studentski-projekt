@@ -17,7 +17,7 @@ function Header() {
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
             <h2 style={{ margin: 0 }}>
                 <Link to="/" style={{ textDecoration: 'none', color: '#333' }}>
-                    Smart Parking
+                    ParkingMate
                 </Link>
             </h2>
             <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -32,8 +32,10 @@ function Header() {
                             Analiza pokrivenosti
                         </Link>
 
+                        <button onClick={handleLogout} style={{ background: 'none', border: 'none', padding: 0, margin: 0, textDecoration: 'none', color: '#007bff', cursor: 'pointer', font: 'inherit' }}>
+                            Logout
+                        </button>
 
-                        <button onClick={handleLogout} style={{ textDecoration: 'none', color: '#007bff' }}>Logout</button>
                     </>
                 ) : (
                     <>
