@@ -1,0 +1,18 @@
+OPIS OSNOVNIH KONSTRUKCIJ JEZIKA IN NJIHOVIH FUNKCIONALNOSTI 
+
+Konstrukti:
+1.	Realna števila  (1 , 3.456, 3.4)
+2.	Nizi "NIZ" (identifier)
+3.	Koordinate (X, Y)
+4.	Bloki (BLOCKS)
+5.	Ukazi:
+5.1.	line(POINT, POINT)
+5.2.	bend(POINT, POINT, ANGLE)
+5.3.	box(POINT, POINT)
+5.4.	circ(POINT, RADIUS)
+5.5.	polyline(POINTS)
+5.6   mark(POINT)
+6.	Konstanta let 
+7.  Spremenjljivke 
+8.	Matematični izrazi
+9.	Validacija (presečišče med objekti)
