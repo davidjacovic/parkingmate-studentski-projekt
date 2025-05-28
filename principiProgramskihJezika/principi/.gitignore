@@ -1,0 +1,5 @@
+.idea/
+.run/
+.gradle/
+build/
+src/main/kotlin/db/config.json
