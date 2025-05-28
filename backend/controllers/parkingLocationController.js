@@ -1,34 +1,21 @@
 var Parking_locationModel = require('../models/parkingLocationModel.js');
 
-/**
- * parking_locationController.js
- *
- * @description :: Server-side logic for managing parking_locations.
- */
 module.exports = {
 
-    /**
-     * parking_locationController.list()
-     */
     list: function (req, res) {
         Parking_locationModel.find(function (err, parking_locations) {
             if (err) {
                 return res.status(500).json({
-                    message: 'Error when getting parking_location.',
+                    message: 'Error when getting parking_locations.',
                     error: err
                 });
             }
-
             return res.json(parking_locations);
         });
     },
 
-    /**
-     * parking_locationController.show()
-     */
     show: function (req, res) {
         var id = req.params.id;
-
         Parking_locationModel.findOne({_id: id}, function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
@@ -36,23 +23,34 @@ module.exports = {
                     error: err
                 });
             }
-
             if (!parking_location) {
                 return res.status(404).json({
                     message: 'No such parking_location'
                 });
             }
-
             return res.json(parking_location);
         });
     },
 
-    /**
-     * parking_locationController.create()
-     */
     create: function (req, res) {
-        var parking_location = new Parking_locationModel({
+        // Pretpostavljamo da u req.body stižu svi podaci, uključujući location sa {type, coordinates}
+        var data = req.body;
 
+        var parking_location = new Parking_locationModel({
+            name: data.name,
+            address: data.address,
+            location: data.location, // očekujemo: { type: "Point", coordinates: [lng, lat] }
+            total_regular_spots: data.total_regular_spots,
+            total_invalid_spots: data.total_invalid_spots,
+            total_bus_spots: data.total_bus_spots,
+            available_regular_spots: data.available_regular_spots,
+            available_invalid_spots: data.available_invalid_spots,
+            available_bus_spots: data.available_bus_spots,
+            created: new Date(),
+            modified: new Date(),
+            description: data.description,
+            hidden: data.hidden,
+            subscriber: data.subscriber
         });
 
         parking_location.save(function (err, parking_location) {
@@ -62,16 +60,13 @@ module.exports = {
                     error: err
                 });
             }
-
             return res.status(201).json(parking_location);
         });
     },
 
-    /**
-     * parking_locationController.update()
-     */
     update: function (req, res) {
         var id = req.params.id;
+        var data = req.body;
 
         Parking_locationModel.findOne({_id: id}, function (err, parking_location) {
             if (err) {
@@ -80,14 +75,27 @@ module.exports = {
                     error: err
                 });
             }
-
             if (!parking_location) {
                 return res.status(404).json({
                     message: 'No such parking_location'
                 });
             }
 
-            
+            // Ažuriraj polja:
+            parking_location.name = data.name !== undefined ? data.name : parking_location.name;
+            parking_location.address = data.address !== undefined ? data.address : parking_location.address;
+            parking_location.location = data.location !== undefined ? data.location : parking_location.location;
+            parking_location.total_regular_spots = data.total_regular_spots !== undefined ? data.total_regular_spots : parking_location.total_regular_spots;
+            parking_location.total_invalid_spots = data.total_invalid_spots !== undefined ? data.total_invalid_spots : parking_location.total_invalid_spots;
+            parking_location.total_bus_spots = data.total_bus_spots !== undefined ? data.total_bus_spots : parking_location.total_bus_spots;
+            parking_location.available_regular_spots = data.available_regular_spots !== undefined ? data.available_regular_spots : parking_location.available_regular_spots;
+            parking_location.available_invalid_spots = data.available_invalid_spots !== undefined ? data.available_invalid_spots : parking_location.available_invalid_spots;
+            parking_location.available_bus_spots = data.available_bus_spots !== undefined ? data.available_bus_spots : parking_location.available_bus_spots;
+            parking_location.description = data.description !== undefined ? data.description : parking_location.description;
+            parking_location.hidden = data.hidden !== undefined ? data.hidden : parking_location.hidden;
+            parking_location.subscriber = data.subscriber !== undefined ? data.subscriber : parking_location.subscriber;
+            parking_location.modified = new Date();
+
             parking_location.save(function (err, parking_location) {
                 if (err) {
                     return res.status(500).json({
@@ -95,18 +103,13 @@ module.exports = {
                         error: err
                     });
                 }
-
                 return res.json(parking_location);
             });
         });
     },
 
-    /**
-     * parking_locationController.remove()
-     */
     remove: function (req, res) {
         var id = req.params.id;
-
         Parking_locationModel.findByIdAndRemove(id, function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
@@ -114,10 +117,42 @@ module.exports = {
                     error: err
                 });
             }
-
             return res.status(204).json();
         });
-    },
+    }, 
 
+     /**
+     * GET /parkingLocations/nearby/search?lat=46.0625&lng=14.5082&radius=2000
+     */
+    nearby: async function (req, res) {
+        const { lat, lng, radius } = req.query;
+
+        if (!lat || !lng || !radius) {
+            return res.status(400).json({
+                message: 'Missing required query parameters: lat, lng, radius'
+            });
+        }
+
+        try {
+            const locations = await Parking_locationModel.find({
+                location: {
+                    $near: {
+                        $geometry: {
+                            type: "Point",
+                            coordinates: [parseFloat(lng), parseFloat(lat)]
+                        },
+                        $maxDistance: parseInt(radius) // in meters
+                    }
+                }
+            });
+
+            return res.json(locations);
+        } catch (err) {
+            return res.status(500).json({
+                message: 'Error during geospatial search',
+                error: err
+            });
+        }
+    }
 
 };
