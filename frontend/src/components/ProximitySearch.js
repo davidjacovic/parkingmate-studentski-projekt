@@ -58,7 +58,13 @@ function ProximitySearch() {
               key={loc._id}
               position={[loc.location.coordinates[1], loc.location.coordinates[0]]}
             >
-              <Popup>{loc.name}<br />{loc.address}</Popup>
+              <Popup>
+                <div>
+                  <strong>{loc.name}</strong><br />
+                  {loc.address}<br />
+                  <a href={`/location/${loc._id}`}>Detalji</a>
+                </div>
+              </Popup>
             </Marker>
           ))}
         </MapContainer>
