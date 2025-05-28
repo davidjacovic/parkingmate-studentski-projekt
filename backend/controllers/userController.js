@@ -1,8 +1,11 @@
 var UserModel = require('../models/userModel.js');
-var VehicleModel = require('../models/vehicleModel.js');
-require('dotenv').config();
-const SECRET = process.env.JWT_SECRET;
+const VehicleModel = require('../models/vehicleModel');
+
 const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET;
+/*
+* dodata validacija iz modela u funkciju create
+*/
 
 /**
  * userController.js
@@ -11,142 +14,104 @@ const jwt = require('jsonwebtoken');
  */
 module.exports = {
 
+    create: async function (req, res) {
+        try {
+            console.log('Register request body:', req.body);
 
-  create: async function (req, res) {
-    try {
-      console.log('Register request body:', req.body);
+            const { username, email, password, credit_card_number, phone_number } = req.body;
 
-      // Create base user data
-      const userData = {
-        username: req.body.username,
-        email: req.body.email,
-        password_hash: req.body.password,
-        created_at: new Date(),
-        updated_at: new Date(),
-        user_type: 'user',
-        hidden: false,
-      };
+            // Validacije
+            if (!username || username.trim().length < 3 || username.trim().length > 30) {
+                return res.status(400).json({ message: 'Username must be between 3 and 30 characters.' });
+            }
 
-      // Add credit_card_number only if provided
-      if (req.body.credit_card_number) {
-        userData.credit_card_number = req.body.credit_card_number;
-      }
+            if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+                return res.status(400).json({ message: 'Invalid email format.' });
+            }
 
-      var user = new UserModel(userData);
+            if (!password || password.length < 6) {
+                return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+            }
 
-      const savedUser = await user.save();
-      console.log('User saved:', savedUser._id);
+            if (credit_card_number && !/^\d{13,19}$/.test(credit_card_number)) {
+                return res.status(400).json({ message: 'Credit card number must be 13 to 19 digits.' });
+            }
 
-      var vehicle = new VehicleModel({
-        registration_number: req.body.registration_number,
-        user: savedUser._id,
-        created: new Date(),
-        modified: new Date(),
-      });
+            if (phone_number && !/^\+?[0-9]{7,15}$/.test(phone_number)) {
+                return res.status(400).json({ message: 'Phone number is invalid.' });
+            }
 
-      const savedVehicle = await vehicle.save();
-      console.log('Vehicle saved:', savedVehicle._id);
+            const userData = {
+                username: username.trim(),
+                email: email.toLowerCase(),
+                password_hash: password,
+                created_at: new Date(),
+                updated_at: new Date(),
+                user_type: 'user',
+                hidden: false,
+            };
 
-      return res.status(201).json({
-        user: savedUser,
-        vehicle: savedVehicle,
-      });
+            if (credit_card_number) userData.credit_card_number = credit_card_number;
+            if (phone_number) userData.phone_number = phone_number;
 
-    } catch (err) {
-      console.error('Error during registration:', err);
-      return res.status(500).json({
-        message: 'Error during registration',
-        error: err.message || err,
-      });
-    }
-  },
+            const user = new UserModel(userData);
+            const savedUser = await user.save();
+            console.log('User saved:', savedUser._id);
 
+            const vehicle = new VehicleModel({
+                registration_number: req.body.registration_number,
+                user: savedUser._id,
+                created: new Date(),
+                modified: new Date(),
+            });
 
+            const savedVehicle = await vehicle.save();
+            console.log('Vehicle saved:', savedVehicle._id);
 
-  showRegister: function (req, res) {
-    res.render('user/register');
-  },
+            return res.status(201).json({
+                user: savedUser,
+                vehicle: savedVehicle,
+            });
 
-  showLogin: function (req, res) {
-    res.render('user/login');
-  },
-
-  /**
-   * userController.update()
-   */
-  update: function (req, res) {
-    var id = req.params.id;
-
-    UserModel.findOne({ _id: id }, function (err, user) {
-      if (err) {
-        return res.status(500).json({
-          message: 'Error when getting user',
-          error: err
-        });
-      }
-
-      if (!user) {
-        return res.status(404).json({
-          message: 'No such user'
-        });
-      }
-
-
-      user.save(function (err, user) {
-        if (err) {
-          return res.status(500).json({
-            message: 'Error when updating user.',
-            error: err
-          });
+        } catch (err) {
+            console.error('Error during registration:', err);
+            return res.status(500).json({ error: 'Registration failed.' });
         }
+    },
 
-        return res.json(user);
-      });
-    });
-  },
 
-  /**
-   * userController.remove()
-   */
-  remove: function (req, res) {
-    var id = req.params.id;
+    showRegister: function (req, res) {
+        res.render('user/register');
+    },
 
-    UserModel.findByIdAndRemove(id, function (err, user) {
-      if (err) {
-        return res.status(500).json({
-          message: 'Error when deleting the user.',
-          error: err
+    showLogin: function (req, res) {
+        res.render('user/login');
+    },
+
+    login: function (req, res) {
+        UserModel.authenticate(req.body.username, req.body.password, function (err, user) {
+            if (err || !user) {
+                console.log('Login failed:', err || 'User not found');
+                return res.status(401).json({ message: 'Wrong username or password' });
+            }
+
+            const token = jwt.sign(
+                { userId: user._id, username: user.username, email: user.email },
+                SECRET,
+                { expiresIn: '1h' }
+            );
+
+            console.log('Login successful for user:', user.username);
+            console.log('JWT token generated:', token);
+
+            return res.json({
+                user: user,
+                token: token
+            });
         });
-      }
+    },
 
-      return res.status(204).json();
-    });
-  },
-
-  login: function (req, res) {
-    UserModel.authenticate(req.body.username, req.body.password, function (err, user) {
-      if (err || !user) {
-        console.log('Login failed:', err || 'User not found');
-        return res.status(401).json({ message: 'Wrong username or password' });
-      }
-
-      const token = jwt.sign(
-        { userId: user._id, username: user.username, email: user.email },
-        SECRET,
-        { expiresIn: '1h' }
-      );
-
-      console.log('Login successful for user:', user.username);
-      console.log('JWT token generated:', token);
-
-      return res.json({
-        user: user,
-        token: token
-      });
-    });
-  },
-  
-  getProfile: async function (req, res) {
+    getProfile: async function (req, res) {
         try {
             const authHeader = req.headers.authorization;
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -217,6 +182,5 @@ module.exports = {
             res.status(500).json({ message: 'Greška pri ažuriranju profila.' });
         }
     }
-
 
 };
