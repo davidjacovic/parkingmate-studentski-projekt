@@ -1,5 +1,26 @@
 var Parking_locationModel = require('../models/parkingLocationModel.js');
 
+// Helper funkcija koja konvertuje Decimal128 u number za coordinates
+function convertDecimalCoordinates(parkingLocation) {
+    if (parkingLocation.location && Array.isArray(parkingLocation.location.coordinates)) {
+        parkingLocation.location.coordinates = parkingLocation.location.coordinates.map(coord => {
+            let num;
+            if (coord && typeof coord.toDouble === 'function') {
+                num = coord.toDouble();
+            } else {
+                num = Number(coord);
+            }
+            if (isNaN(num)) {
+                console.error('Invalid coordinate value:', coord);
+                throw new Error('Invalid coordinate value');
+            }
+            return num;
+        });
+    }
+    return parkingLocation;
+}
+
+
 module.exports = {
 
     list: function (req, res) {
@@ -10,7 +31,8 @@ module.exports = {
                     error: err
                 });
             }
-            return res.json(parking_locations);
+            const converted = parking_locations.map(convertDecimalCoordinates);
+            return res.json(converted);
         });
     },
 
@@ -28,18 +50,18 @@ module.exports = {
                     message: 'No such parking_location'
                 });
             }
+            convertDecimalCoordinates(parking_location);
             return res.json(parking_location);
         });
     },
 
     create: function (req, res) {
-        // Pretpostavljamo da u req.body stižu svi podaci, uključujući location sa {type, coordinates}
         var data = req.body;
 
         var parking_location = new Parking_locationModel({
             name: data.name,
             address: data.address,
-            location: data.location, // očekujemo: { type: "Point", coordinates: [lng, lat] }
+            location: data.location,
             total_regular_spots: data.total_regular_spots,
             total_invalid_spots: data.total_invalid_spots,
             total_bus_spots: data.total_bus_spots,
@@ -60,6 +82,7 @@ module.exports = {
                     error: err
                 });
             }
+            convertDecimalCoordinates(parking_location);
             return res.status(201).json(parking_location);
         });
     },
@@ -81,7 +104,6 @@ module.exports = {
                 });
             }
 
-            // Ažuriraj polja:
             parking_location.name = data.name !== undefined ? data.name : parking_location.name;
             parking_location.address = data.address !== undefined ? data.address : parking_location.address;
             parking_location.location = data.location !== undefined ? data.location : parking_location.location;
@@ -103,6 +125,7 @@ module.exports = {
                         error: err
                     });
                 }
+                convertDecimalCoordinates(parking_location);
                 return res.json(parking_location);
             });
         });
@@ -121,9 +144,6 @@ module.exports = {
         });
     }, 
 
-     /**
-     * GET /parkingLocations/nearby/search?lat=46.0625&lng=14.5082&radius=2000
-     */
     nearby: async function (req, res) {
         const { lat, lng, radius } = req.query;
 
@@ -146,7 +166,8 @@ module.exports = {
                 }
             });
 
-            return res.json(locations);
+            const convertedLocations = locations.map(convertDecimalCoordinates);
+            return res.json(convertedLocations);
         } catch (err) {
             return res.status(500).json({
                 message: 'Error during geospatial search',
