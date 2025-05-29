@@ -10,8 +10,12 @@ function Homepage() {
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
   const [nearestParking, setNearestParking] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  // Funkcija za učitavanje lokacija (koristi se i na mount i na refresh dugme)
+  const fetchLocations = () => {
+    setLoading(true);
+    setError('');
     fetch('http://localhost:3002/parkingLocations')
       .then(res => {
         if (!res.ok) throw new Error('Neuspešno učitavanje lokacija');
@@ -21,7 +25,12 @@ function Homepage() {
       .catch(err => {
         console.error(err);
         setError('Greška pri učitavanju lokacija.');
-      });
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchLocations();
   }, []);
 
   useEffect(() => {
@@ -75,13 +84,13 @@ function Homepage() {
       <h1>HOME PAGE</h1>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}
-
       {nearestParking && (
         <>
           <MapView
             userLocation={userLocation}
             parkingLocations={locations}
             nearestId={nearestParking._id}
+            onRefresh={fetchLocations}
           />
           <div>
             <h2>Najbliže parking mesto</h2>
@@ -101,7 +110,7 @@ function Homepage() {
       <div>
         <h2>Spisak ulica i parking mesta</h2>
         {locations.map(loc => (
-          <div key={loc._id}>
+          <div key={loc._id} style={{ marginBottom: '1rem' }}>
             <div>
               <h4>
                 <Link to={`/location/${loc._id}`}>
