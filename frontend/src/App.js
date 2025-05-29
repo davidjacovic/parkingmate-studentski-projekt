@@ -13,6 +13,7 @@ import LocationDetails from "./components/LocationDetails";
 import Payment from "./components/Payment";
 import ProximitySearch from './components/ProximitySearch';
 import CoverageAnalysis from './components/CoverageAnalysis';
+import LocationsPage from './components/LocationsPage';
 
 function App() {
     const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
@@ -42,16 +43,16 @@ function App() {
                 setUserContext: updateUserData
             }}>
                 <div className="App">
-                    <Header /> 
+                    <Header />
                     <Routes>
                         {/* Prosledi nearestParkingId i ostale podatke Homepage komponenti */}
                         <Route path="/" element={
-                            <Homepage 
-                                nearestParkingId={nearestParkingId} 
-                                parkingSpots={parkingSpots} 
+                            <Homepage
+                                nearestParkingId={nearestParkingId}
+                                parkingSpots={parkingSpots}
                                 userLocation={userLocation}
                                 setUserLocation={setUserLocation} // ako želiš da menjaš lokaciju
-                            />} 
+                            />}
                         />
                         <Route path="/location/:id" element={<LocationDetails />} />
                         <Route path="/login" element={<Login />} />
@@ -59,8 +60,7 @@ function App() {
                         <Route path="/logout" element={<Logout />} />
                         <Route path="/profile" element={<Profil />} />
                         <Route path="/payment" element={<Payment />} />
-                        <Route path="/proximity" element={<ProximitySearch />} />
-                        <Route path="/coverage" element={<CoverageAnalysis />} />
+                        <Route path="/locations/*" element={<LocationsPage />} />
                     </Routes>
                 </div>
             </UserContext.Provider>

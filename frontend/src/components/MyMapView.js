@@ -1,13 +1,10 @@
-// src/components/MapView.jsx
 import React from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap  } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Link } from 'react-router-dom';
 import userIconImg from '../assets/man-location.png';
 
-
-// Popravi ikonice da se pravilno prikazuju
+// Ikonice
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -22,14 +19,76 @@ const userIcon = new L.Icon({
   popupAnchor: [0, -40],
 });
 
-const MapView = ({ userLocation, parkingLocations, nearestId }) => {
+// Ovdje ubaci CustomRefreshControl (iz prethodnog koraka)
+function CustomRefreshControl({ onRefresh }) {
+  const map = useMap();
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const control = L.control({ position: 'topright' });
+
+    control.onAdd = function () {
+      const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+      div.innerHTML = '🔄';
+      div.title = 'Osveži lokacije';
+
+      Object.assign(div.style, {
+        backgroundColor: 'white',
+        width: '34px',
+        height: '34px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        fontSize: '20px',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+        transition: 'transform 0.2s, background-color 0.3s',
+      });
+
+      div.onclick = async () => {
+        div.style.transform = 'scale(0.9)';
+        setLoading(true);
+        try {
+          await onRefresh();
+        } finally {
+          setTimeout(() => {
+            div.style.transform = 'scale(1)';
+            setLoading(false);
+          }, 300);
+        }
+      };
+
+      return div;
+    };
+
+    control.addTo(map);
+    return () => map.removeControl(control);
+  }, [map, onRefresh]);
+
+  React.useEffect(() => {
+    const btn = document.querySelector('.leaflet-control-custom');
+    if (btn) {
+      btn.innerHTML = loading ? '⏳' : '🔄';
+      btn.title = loading ? 'Učitavanje...' : 'Osveži lokacije';
+    }
+  }, [loading]);
+
+  return null;
+}
+
+const MapView = ({ userLocation, parkingLocations, nearestId, onRefresh }) => {
   const defaultCenter = userLocation
     ? [userLocation[1], userLocation[0]]
     : [46.0569, 14.5058]; // Ljubljana fallback
 
   return (
     <div style={{ height: '400px', width: '100%', margin: '2rem auto' }}>
-      <MapContainer center={defaultCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
+      <MapContainer
+        key={defaultCenter.join(',')}
+        center={defaultCenter}
+        zoom={15}
+        style={{ height: '100%', width: '100%' }}
+      >
         <TileLayer
           attribution='&copy; OpenStreetMap'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -41,19 +100,18 @@ const MapView = ({ userLocation, parkingLocations, nearestId }) => {
           </Marker>
         )}
 
-
         {parkingLocations.map((loc) => (
           <Marker
             key={loc._id}
-            position={[loc.latitude, loc.longitude]}
+            position={[loc.location.coordinates[1], loc.location.coordinates[0]]}
             icon={
               loc._id === nearestId
                 ? new L.Icon({
-                  iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                  popupAnchor: [0, -41],
-                })
+                    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [0, -41],
+                  })
                 : new L.Icon.Default()
             }
           >
@@ -61,12 +119,13 @@ const MapView = ({ userLocation, parkingLocations, nearestId }) => {
               <div>
                 <strong>{loc.name}</strong><br />
                 {loc.address}<br />
-                <Link to={`/location/${loc._id}`}>Detalji</Link>
+                <a href={`/location/${loc._id}`}>Detalji</a>
               </div>
             </Popup>
-
           </Marker>
         ))}
+
+        {onRefresh && <CustomRefreshControl onRefresh={onRefresh} />}
       </MapContainer>
     </div>
   );

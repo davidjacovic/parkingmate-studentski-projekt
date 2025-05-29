@@ -24,18 +24,11 @@ function Header() {
                 {user ? (
                     <>
                         <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>Profile</Link>
-                        <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
-                            Pay Parking
-                        </Link>
-                        <Link to="/proximity" style={{ textDecoration: 'none', color: '#007bff' }}>Nearby parkings</Link>
-                        <Link to="/coverage" style={{ textDecoration: 'none', color: '#007bff' }}>
-                            Analiza pokrivenosti
-                        </Link>
-
+                        <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>Pay Parking</Link>
+                        <Link to="/locations" style={{ textDecoration: 'none', color: '#007bff' }}>Locations</Link>
                         <button onClick={handleLogout} style={{ background: 'none', border: 'none', padding: 0, margin: 0, textDecoration: 'none', color: '#007bff', cursor: 'pointer', font: 'inherit' }}>
                             Logout
                         </button>
-
                     </>
                 ) : (
                     <>
@@ -44,6 +37,7 @@ function Header() {
                     </>
                 )}
             </nav>
+
         </header>
     );
 }

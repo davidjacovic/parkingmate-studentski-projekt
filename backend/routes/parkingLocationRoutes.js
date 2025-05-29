@@ -2,29 +2,25 @@ var express = require('express');
 var router = express.Router();
 var parkingLocationController = require('../controllers/parkingLocationController.js');
 
-/*
- * GET
- */
+/* GET all parking locations */
 router.get('/', parkingLocationController.list);
 
-/*
- * GET
- */
+/* GET nearby parking locations */
+router.get('/nearby/search', parkingLocationController.nearby);
+
+/* GET occupancy status */
+router.get('/occupancy/status', parkingLocationController.getOccupancyStatus);
+
+/* GET a single parking location by ID */
 router.get('/:id', parkingLocationController.show);
 
-/*
- * POST
- */
+/* POST create new parking location */
 router.post('/', parkingLocationController.create);
 
-/*
- * PUT
- */
+/* PUT update parking location by ID */
 router.put('/:id', parkingLocationController.update);
 
-/*
- * DELETE
- */
+/* DELETE remove parking location by ID */
 router.delete('/:id', parkingLocationController.remove);
 
 module.exports = router;

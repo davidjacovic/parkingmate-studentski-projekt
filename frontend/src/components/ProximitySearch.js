@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import userIconImg from '../assets/man-location.png';
-
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -14,78 +13,134 @@ L.Icon.Default.mergeOptions({
 
 const userIcon = new L.Icon({
   iconUrl: userIconImg,
-  iconSize: [40, 40],       // možeš menjati veličinu
-  iconAnchor: [20, 40],     // gde se marker "kači" na mapu
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
   popupAnchor: [0, -40],
 });
 
+function CustomRefreshControl({ onRefresh }) {
+  const map = useMap();
+  const [loading, setLoading] = useState(false);
 
-// Haversine formula to calculate distance in km
-function getDistance(coord1, coord2) {
-  const [lat1, lon1] = coord1;
-  const [lat2, lon2] = coord2;
-  const R = 6371; // Earth radius in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * (Math.PI / 180)) *
-    Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  useEffect(() => {
+    const control = L.control({ position: 'topright' });
+
+    control.onAdd = function () {
+      const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+      div.innerHTML = '🔄';
+      div.title = 'Osveži lokacije';
+
+      Object.assign(div.style, {
+        backgroundColor: 'white',
+        width: '34px',
+        height: '34px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        fontSize: '20px',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.4)',
+        transition: 'transform 0.2s, background-color 0.3s',
+      });
+
+      div.onclick = async () => {
+        div.style.transform = 'scale(0.9)';
+        setLoading(true);
+        try {
+          await onRefresh();
+        } finally {
+          setTimeout(() => {
+            div.style.transform = 'scale(1)';
+            setLoading(false);
+          }, 300);
+        }
+      };
+
+      return div;
+    };
+
+    control.addTo(map);
+    return () => map.removeControl(control);
+  }, [map, onRefresh]);
+
+  useEffect(() => {
+    const btn = document.querySelector('.leaflet-control-custom');
+    if (btn) {
+      btn.innerHTML = loading ? '⏳' : '🔄';
+      btn.title = loading ? 'Učitavanje...' : 'Osveži lokacije';
+    }
+  }, [loading]);
+
+  return null;
 }
 
 function ProximitySearch() {
   const [userLocation, setUserLocation] = useState(null);
-  const [parkingLocations, setParkingLocations] = useState([]);
   const [filtered, setFiltered] = useState([]);
+  const [error, setError] = useState('');
+
+  const fetchNearby = async () => {
+    if (!userLocation) {
+      setError('Geolokacija nije dostupna.');
+      return;
+    }
+    setError('');
+    const [lat, lng] = userLocation;
+    const radius = 2000;
+
+    try {
+      const res = await fetch(`http://localhost:3002/parkingLocations/nearby/search?lat=${lat}&lng=${lng}&radius=${radius}`);
+      if (!res.ok) throw new Error('Neuspešno učitavanje podataka');
+      const data = await res.json();
+      setFiltered(data);
+    } catch (err) {
+      console.error('Greška u geoprostorskoj pretrazi:', err);
+      setError('Greška pri učitavanju parking lokacija.');
+    }
+  };
 
   useEffect(() => {
-    fetch('http://localhost:3002/parkingLocations')
-      .then(res => res.json())
-      .then(data => setParkingLocations(data))
-      .catch(err => console.error('Greška pri učitavanju parkinga:', err));
+    if (!navigator.geolocation) {
+      setError('Geolokacija nije podržana u vašem pretraživaču.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      pos => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
+      err => {
+        console.error('Geolokacija greška:', err);
+        setError('Dozvolite pristup lokaciji.');
+      }
+    );
   }, []);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const userCoords = [pos.coords.latitude, pos.coords.longitude];
-        setUserLocation(userCoords);
-
-        const filteredData = parkingLocations.filter(loc => {
-          const dist = getDistance(userCoords, [loc.latitude, loc.longitude]);
-          return dist <= 2; // 2 km radijus
-        });
-
-        setFiltered(filteredData);
-      },
-      err => console.error('Geolokacija greška:', err)
-    );
-  }, [parkingLocations]);
+    if (userLocation) fetchNearby();
+  }, [userLocation]);
 
   return (
     <div style={{ height: '100vh', width: '100%' }}>
+      {error && <p style={{ color: 'red', position: 'absolute', top: 50, right: 10, zIndex: 1000, background: 'white', padding: '4px 8px', borderRadius: '4px' }}>{error}</p>}
+
       {userLocation ? (
         <MapContainer center={userLocation} zoom={15} style={{ height: '100%', width: '100%' }}>
-          <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
-            url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          />
+          <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <CustomRefreshControl onRefresh={fetchNearby} />
           <Marker position={userLocation} icon={userIcon}>
             <Popup>Vaša lokacija</Popup>
           </Marker>
           {filtered.map(loc => (
-            <Marker
-              key={loc.id}
-              position={[loc.latitude, loc.longitude]}
-            >
-              <Popup>{loc.name}<br />{loc.address}</Popup>
+            <Marker key={loc._id} position={[loc.location.coordinates[1], loc.location.coordinates[0]]}>
+              <Popup>
+                <div>
+                  <strong>{loc.name}</strong><br />
+                  {loc.address}<br />
+                  <a href={`/location/${loc._id}`}>Detalji</a>
+                </div>
+              </Popup>
             </Marker>
           ))}
         </MapContainer>
-
       ) : (
         <p>Učitavanje vaše lokacije...</p>
       )}

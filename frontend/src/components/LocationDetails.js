@@ -5,6 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet-routing-machine';
+import userIconImg from '../assets/man-location.png';
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -13,6 +14,12 @@ L.Icon.Default.mergeOptions({
     shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
+const userIcon = new L.Icon({
+    iconUrl: userIconImg,
+    iconSize: [40, 40],
+    iconAnchor: [20, 40],
+    popupAnchor: [0, -40],
+});
 
 function Routing({ from, to }) {
     const map = useMap();
@@ -33,6 +40,9 @@ function Routing({ from, to }) {
             draggableWaypoints: false,
             fitSelectedRoutes: true,
             showAlternatives: false,
+
+            // Ovim onemogućavamo automatsko kreiranje markera
+            createMarker: () => null,
         }).addTo(map);
 
         routingControlRef.current = routingControl;
@@ -47,7 +57,6 @@ function Routing({ from, to }) {
                 console.warn('Routing cleanup error:', err);
             }
         };
-
 
     }, [map, from, to]);
 
@@ -98,19 +107,18 @@ function LocationDetails() {
 
             {userLocation && (
                 <div style={{ height: '400px', width: '100%', marginTop: '2rem' }}>
-                    <MapContainer center={[location.latitude, location.longitude]} zoom={15} style={{ height: '100%', width: '100%' }}>
+                    <MapContainer center={[location.location.coordinates[1], location.location.coordinates[0]]} zoom={15} style={{ height: '100%', width: '100%' }}>
                         <TileLayer
                             attribution='&copy; OpenStreetMap contributors'
                             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
                         />
-                        <Marker position={[location.latitude, location.longitude]}>
+                        <Marker position={[location.location.coordinates[1], location.location.coordinates[0]]}>
                             <Popup>{location.name}</Popup>
                         </Marker>
-                        <Marker position={userLocation}>
+                        <Marker position={userLocation} icon={userIcon}>
                             <Popup>Vaša lokacija</Popup>
                         </Marker>
-
-                        <Routing from={userLocation} to={[location.latitude, location.longitude]} />
+                        <Routing from={userLocation} to={[location.location.coordinates[1], location.location.coordinates[0]]} />
                     </MapContainer>
                 </div>
             )}
