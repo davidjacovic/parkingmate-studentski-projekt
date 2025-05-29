@@ -8,6 +8,9 @@ router.get('/', parkingLocationController.list);
 /* GET nearby parking locations */
 router.get('/nearby/search', parkingLocationController.nearby);
 
+/* GET occupancy status */
+router.get('/occupancy/status', parkingLocationController.getOccupancyStatus);
+
 /* GET a single parking location by ID */
 router.get('/:id', parkingLocationController.show);
 
