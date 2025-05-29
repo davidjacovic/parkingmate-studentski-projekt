@@ -1,3 +1,4 @@
+import org.example.Vehicle
 import java.time.LocalDateTime
 import java.util.UUID
 import java.util.regex.Pattern
@@ -14,7 +15,8 @@ data class User(
     val user_type: String? = null,
     val hidden: Boolean? = null,
     val created_at: LocalDateTime? = null,
-    val updated_at: LocalDateTime? = null
+    val updated_at: LocalDateTime? = null,
+    val vehicles: List<Vehicle> = emptyList()  // Dodato
 ) {
     companion object {
         private val EMAIL_REGEX = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
