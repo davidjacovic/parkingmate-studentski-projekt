@@ -16,4 +16,35 @@ data class Payment(
     val modified: LocalDateTime? = null,
     val user: UUID? = null,
     val parking_location: UUID? = null
-)
+){
+    fun isValid(): Boolean {
+        return isAmountValid() &&
+                isMethodValid() &&
+                isStatusValid() &&
+                isDurationValid() &&
+                isDatesValid()
+    }
+
+    private fun isAmountValid(): Boolean {
+        return amount != null && amount > BigDecimal.ZERO
+    }
+
+    private fun isMethodValid(): Boolean {
+        return !method.isNullOrBlank()
+    }
+
+    private fun isStatusValid(): Boolean {
+        return payment_status in listOf("pending", "completed", "failed")
+    }
+
+    private fun isDurationValid(): Boolean {
+        return duration != null && duration > 0
+    }
+
+    private fun isDatesValid(): Boolean {
+        return if (created != null && modified != null) {
+            !modified.isBefore(created)
+        } else true
+    }
+
+}
