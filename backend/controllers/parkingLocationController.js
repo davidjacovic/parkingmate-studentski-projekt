@@ -38,7 +38,7 @@ module.exports = {
 
     show: function (req, res) {
         var id = req.params.id;
-        Parking_locationModel.findOne({_id: id}, function (err, parking_location) {
+        Parking_locationModel.findOne({ _id: id }, function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
                     message: 'Error when getting parking_location.',
@@ -91,7 +91,7 @@ module.exports = {
         var id = req.params.id;
         var data = req.body;
 
-        Parking_locationModel.findOne({_id: id}, function (err, parking_location) {
+        Parking_locationModel.findOne({ _id: id }, function (err, parking_location) {
             if (err) {
                 return res.status(500).json({
                     message: 'Error when getting parking_location',
@@ -142,7 +142,7 @@ module.exports = {
             }
             return res.status(204).json();
         });
-    }, 
+    },
 
     nearby: async function (req, res) {
         const { lat, lng, radius } = req.query;
@@ -174,6 +174,34 @@ module.exports = {
                 error: err
             });
         }
+    },
+
+    getOccupancyStatus: async function (req, res) {
+        try {
+            const locations = await Parking_locationModel.find({});
+            const processed = locations.map(loc => {
+                const total = loc.total_regular_spots || 0;
+                const available = loc.available_regular_spots || 0;
+                const occupied = total - available;
+                const occupancy = total > 0 ? (occupied / total) * 100 : 0;
+
+                return {
+                    _id: loc._id,
+                    name: loc.name,
+                    address: loc.address,
+                    location: loc.location, // 👈 Vraćamo ceo location objekat (kao i u /nearby/search)
+                    occupancy: Math.round(occupancy),
+                };
+            });
+            res.json(processed);
+        } catch (err) {
+            res.status(500).json({
+                message: 'Error while fetching occupancy data',
+                error: err
+            });
+        }
     }
+
+
 
 };
