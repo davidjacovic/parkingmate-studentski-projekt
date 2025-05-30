@@ -1,6 +1,9 @@
 package org.example
 
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.math.BigDecimal
 import java.util.UUID
 
@@ -17,13 +20,14 @@ data class Tariff(
     val parking_location: UUID? = null
 ) {
 
-    fun isValid(): Boolean {
+    fun isValid(existingTariffs: List<Tariff> = emptyList()): Boolean {
         return isTypeValid() &&
                 isDurationValid() &&
                 isVehicleTypeValid() &&
                 isPriceValid() &&
                 isPriceUnitValid() &&
-                isDatesValid()
+                isDatesValid() &&
+                !isOverlapping(existingTariffs)
     }
 
     private fun isTypeValid(): Boolean {
@@ -31,8 +35,26 @@ data class Tariff(
     }
 
     private fun isDurationValid(): Boolean {
-        val regex = Regex("^\\d{2}:\\d{2}-\\d{2}:\\d{2}\$")
-        return !duration.isNullOrBlank() && regex.matches(duration)
+        if (duration.isNullOrBlank()) return false
+
+        val parts = duration.split("-")
+        if (parts.size != 2) return false
+
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+
+        val start: LocalTime
+        val end: LocalTime
+        try {
+            start = LocalTime.parse(parts[0], formatter)
+            end = LocalTime.parse(parts[1], formatter)
+        } catch (e: DateTimeParseException) {
+            return false
+        }
+        if (!end.isAfter(start)) {
+            return false
+        }
+
+        return true
     }
 
     private fun isVehicleTypeValid(): Boolean {
@@ -56,5 +78,30 @@ data class Tariff(
         return if (created != null && modified != null) {
             !modified.isBefore(created)
         } else true
+    }
+
+    private fun isOverlapping(existingTariffs: List<Tariff>): Boolean {
+        if (duration.isNullOrBlank() || parking_location == null) return false
+
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        val (startStr, endStr) = duration.split("-")
+        val start = LocalTime.parse(startStr, formatter)
+        val end = LocalTime.parse(endStr, formatter)
+
+        for (tariff in existingTariffs) {
+            if (tariff.id == this.id) continue
+            if (tariff.parking_location != this.parking_location) continue
+            if (tariff.duration.isNullOrBlank()) continue
+
+            val (otherStartStr, otherEndStr) = tariff.duration.split("-")
+            val otherStart = LocalTime.parse(otherStartStr, formatter)
+            val otherEnd = LocalTime.parse(otherEndStr, formatter)
+
+            if (start < otherEnd && otherStart < end) {
+                return true
+            }
+        }
+
+        return false
     }
 }
