@@ -14,6 +14,9 @@ router.get('/occupancy/status', parkingLocationController.getOccupancyStatus);
 /* GET a single parking location by ID */
 router.get('/:id', parkingLocationController.show);
 
+// Route to get parking logs for that location
+router.get('/:id/logs', parkingLocationController.getParkingLogsByLocation);
+
 /* POST create new parking location */
 router.post('/', parkingLocationController.create);
 
