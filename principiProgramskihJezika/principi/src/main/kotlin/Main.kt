@@ -22,8 +22,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import org.example.*
 import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
-
+import java.math.BigDecimal
 import java.util.*
+
 
 @Composable
 @Preview
@@ -33,8 +34,10 @@ fun App() {
     var users by remember { mutableStateOf(mutableListOf<User>()) }
     var parkingLocations by remember { mutableStateOf(mutableListOf<ParkingLocation>()) }
     var subscribers by remember { mutableStateOf(mutableListOf<Subscriber>()) }
-    var tariffs by remember { mutableStateOf(mutableListOf<Tariff>()) } // 👈 Dodato
+    var tariffs by remember { mutableStateOf(mutableListOf<Tariff>()) }
     var reviews by remember { mutableStateOf(mutableListOf<Review>()) }
+    var payments by remember { mutableStateOf(mutableListOf<Payment>()) }
+
 
     if (selectedEntity == null) {
         EntitySelectionScreen(onEntitySelected = { selectedEntity = it })
@@ -59,13 +62,13 @@ fun App() {
             "ParkingLocation" -> ParkingLocationAdminUI(
                 locations = parkingLocations,
                 subscribers = subscribers,
-                tariffs = tariffs, // <-- Ovo je lista tarifa (List<Tariff>)
-                onAddLocation = { newLocation, newSubscriber, newTariffs -> // <- umesto newTariff
+                tariffs = tariffs,
+                onAddLocation = { newLocation, newSubscriber, newTariffs ->
                     subscribers = subscribers.toMutableList().apply { add(newSubscriber) }
                     parkingLocations = parkingLocations.toMutableList().apply {
                         add(newLocation.copy(subscriber = newSubscriber.id))
                     }
-                    tariffs = tariffs.toMutableList().apply { addAll(newTariffs) } // <- addAll, ne add
+                    tariffs = tariffs.toMutableList().apply { addAll(newTariffs) }
                 },
                 onUpdateLocation = { updatedLocation, updatedSubscriber ->
                     parkingLocations = parkingLocations.map {
@@ -80,7 +83,7 @@ fun App() {
                 },
                 onAddTariff = { newTariff ->
                     tariffs = tariffs.toMutableList().apply { add(newTariff) }
-                }, // <-- Ovde prosleđuješ LAMBDU koja prima jedan Tariff
+                },
                 onDeleteTariff = { tariffToDelete ->
                     tariffs = tariffs.filter { it.id != tariffToDelete.id }.toMutableList()
                 },
@@ -89,16 +92,237 @@ fun App() {
             "Review" -> ReviewAdminUI(
                 users = users,
                 locations = parkingLocations,
-                reviews = reviews,  // OBAVEZNO
+                reviews = reviews,
                 onAddReview = { newReview ->
                     reviews = reviews.toMutableList().apply { add(newReview) }
                 },
                 onBack = { selectedEntity = null }
             )
-
-
+            "Payment" -> PaymentAdminUI(
+                users = users,
+                parkingLocations = parkingLocations,
+                tariffs = tariffs,
+                payments = payments,
+                onAddPayment = { newPayment ->
+                    payments = payments.toMutableList().apply { add(newPayment) }
+                },
+                onBack = { selectedEntity = null }
+            )
 
             else -> PlaceholderScreen(entity = selectedEntity!!, onBack = { selectedEntity = null })
+        }
+    }
+}
+@Composable
+fun PaymentAdminUI(
+    users: List<User>,
+    parkingLocations: List<ParkingLocation>,
+    tariffs: List<Tariff>,
+    payments: List<Payment>,
+    onAddPayment: (Payment) -> Unit,
+    onBack: () -> Unit
+) {
+    var selectedTab by remember { mutableStateOf("Add payment") }
+    var selectedUser by remember { mutableStateOf<User?>(null) }
+    var selectedLocation by remember { mutableStateOf<ParkingLocation?>(null) }
+    var duration by remember { mutableStateOf("") }
+    var paymentMethod by remember { mutableStateOf("Credit Card") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val currentDateTime = remember { LocalDateTime.now() }
+
+    MaterialTheme {
+        Column {
+            TopAppBar(
+                title = { Text("Payment Admin") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                backgroundColor = Color(0xFFEEEEEE)
+            )
+
+            Row(Modifier.fillMaxSize()) {
+                Column(
+                    Modifier
+                        .width(180.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFFF5F5F5))
+                        .padding(10.dp)
+                ) {
+                    NavigationButton("Add payment") { selectedTab = it }
+                    NavigationButton("View payments") { selectedTab = it }
+                    Spacer(Modifier.weight(1f))
+                    NavigationButton("About") { selectedTab = it }
+                }
+
+                Box(Modifier.fillMaxSize().padding(16.dp)) {
+                    when (selectedTab) {
+                        "Add payment" -> {
+                            Column {
+                                Text("Select User", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = users,
+                                    selected = selectedUser,
+                                    onSelect = { selectedUser = it },
+                                    displayText = { it.name ?: "Unknown" }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                Text("Select Parking Location", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = parkingLocations,
+                                    selected = selectedLocation,
+                                    onSelect = { selectedLocation = it },
+                                    displayText = { it.name }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = duration,
+                                    onValueChange = { duration = it.filter { ch -> ch.isDigit() } },
+                                    label = { Text("Duration (hours)") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                OutlinedTextField(
+                                    value = paymentMethod,
+                                    onValueChange = { paymentMethod = it },
+                                    label = { Text("Payment Method") }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                val applicableTariffs = tariffs.filter { tariff ->
+                                    selectedLocation?.id == tariff.parking_location
+                                }
+                                val tariffPricePerHour = applicableTariffs.firstOrNull()?.price ?: BigDecimal.ZERO
+
+                                val amount = try {
+                                    val dur = duration.toInt()
+                                    tariffPricePerHour.multiply(BigDecimal(dur))
+                                } catch (e: Exception) {
+                                    BigDecimal.ZERO
+                                }
+                                Text("Amount: $amount")
+                                Spacer(Modifier.height(16.dp))
+
+                                errorMessage?.let {
+                                    Text(it, color = MaterialTheme.colors.error)
+                                    Spacer(Modifier.height(12.dp))
+                                }
+
+                                Button(
+                                    onClick = {
+                                        errorMessage = null
+                                        if (selectedUser == null) {
+                                            errorMessage = "Please select a User"
+                                            return@Button
+                                        }
+                                        if (selectedLocation == null) {
+                                            errorMessage = "Please select a Parking Location"
+                                            return@Button
+                                        }
+                                        if (duration.isBlank() || duration.toIntOrNull() == null || duration.toInt() <= 0) {
+                                            errorMessage = "Please enter a valid Duration"
+                                            return@Button
+                                        }
+                                        val payment = Payment(
+                                            date = currentDateTime,
+                                            amount = amount,
+                                            method = paymentMethod,
+                                            payment_status = "pending",
+                                            duration = duration.toInt(),
+                                            user = selectedUser!!.id,
+                                            parking_location = selectedLocation!!.id,
+                                            created = currentDateTime,
+                                            modified = currentDateTime
+                                        )
+                                        onAddPayment(payment)
+                                        selectedUser = null
+                                        selectedLocation = null
+                                        duration = ""
+                                        paymentMethod = "Credit Card"
+                                    },
+                                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00796B)),
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                ) {
+                                    Text("Save Payment", color = Color.White)
+                                }
+                            }
+                        }
+
+                        "View payments" -> {
+                            val filteredPayments = if (selectedUser != null && selectedLocation != null) {
+                                payments.filter { it.user == selectedUser!!.id && it.parking_location == selectedLocation!!.id }
+                            } else emptyList()
+
+                            Column {
+                                Text("Filter by User", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = users,
+                                    selected = selectedUser,
+                                    onSelect = { selectedUser = it },
+                                    displayText = { it.name ?: "Unknown" }
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Text("Filter by Location", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = parkingLocations,
+                                    selected = selectedLocation,
+                                    onSelect = { selectedLocation = it },
+                                    displayText = { it.name }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                Text("Payments (${filteredPayments.size}):", style = MaterialTheme.typography.h6)
+                                Spacer(Modifier.height(8.dp))
+
+                                if (filteredPayments.isEmpty()) {
+                                    Text("No payments for selected filters.")
+                                } else {
+                                    LazyColumn {
+                                        items(filteredPayments) { payment ->
+                                            PaymentItem(payment, users, parkingLocations)
+                                            Spacer(Modifier.height(8.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        "About" -> {
+                            Text("Payment Admin UI\nVersion 1.0\nStyled similarly to Review Admin.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PaymentItem(
+    payment: Payment,
+    users: List<User>,
+    locations: List<ParkingLocation>
+) {
+    val userName = users.find { it.id == payment.user }?.name ?: "Unknown user"
+    val locationName = locations.find { it.id == payment.parking_location }?.name ?: "Unknown location"
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text("User: $userName", style = MaterialTheme.typography.subtitle1)
+            Text("Location: $locationName")
+            Text("Amount: ${payment.amount}")
+            Text("Duration: ${payment.duration} hours")
+            Text("Payment Method: ${payment.method}")
+            Text("Status: ${payment.payment_status}")
+            payment.date?.let {
+                Text("Date: ${it.toLocalDate()}")
+            }
         }
     }
 }
@@ -115,7 +339,7 @@ fun EntitySelectionScreen(onEntitySelected: (String) -> Unit) {
             Text("Select Entity", fontSize = 24.sp)
             Spacer(Modifier.height(20.dp))
 
-            listOf("User", "ParkingLocation", "Vehicle", "Review").forEach { entity ->
+            listOf("User", "ParkingLocation", "Payment", "Review").forEach { entity ->
                 Button(
                     onClick = { onEntitySelected(entity) },
                     modifier = Modifier.padding(8.dp)
