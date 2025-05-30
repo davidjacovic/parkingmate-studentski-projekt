@@ -1,3 +1,4 @@
+import org.example.Vehicle
 import java.time.LocalDateTime
 import java.util.UUID
 import java.util.regex.Pattern
@@ -14,17 +15,20 @@ data class User(
     val user_type: String? = null,
     val hidden: Boolean? = null,
     val created_at: LocalDateTime? = null,
-    val updated_at: LocalDateTime? = null
+    val updated_at: LocalDateTime? = null,
+    val vehicles: List<Vehicle> = emptyList()
 ) {
     companion object {
         private val EMAIL_REGEX = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")
         private val CREDIT_CARD_REGEX = Pattern.compile("^\\d{13,19}$")
         private val PHONE_REGEX = Pattern.compile("^\\d{7,15}$")
+        private val USERNAME_REGEX = Pattern.compile("^[A-Za-z0-9._]{8,}$")
         private val ALLOWED_USER_TYPES = setOf("admin", "user")
+        private val PASSWORD_REGEX = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@\$!%*?&._])[A-Za-z\\d@\$!%*?&._]{8,}$")
     }
 
     fun isUsernameValid(): Boolean {
-        return !username.isNullOrBlank() && username.length >= 3
+        return !username.isNullOrBlank() && USERNAME_REGEX.matcher(username).matches()
     }
 
     fun isEmailValid(): Boolean {
@@ -47,11 +51,8 @@ data class User(
         return ALLOWED_USER_TYPES.contains(user_type.lowercase())
     }
 
-    fun isValidUser(): Boolean {
-        return isUsernameValid() &&
-                isEmailValid() &&
-                isCreditCardValid() &&
-                isPhoneNumberValid() &&
-                isUserTypeValid()
+    fun isPasswordValid(): Boolean {
+        if (password_hash.isNullOrBlank()) return false
+        return PASSWORD_REGEX.matcher(password_hash).matches()
     }
 }
