@@ -1,6 +1,7 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
@@ -18,12 +19,10 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
-import org.example.ParkingLocation
-import org.example.LocationCoordinates
-import org.example.Vehicle
-import org.example.Subscriber
-import org.example.Tariff
+import org.example.*
 import java.time.LocalDateTime
+import androidx.compose.foundation.lazy.items
+
 import java.util.*
 
 @Composable
@@ -35,6 +34,7 @@ fun App() {
     var parkingLocations by remember { mutableStateOf(mutableListOf<ParkingLocation>()) }
     var subscribers by remember { mutableStateOf(mutableListOf<Subscriber>()) }
     var tariffs by remember { mutableStateOf(mutableListOf<Tariff>()) } // 👈 Dodato
+    var reviews by remember { mutableStateOf(mutableListOf<Review>()) }
 
     if (selectedEntity == null) {
         EntitySelectionScreen(onEntitySelected = { selectedEntity = it })
@@ -86,6 +86,16 @@ fun App() {
                 },
                 onBack = { selectedEntity = null }
             )
+            "Review" -> ReviewAdminUI(
+                users = users,
+                locations = parkingLocations,
+                reviews = reviews,  // OBAVEZNO
+                onAddReview = { newReview ->
+                    reviews = reviews.toMutableList().apply { add(newReview) }
+                },
+                onBack = { selectedEntity = null }
+            )
+
 
 
             else -> PlaceholderScreen(entity = selectedEntity!!, onBack = { selectedEntity = null })
@@ -1276,6 +1286,241 @@ fun EditParkingLocationScreen(
     }
 }
 
+@Composable
+fun ReviewAdminUI(
+    users: List<User>,
+    locations: List<ParkingLocation>,
+    reviews: List<Review>,
+    onAddReview: (Review) -> Unit,
+    onBack: () -> Unit
+) {
+    var selectedTab by remember { mutableStateOf("Add review") }
+    var selectedUser by remember { mutableStateOf<User?>(null) }
+    var selectedLocation by remember { mutableStateOf<ParkingLocation?>(null) }
+    var rating by remember { mutableStateOf(1) }
+    var reviewText by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    MaterialTheme {
+        Column {
+            TopAppBar(
+                title = { Text("Review Admin") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                backgroundColor = Color(0xFFEEEEEE)
+            )
+            Row(Modifier.fillMaxSize()) {
+                // Sidebar
+                Column(
+                    Modifier
+                        .width(180.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFFF5F5F5))
+                        .padding(10.dp)
+                ) {
+                    NavigationButton("Add review") { selectedTab = it }
+                    NavigationButton("View reviews") { selectedTab = it }
+                    Spacer(Modifier.weight(1f))
+                    NavigationButton("About") { selectedTab = it }
+                }
+
+                // Main content
+                Box(Modifier.fillMaxSize().padding(16.dp)) {
+                    when (selectedTab) {
+                        "Add review" -> {
+                            Column {
+                                // User selector
+                                Text("Select User", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = users,
+                                    selected = selectedUser,
+                                    onSelect = { selectedUser = it },
+                                    displayText = { it.name ?: "Unknown" }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                // Location selector
+                                Text("Select Parking Location", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = locations,
+                                    selected = selectedLocation,
+                                    onSelect = { selectedLocation = it },
+                                    displayText = { it.name }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                // Rating selector
+                                Text("Rating (1 to 5)")
+                                Row {
+                                    (1..5).forEach { r ->
+                                        Button(
+                                            onClick = { rating = r },
+                                            colors = if (rating == r) ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary)
+                                            else ButtonDefaults.buttonColors()
+                                        ) {
+                                            Text(r.toString())
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                    }
+                                }
+                                Spacer(Modifier.height(16.dp))
+
+                                // Review Text Input
+                                OutlinedTextField(
+                                    value = reviewText,
+                                    onValueChange = { if (it.length <= 1000) reviewText = it },
+                                    label = { Text("Review Text (max 1000 chars)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    maxLines = 4
+                                )
+
+                                Spacer(Modifier.height(16.dp))
+
+
+
+                                errorMessage?.let {
+                                    Text(it, color = MaterialTheme.colors.error)
+                                    Spacer(Modifier.height(12.dp))
+                                }
+
+                                Button(
+                                    onClick = {
+                                        errorMessage = null
+                                        if (selectedUser == null) {
+                                            errorMessage = "Please select a User"
+                                            return@Button
+                                        }
+                                        if (selectedLocation == null) {
+                                            errorMessage = "Please select a Parking Location"
+                                            return@Button
+                                        }
+                                        val newReview = Review(
+                                            rating = rating,
+                                            review_text = reviewText.takeIf { it.isNotBlank() },
+                                            review_date = LocalDateTime.now(),
+                                            created = LocalDateTime.now(),
+                                            modified = LocalDateTime.now(),
+                                            user = selectedUser!!.id,
+                                            parking_location = selectedLocation!!.id
+                                        )
+                                        if (!newReview.isValid()) {
+                                            errorMessage = "Review data is not valid."
+                                            return@Button
+                                        }
+                                        onAddReview(newReview)
+
+                                        // Reset form after add
+                                        rating = 1
+                                        reviewText = ""
+                                        selectedUser = null
+                                        selectedLocation = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00796B)),
+                                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                                ) {
+                                    Text("Save Review", color = Color.White)
+                                }
+                            }
+                        }
+                        "View reviews" -> {
+                            val filteredReviews = if (selectedUser != null && selectedLocation != null) {
+                                reviews.filter { it.user == selectedUser!!.id && it.parking_location == selectedLocation!!.id }
+                            } else emptyList()
+
+                            Column {
+                                // User filter dropdown
+                                Text("Filter by User", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = users,
+                                    selected = selectedUser,
+                                    onSelect = { selectedUser = it },
+                                    displayText = { it.name ?: "Unknown" }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                // Location filter dropdown
+                                Text("Filter by Location", style = MaterialTheme.typography.subtitle1)
+                                DropdownSelector(
+                                    options = locations,
+                                    selected = selectedLocation,
+                                    onSelect = { selectedLocation = it },
+                                    displayText = { it.name }
+                                )
+                                Spacer(Modifier.height(16.dp))
+
+                                Text("Reviews (${filteredReviews.size}):", style = MaterialTheme.typography.h6)
+                                Spacer(Modifier.height(8.dp))
+
+                                if (filteredReviews.isEmpty()) {
+                                    Text("No reviews for selected filters.")
+                                } else {
+                                    LazyColumn {
+                                        items(filteredReviews) { review ->
+                                            ReviewItem(review)
+                                            Spacer(Modifier.height(8.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        "About" -> {
+                            Text("Review Admin UI\nVersion 1.0\nDesigned similarly to Parking Location Admin.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun <T> DropdownSelector(
+    options: List<T>,
+    selected: T?,
+    onSelect: (T) -> Unit,
+    displayText: (T) -> String
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Button(onClick = { expanded = true }) {
+            Text(selected?.let(displayText) ?: "Select")
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(onClick = {
+                    onSelect(option)
+                    expanded = false
+                }) {
+                    Text(displayText(option))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ReviewItem(review: Review) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = 4.dp
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text("Rating: ${review.rating}", style = MaterialTheme.typography.subtitle1)
+            review.review_text?.let {
+                Text("Text: $it")
+            }
+            review.review_date?.let {
+                Text("Date: ${it.toLocalDate()}")
+            }
+        }
+    }
+}
 
 fun main() = application {
     Window(onCloseRequest = ::exitApplication, title = "Compose Database Admin") {
