@@ -1,4 +1,7 @@
 var Parking_locationModel = require('../models/parkingLocationModel.js');
+const ParkingLog = require('../models/parkingLogModel.js');
+// or the correct relative path to your model
+
 
 // Helper funkcija koja konvertuje Decimal128 u number za coordinates
 function convertDecimalCoordinates(parkingLocation) {
@@ -189,7 +192,7 @@ module.exports = {
                     _id: loc._id,
                     name: loc.name,
                     address: loc.address,
-                    location: loc.location, // 👈 Vraćamo ceo location objekat (kao i u /nearby/search)
+                    location: loc.location,
                     occupancy: Math.round(occupancy),
                 };
             });
@@ -200,8 +203,28 @@ module.exports = {
                 error: err
             });
         }
-    }
+    },
 
+    getParkingLogsByLocation: async function (req, res) {
+        try {
+            const locationId = req.params.id;
+            const fromDate = req.query.from ? new Date(req.query.from) : null;
+            const toDate = req.query.to ? new Date(req.query.to) : null;
 
+            const filter = { parkingLocationId: locationId };
+            if (fromDate || toDate) {
+                filter.timestamp = {};
+                if (fromDate) filter.timestamp.$gte = fromDate;
+                if (toDate) filter.timestamp.$lte = toDate;
+            }
 
+            const logs = await ParkingLog.find(filter)
+                .sort({ timestamp: -1 })
+                .limit(1000);
+
+            res.json(logs.reverse());
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    },
 };
