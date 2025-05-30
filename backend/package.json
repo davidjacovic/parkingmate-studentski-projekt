@@ -19,6 +19,7 @@
     "jade": "~1.11.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^6.9.0",
-    "morgan": "~1.9.1"
+    "morgan": "~1.9.1",
+    "node-cron": "^4.0.7"
   }
 }

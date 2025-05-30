@@ -11,6 +11,8 @@ const MongoStore = require('connect-mongo');
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET;
+const cron = require('node-cron');
+const { exec } = require('child_process');
 
 
 const app = express();
@@ -62,7 +64,18 @@ app.use((req, res, next) => {
   res.locals.session = req.session;
   next();
 });
-
+//Pokretanje skripte u bin
+cron.schedule('*/5 * * * *', () => {
+  exec('node ./bin/parkingLogScript.js', (err, stdout, stderr) => {
+    if (err) {
+      console.error(`Cron error: ${err.message}`);
+    }
+    if (stderr) {
+      console.error(`Cron stderr: ${stderr}`);
+    }
+    console.log(`Cron stdout: ${stdout}`);
+  });
+});
 // Routers
 const indexRouter = require('./routes/index');
 const vehicleRouter = require('./routes/vehicleRoutes');

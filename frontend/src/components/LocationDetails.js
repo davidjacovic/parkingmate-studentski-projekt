@@ -6,6 +6,8 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet-routing-machine';
 import userIconImg from '../assets/man-location.png';
+import ParkingAvailabilityChart from './ParkingChart';
+
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -62,7 +64,6 @@ function Routing({ from, to }) {
 
     return null;
 }
-
 
 function LocationDetails() {
     const { id } = useParams();
@@ -122,7 +123,9 @@ function LocationDetails() {
                     </MapContainer>
                 </div>
             )}
-        </div>
+             <h3>Status zauzetosti</h3>
+            <ParkingAvailabilityChart locationId={id} />
+       </div>
     );
 }
 
