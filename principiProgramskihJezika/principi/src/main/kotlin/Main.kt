@@ -24,6 +24,7 @@ import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
 import java.math.BigDecimal
 import java.util.*
+import skraper.main
 
 @Composable
 @Preview
@@ -843,6 +844,8 @@ fun AddParkingLocationScreen(
     var subscriberReserved by remember { mutableStateOf("0") }
     var subscriberWaiting by remember { mutableStateOf("0") }
 
+    var description by remember { mutableStateOf("") }
+
     var tariffs by remember { mutableStateOf(listOf<Tariff>()) }
     var showTariffForm by remember { mutableStateOf(false) }
 
@@ -859,11 +862,6 @@ fun AddParkingLocationScreen(
             errorMessage = "Invalid coordinates."
             return
         }
-
-        /*if (tariffs.isEmpty()) {
-            errorMessage = "Please add at least one tariff."
-            return
-        }*/
 
         val subscriber = Subscriber(
             available_spots = parseInt(subscriberAvailable),
@@ -889,7 +887,8 @@ fun AddParkingLocationScreen(
             available_invalid_spots = parseInt(availableInvalid),
             available_bus_spots = parseInt(availableBus),
             created = LocalDateTime.now(),
-            subscriber = subscriber.id
+            subscriber = subscriber.id,
+            description = if (description.isBlank()) null else description
         )
 
         if (!location.isValid()) {
@@ -915,6 +914,7 @@ fun AddParkingLocationScreen(
         subscriberAvailable = "0"
         subscriberReserved = "0"
         subscriberWaiting = "0"
+        description = ""
         tariffs = emptyList()
         errorMessage = null
     }
@@ -939,6 +939,7 @@ fun AddParkingLocationScreen(
     ) {
         TextFieldWithLabel("Name", name) { name = it }
         TextFieldWithLabel("Address", address) { address = it }
+        TextFieldWithLabel("Description", description) { description = it }
 
         Spacer(Modifier.height(8.dp))
         Text("Coordinates", style = MaterialTheme.typography.subtitle1)
@@ -1008,6 +1009,7 @@ fun AddParkingLocationScreen(
     }
 }
 
+
 @Composable
 fun ParkingLocationListScreen(
     locations: List<ParkingLocation>,
@@ -1037,7 +1039,6 @@ fun ParkingLocationListScreen(
         }
     }
 }
-
 @Composable
 fun EditParkingLocationScreen(
     location: ParkingLocation,
@@ -1051,6 +1052,8 @@ fun EditParkingLocationScreen(
 ) {
     var name by remember { mutableStateOf(location.name) }
     var address by remember { mutableStateOf(location.address) }
+    var description by remember { mutableStateOf(location.description ?: "") }
+
     var longitude by remember { mutableStateOf(location.location.coordinates.getOrNull(0)?.toString() ?: "0.0") }
     var latitude by remember { mutableStateOf(location.location.coordinates.getOrNull(1)?.toString() ?: "0.0") }
 
@@ -1093,7 +1096,7 @@ fun EditParkingLocationScreen(
         )
 
         if (!updatedSubscriber.isValid()) {
-            errorMessage = "Invalid subscriber data."
+            errorMessage = "Subscriber data is invalid."
             return
         }
 
@@ -1108,11 +1111,12 @@ fun EditParkingLocationScreen(
             available_invalid_spots = parseIntSafe(availableInvalid),
             available_bus_spots = parseIntSafe(availableBus),
             modified = LocalDateTime.now(),
-            subscriber = updatedSubscriber.id
+            subscriber = updatedSubscriber.id,
+            description = if (description.isBlank()) null else description
         )
 
         if (!updatedLocation.isValid()) {
-            errorMessage = "Invalid location data."
+            errorMessage = "Parking location data is invalid."
             return
         }
 
@@ -1131,9 +1135,15 @@ fun EditParkingLocationScreen(
         return
     }
 
-    Column(modifier = Modifier.verticalScroll(scrollState).padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp)
+    ) {
         TextFieldWithLabel("Name", name) { name = it }
         TextFieldWithLabel("Address", address) { address = it }
+        TextFieldWithLabel("Description", description) { description = it }
 
         Spacer(Modifier.height(8.dp))
         Text("Coordinates", style = MaterialTheme.typography.subtitle1)
@@ -1156,8 +1166,11 @@ fun EditParkingLocationScreen(
 
         Spacer(Modifier.height(16.dp))
         Text("Tariffs", style = MaterialTheme.typography.subtitle1)
-        tariffs.filter { it.parking_location == location.id }.forEach { tariff ->
-            Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), elevation = 4.dp) {
+        tariffs.forEach { tariff ->
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                elevation = 4.dp
+            ) {
                 Row(
                     Modifier.padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1176,7 +1189,10 @@ fun EditParkingLocationScreen(
             }
         }
 
-        Button(onClick = { showTariffForm = true }, modifier = Modifier.padding(top = 8.dp)) {
+        Button(
+            onClick = { showTariffForm = true },
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
             Text("Add Tariff")
         }
 
@@ -1185,19 +1201,32 @@ fun EditParkingLocationScreen(
             Text(it, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { validateAndSubmit() }) {
-                Text("Save")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray)
+            ) {
+                Text("Cancel", color = Color.White)
             }
-            Button(onClick = { onDelete(location) }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)) {
+            Button(
+                onClick = { validateAndSubmit() },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF00796B))
+            ) {
+                Text("Save", color = Color.White)
+            }
+            Button(
+                onClick = { onDelete(location) },
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)
+            ) {
                 Text("Delete", color = Color.White)
-            }
-            Button(onClick = onBack) {
-                Text("Cancel")
             }
         }
     }
 }
+
 
 @Composable
 fun RowInputs(
