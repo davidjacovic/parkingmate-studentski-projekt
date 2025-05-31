@@ -12,11 +12,34 @@ function Homepage() {
   const [nearestParking, setNearestParking] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Funkcija za učitavanje lokacija (koristi se i na mount i na refresh dugme)
+  // Filter state
+  const [filters, setFilters] = useState({
+    regular: false,
+    invalid: false,
+    electric: false,
+    bus: false,
+  });
+
+  // Update filters on checkbox toggle
+  function toggleFilter(type) {
+    setFilters(prev => ({ ...prev, [type]: !prev[type] }));
+  }
+
+  // Fetch locations with filters applied
   const fetchLocations = () => {
     setLoading(true);
     setError('');
-    fetch('http://localhost:3002/parkingLocations')
+
+    // Build query params from filters
+    const params = new URLSearchParams();
+    if (filters.regular) params.append('regular', 'true');
+    if (filters.invalid) params.append('invalid', 'true');
+    if (filters.electric) params.append('electric', 'true');
+    if (filters.bus) params.append('bus', 'true');
+
+    const url = `http://localhost:3002/parkingLocations/parking-filter?${params.toString()}`;
+
+    fetch(url)
       .then(res => {
         if (!res.ok) throw new Error('Neuspešno učitavanje lokacija');
         return res.json();
@@ -29,9 +52,10 @@ function Homepage() {
       .finally(() => setLoading(false));
   };
 
+  // Initial fetch and whenever filters change
   useEffect(() => {
     fetchLocations();
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -51,7 +75,6 @@ function Homepage() {
 
   useEffect(() => {
     if (userLocation && locations.length > 0) {
-      // Mapiraj i filtriraj samo validne koordinate
       const spots = locations
         .map(loc => ({
           id: loc._id,
@@ -83,7 +106,45 @@ function Homepage() {
     <div>
       <h1>HOME PAGE</h1>
 
+      {/* Filter checkboxes */}
+      <div style={{ marginBottom: '1rem' }}>
+        <label>
+          <input
+            type="checkbox"
+            checked={filters.regular}
+            onChange={() => toggleFilter('regular')}
+          />{' '}
+          Regular Spots
+        </label>{' '}
+        <label>
+          <input
+            type="checkbox"
+            checked={filters.invalid}
+            onChange={() => toggleFilter('invalid')}
+          />{' '}
+          Invalid Spots
+        </label>{' '}
+        <label>
+          <input
+            type="checkbox"
+            checked={filters.electric}
+            onChange={() => toggleFilter('electric')}
+          />{' '}
+          Electric Spots
+        </label>{' '}
+        <label>
+          <input
+            type="checkbox"
+            checked={filters.bus}
+            onChange={() => toggleFilter('bus')}
+          />{' '}
+          Bus Spots
+        </label>
+      </div>
+
+      {loading && <p>Loading locations...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
+
       {nearestParking && (
         <>
           <MapView
@@ -109,33 +170,37 @@ function Homepage() {
 
       <div>
         <h2>Spisak ulica i parking mesta</h2>
-        {locations.map(loc => (
-          <div key={loc._id} style={{ marginBottom: '1rem' }}>
-            <div>
-              <h4>
-                <Link to={`/location/${loc._id}`}>
-                  {loc.name}
-                </Link>
-              </h4>
-              <p>Adresa: {loc.address}</p>
-              <p>
-                Regularna mesta: Slobodnih: {loc.available_regular_spots} / Ukupno: {loc.total_regular_spots} <br />
-                Invalidska mesta: Slobodnih: {loc.available_invalid_spots} / Ukupno: {loc.total_invalid_spots} <br />
-                Električna mesta: Slobodnih: {loc.available_electric_spots} / Ukupno: {loc.total_electric_spots} <br />
-                Autobuska mesta: Slobodnih: {loc.available_bus_spots} / Ukupno: {loc.total_bus_spots}
-              </p>
+        {locations.length === 0 ? (
+          <p>Nema dostupnih parking mesta za izabrane filtere.</p>
+        ) : (
+          locations.map(loc => (
+            <div key={loc._id} style={{ marginBottom: '1rem' }}>
+              <div>
+                <h4>
+                  <Link to={`/location/${loc._id}`}>
+                    {loc.name}
+                  </Link>
+                </h4>
+                <p>Adresa: {loc.address}</p>
+                <p>
+                  Regularna mesta: Slobodnih: {loc.available_regular_spots} / Ukupno: {loc.total_regular_spots} <br />
+                  Invalidska mesta: Slobodnih: {loc.available_invalid_spots} / Ukupno: {loc.total_invalid_spots} <br />
+                  Električna mesta: Slobodnih: {loc.available_electric_spots} / Ukupno: {loc.total_electric_spots} <br />
+                  Autobuska mesta: Slobodnih: {loc.available_bus_spots} / Ukupno: {loc.total_bus_spots}
+                </p>
+              </div>
+              <div>
+                <a
+                  href={`https://www.google.com/maps?q=${loc.location.coordinates[1]},${loc.location.coordinates[0]}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  📍
+                </a>
+              </div>
             </div>
-            <div>
-              <a
-                href={`https://www.google.com/maps?q=${loc.location.coordinates[1]},${loc.location.coordinates[0]}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                📍
-              </a>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

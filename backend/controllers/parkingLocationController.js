@@ -227,4 +227,34 @@ module.exports = {
             res.status(500).json({ error: err.message });
         }
     },
+
+   filteredParkingLocations: async function (req, res) {
+  const filterRegular = req.query.regular === 'true';
+  const filterInvalid = req.query.invalid === 'true';
+  const filterElectric = req.query.electric === 'true';
+  const filterBus = req.query.bus === 'true';
+
+  // Build MongoDB query filters
+  const orFilters = [];
+
+  if (filterRegular) orFilters.push({ available_regular_spots: { $gt: 0 } });
+  if (filterInvalid) orFilters.push({ available_invalid_spots: { $gt: 0 } });
+  if (filterElectric) orFilters.push({ available_electric_spots: { $gt: 0 } });
+  if (filterBus) orFilters.push({ available_bus_spots: { $gt: 0 } });
+
+  try {
+    let query = {};
+    if (orFilters.length > 0) {
+      query = { $or: orFilters };
+    }
+
+    const locations = await Parking_locationModel.find(query);
+    res.json(locations);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error fetching filtered parking locations' });
+  }
+}
+
+
 };
