@@ -142,6 +142,14 @@ function Homepage() {
         </label>
       </div>
 
+      {/* Število rezultatov in gumb za reset */}
+      <div style={{ marginBottom: '1rem', marginTop: '1rem' }}>
+        <p>Prikazano {locations.length} rezultatov</p>
+        <button onClick={() => setFilters({ regular: false, invalid: false, electric: false, bus: false })}>
+          Ponastavi filtre
+        </button>
+      </div>
+
       {loading && <p>Loading locations...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
