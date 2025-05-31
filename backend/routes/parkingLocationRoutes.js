@@ -5,6 +5,9 @@ var parkingLocationController = require('../controllers/parkingLocationControlle
 /* GET all parking locations */
 router.get('/', parkingLocationController.list);
 
+router.get('/parking-filter', parkingLocationController.filteredParkingLocations);
+
+
 /* GET nearby parking locations */
 router.get('/nearby/search', parkingLocationController.nearby);
 
