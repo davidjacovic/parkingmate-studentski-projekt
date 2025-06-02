@@ -40,6 +40,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("org.json:json:20240303")
 
+    implementation("org.litote.kmongo:kmongo:4.11.0")
+
 }
 
 compose.desktop {

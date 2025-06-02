@@ -1,16 +1,19 @@
 package org.example
-
 import User
+import org.bson.codecs.pojo.annotations.BsonId
+import org.bson.types.ObjectId
 import java.time.LocalDateTime
 import java.util.UUID
 
 data class Vehicle(
-    val id: UUID = UUID.randomUUID(),
+    @BsonId
+    val id: ObjectId = ObjectId.get(),
     val registration_number: String? = null,
     val vehicle_type: String? = null,
     val created: LocalDateTime? = null,
     val modified: LocalDateTime? = null,
-    val user: UUID? = null
+    val user: ObjectId? = null,
+    var hidden: Boolean? = null
 )
 {
     fun isValid(): Boolean {
