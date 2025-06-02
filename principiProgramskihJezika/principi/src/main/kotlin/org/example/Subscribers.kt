@@ -1,10 +1,13 @@
 package org.example
 
+import org.bson.codecs.pojo.annotations.BsonId
+import org.bson.types.ObjectId
 import java.time.LocalDateTime
 import java.util.UUID
 
 data class Subscriber(
-    val id: UUID = UUID.randomUUID(),
+    @BsonId
+    val id: ObjectId = ObjectId.get(),
     val available_spots: Int? = null,
     val total_spots: Int? = null,
     val reserved_spots: Int? = null,

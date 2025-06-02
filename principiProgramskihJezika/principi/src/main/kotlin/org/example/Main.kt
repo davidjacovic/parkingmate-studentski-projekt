@@ -25,6 +25,9 @@ import androidx.compose.foundation.lazy.items
 import java.math.BigDecimal
 import java.util.*
 import skraper.main
+import org.bson.types.ObjectId
+import org.example.db.*
+
 
 @Composable
 @Preview
@@ -38,6 +41,9 @@ fun App() {
     var reviews by remember { mutableStateOf(mutableListOf<Review>()) }
     var payments by remember { mutableStateOf(mutableListOf<Payment>()) }
 
+    val userRepo = UserRepository()
+
+
 
     if (selectedEntity == null) {
         EntitySelectionScreen(onEntitySelected = { selectedEntity = it })
@@ -46,15 +52,16 @@ fun App() {
             "User" -> UserAdminUI(
                 users = users,
                 onAddUser = { newUser ->
-                    users = users.toMutableList().apply { add(newUser) }
+                    userRepo.insert(newUser)
+                    users = userRepo.findAll().toMutableList() // Osveži prikaz liste iz baze
                 },
                 onUpdateUser = { updatedUser ->
-                    users = users.map {
-                        if (it.id == updatedUser.id) updatedUser else it
-                    }.toMutableList()
+                    userRepo.update(updatedUser)
+                    users = userRepo.findAll().toMutableList()
                 },
                 onDeleteUser = { userToDelete ->
-                    users = users.filter { it.id != userToDelete.id }.toMutableList()
+                    userRepo.deleteById(userToDelete.id.toHexString())
+                    users = userRepo.findAll().toMutableList()
                 },
                 onBack = { selectedEntity = null }
             )
@@ -700,7 +707,6 @@ fun AddOrEditVehicleScreen(
         Row {
             Button(onClick = {
                 val newVehicle = Vehicle(
-                    id = vehicle?.id ?: UUID.randomUUID(),
                     registration_number = registrationNumber,
                     vehicle_type = vehicleType,
                     created = vehicle?.created ?: LocalDateTime.now(),
@@ -1086,7 +1092,6 @@ fun EditParkingLocationScreen(
         }
 
         val updatedSubscriber = Subscriber(
-            id = subscriber?.id ?: UUID.randomUUID(),
             available_spots = parseIntSafe(subscriberAvailable),
             total_spots = parseIntSafe(subscriberTotal),
             reserved_spots = parseIntSafe(subscriberReserved),
@@ -1802,7 +1807,431 @@ fun PaymentItem(
 
 
 fun main() = application {
+
     Window(onCloseRequest = ::exitApplication, title = "Compose Database Admin") {
         App()
     }
+
+
+
+/*
+    println("==========SUBSCRIBERS TESTS==========")
+    val subscribersTest = SubscribersRepository()
+
+    // 1. Kreiraj Subscriber
+    val subscribers = Subscriber(
+        available_spots = 5,
+        reserved_spots = 3,
+        total_spots = 10,
+        waiting_line = 2,
+        created = LocalDateTime.now(),
+        modified = LocalDateTime.now(),
+        hidden = false
+    )
+
+    // Ubaci u bazu
+    subscribersTest.insert(subscribers)
+    println("Ubacio subscriber sa ID: ${subscribers.id}")
+
+    // 2. Dohvati po ID-u
+    val fetche = subscribersTest.findById(subscribers.id.toHexString())
+    println("Dohvatio subscriber: $fetche")
+
+    // 3. Update subscriber - npr. promeni reserved_spots
+    if (fetche != null) {
+        val updatedSubscriber = fetche.copy(
+            reserved_spots = 4,
+            modified = LocalDateTime.now()
+        )
+        val updateResult = subscribersTest.update(updatedSubscriber)
+        println("Update uspešan? $updateResult")
+    }
+
+    // 4. Dohvati ponovo da vidiš update
+    val updatedFetched = subscribersTest.findById(subscribers.id.toHexString())
+    println("Dohvatio nakon update-a: $updatedFetched")
+
+    // 5. Soft delete
+    val deleteResult = subscribersTest.deleteById(subscribers.id.toHexString())
+    println("Soft delete uspešan? $deleteResult")
+
+    // 6. Pokušaj dohvatiti obrisanog (trebalo bi da postoji ali sa hidden=true)
+    val afterDelet = subscribersTest.findById(subscribers.id.toHexString())
+    println("Dohvatio nakon soft delete: $afterDelet")
+
+    // 7. Dohvati sve vidljive (hidden != true)
+    val visibleSubscribers = subscribersTest.findAllVisible()
+    println("Svi vidljivi subscriberi: $visibleSubscribers")
+
+
+
+
+
+    println("==========PARKING LOCATION TESTS==========")
+    val parkingLocationRepository = ParkingLocationRepository()
+
+    // Kreiraj LocationCoordinates
+    val locationCoordinates = LocationCoordinates(
+        coordinates = listOf(15.966568, 45.815399)
+    )
+
+    // Kreiraj ParkingLocation
+    val now = Date()
+    val testLocation = ParkingLocation(
+        id = ObjectId(), // ObjectId automatski kreiran
+        name = "Test Parking",
+        address = "Main Street 123",
+        location = locationCoordinates,
+        total_regular_spots = 100,
+        total_invalid_spots = 5,
+        total_bus_spots = 3,
+        available_regular_spots = 90,
+        available_invalid_spots = 5,
+        available_bus_spots = 2,
+        created = LocalDateTime.now(),
+        modified = LocalDateTime.now(),
+        description = "Parking in center of city",
+        hidden = false
+    )
+
+    // Validacija
+    if (testLocation.isValid()) {
+        // Ubaci ParkingLocation
+        parkingLocationRepository.insert(testLocation)
+
+        // Prikaz svih parking lokacija
+        val allLocations = parkingLocationRepository.findAll()
+        println("✅ Svi ParkingLocations: $allLocations")
+
+        // Ažuriraj parkingLocation
+        val updatedLocation = testLocation.copy(
+            available_regular_spots = 80,
+            modified = LocalDateTime.now() // novo vreme
+        )
+        val updateResult = parkingLocationRepository.update(updatedLocation)
+        println("✅ Update uspešan? $updateResult")
+        println("ID: ${updatedLocation.id}")
+
+        // Dohvati po ID-u
+        val fetchedLocation = parkingLocationRepository.findById(testLocation.id.toHexString()) // važno!
+        println("✅ Fetched by ID: $fetchedLocation")
+
+        // Obrisi parkingLocation
+        val deleteResult = parkingLocationRepository.deleteById(testLocation.id.toHexString()) // važno!
+        println("✅ Delete uspešan? $deleteResult")
+    } else {
+        println("❌ ParkingLocation nije validan!")
+    }
+
+
+
+
+    println("==========PAYMENT TESTS==========")
+    val paymentRepo = PaymentRepository()
+
+    val userId = ObjectId() // testni user
+    val parkingLocationId = ObjectId() // testni parking location
+
+    val payment = Payment(
+        amount = BigDecimal("9.99"),
+        method = "card",
+        payment_status = "pending",
+        duration = 30,
+        created = LocalDateTime.now(),
+        modified = LocalDateTime.now(),
+        hidden = false,
+        user = userId,
+        parking_location = parkingLocationId
+    )
+
+    // Validacija i insert
+    if (payment.isValid()) {
+        paymentRepo.insert(payment)
+
+        // Dohvati sve
+        val allPayments = paymentRepo.findAll()
+        println("✅ Svi Payments: $allPayments")
+
+        // Dohvati po ID-u
+        val fetchedById = paymentRepo.findById(payment.id.toHexString())
+        println("✅ Fetched by ID: $fetchedById")
+
+        // Dohvati po statusu
+        val pendingPayments = paymentRepo.findByStatus("pending")
+        println("✅ Pending Payments: $pendingPayments")
+
+        // Dohvati po user-u
+        val byUser = paymentRepo.findByUser(userId.toHexString())
+        println("✅ Payments by User: $byUser")
+
+        // Dohvati po lokaciji
+        val byLocation = paymentRepo.findByParkingLocation(parkingLocationId.toHexString())
+        println("✅ Payments by Location: $byLocation")
+
+        // Update
+        val updatedPayment = payment.copy(payment_status = "completed", modified = LocalDateTime.now())
+        val updated = paymentRepo.update(updatedPayment)
+        println("✅ Update uspešan? $updated")
+
+        // Brisanje
+        val deleted = paymentRepo.deleteById(payment.id.toHexString())
+        println("✅ Delete uspešan? $deleted")
+    } else {
+        println("❌ Payment nije validan!")
+    }
+
+
+
+
+    println("==========USER TESTS==========")
+    val userRepository = UserRepository()
+
+    // Kreiraj testnog user-a
+    val testUser = User(
+        name = "Milan",
+        surname = "Jovanovic",
+        username = "milan.jovanovic",
+        email = "milan@example.com",
+        password_hash = "Passw0rd@2025", // Za test
+        phone_number = "381641234567",
+        credit_card_number = "1234567890123456",
+        user_type = "user",
+        hidden = false,
+        created_at = LocalDateTime.now(),
+        updated_at = LocalDateTime.now(),
+        vehicles = emptyList()
+    )
+
+    // Validacija
+    val isValid = testUser.isUsernameValid() &&
+            testUser.isEmailValid() &&
+            testUser.isPasswordValid() &&
+            testUser.isPhoneNumberValid() &&
+            testUser.isCreditCardValid() &&
+            testUser.isUserTypeValid()
+
+    if (isValid) {
+        // Ubaci user-a
+        userRepository.insert(testUser)
+
+        // Prikaži sve user-e
+        val allUsers = userRepository.findAll()
+        println("✅ Svi User-i: $allUsers")
+
+        // Ažuriraj user-a
+        val updatedUser = testUser.copy(
+            phone_number = "381651234567",
+            updated_at = LocalDateTime.now()
+        )
+        val updateResult = userRepository.update(updatedUser)
+        println("✅ Update uspešan? $updateResult")
+
+        // Pronađi po username-u
+        val fetchedByUsername = userRepository.findByUsername("milan.jovanovic")
+        println("✅ Fetched by username: $fetchedByUsername")
+
+        // Pronađi po email-u
+        val fetchedByEmail = userRepository.findByEmail("milan@example.com")
+        println("✅ Fetched by email: $fetchedByEmail")
+
+        // Pronađi po user_type
+        val fetchedByUserType = userRepository.findByUserType("user")
+        println("✅ Users by user_type: $fetchedByUserType")
+
+        // Pronađi vidljive user-e
+        val visibleUsers = userRepository.findVisible()
+        println("✅ Vidljivi User-i: $visibleUsers")
+
+        // Dohvati po ID-u
+        val fetchedById = userRepository.findById(testUser.id.toHexString())
+        println("✅ Fetched by ID: $fetchedById")
+
+        // Obriši user-a
+        val deleteResult = userRepository.deleteById(testUser.id.toHexString())
+        println("✅ Delete uspešan? $deleteResult")
+    } else {
+        println("❌ Test user nije validan!")
+    }
+
+
+
+
+    println("==========VEHICLE TESTS==========")
+    val vehicleRepo = VehicleRepository()
+
+    // 1️⃣ Kreiraj testno vozilo
+    //val userId = testUser.id // Pretpostavimo da je userId ObjectId od postojećeg korisnika
+    val vehicle = Vehicle(
+        registration_number = "ZG1234AB",
+        vehicle_type = "car",
+        created = LocalDateTime.now(),
+        modified = LocalDateTime.now(),
+        user = testUser.id,
+        hidden = false
+    )
+
+    // 2️⃣ Validacija
+    if (vehicle.isValid()) {
+        println("✅ Vozilo je validno!")
+
+        // 3️⃣ Ubacivanje vozila
+        vehicleRepo.insert(vehicle)
+
+        // 4️⃣ Dohvati po ID-u
+        val fetched = vehicleRepo.findById(vehicle.id.toHexString())
+        println("✅ Dohvaceno vozilo: $fetched")
+
+        // 5️⃣ Ažuriranje vozila (npr. promena tipa)
+        val updatedVehicle = vehicle.copy(
+            vehicle_type = "truck",
+            modified = LocalDateTime.now()
+        )
+        val updateResult = vehicleRepo.update(updatedVehicle)
+        println("✅ Update uspešan? $updateResult")
+
+        // 6️⃣ Dohvati sva vozila
+        val allVehicles = vehicleRepo.findAll()
+        println("✅ Sva vozila: $allVehicles")
+
+        // 7️⃣ Dohvati vozila po tipu
+        val trucks = vehicleRepo.findByVehicleType("truck")
+        println("✅ Vozila tipa 'truck': $trucks")
+
+        // 8️⃣ Dohvati vozila po korisniku
+        val userVehicles = vehicleRepo.findByUser(userId.toHexString())
+        println("✅ Vozila za korisnika $userId: $userVehicles")
+
+        // 9️⃣ Dohvati po registracionom broju
+        val byRegNumber = vehicleRepo.findByRegistrationNumber("ZG1234AB")
+        println("✅ Vozilo po registracionom broju: $byRegNumber")
+
+        // 🔟 Obrisi vozilo
+        //val deleteResult = vehicleRepo.deleteById(vehicle.id.toHexString())
+        //println("✅ Brisanje uspešno? $deleteResult")
+    } else {
+        println("❌ Vozilo nije validno!")
+    }
+
+
+
+
+    println("==========UPDATED USER==========")
+// Ažuriraj user-a (dodaj vozilo u vehicles listu)
+    val updatedUser = testUser.copy(
+        vehicles = listOf(vehicle),
+        updated_at = LocalDateTime.now()
+    )
+    val updateResult = userRepository.update(updatedUser)
+    println("✅ Update uspešan? $updateResult")
+
+// Dohvati vozila za user-a (koristi testUser.id)
+    val userVehicles = vehicleRepo.findByUser(testUser.id.toHexString())
+    println("✅ Vozila za korisnika ${testUser.id}: $userVehicles")
+
+
+
+
+    println("==========REVIEW TEST==========")
+    val repo = ReviewsRepository()
+
+    // Kreiraj novi review
+    val newReview = Review(
+        rating = 4,
+        review_text = "Dobar parking, pristojna cena.",
+        review_date = LocalDateTime.now().minusDays(1),
+        hidden = false,
+        created = LocalDateTime.now().minusDays(2),
+        modified = LocalDateTime.now().minusDays(1),
+        user = testUser.id,
+        parking_location = testLocation.id
+    )
+
+    // Ubaci review u bazu
+    repo.insert(newReview)
+
+    // Dohvati po ID-u
+    val fetched = repo.findById(newReview.id.toHexString())
+    println("Dohvacen review: $fetched")
+
+    // Ažuriraj review (npr. promeni rating)
+    val updatedReview = fetched?.copy(rating = 5, modified = LocalDateTime.now())
+    if (updatedReview != null) {
+        val success = repo.update(updatedReview)
+        println("Update uspešan? $success")
+
+        // Dohvati opet i proveri update
+        val updatedFetched = repo.findById(updatedReview.id.toHexString())
+        println("Ažurirani review: $updatedFetched")
+    }
+
+    // Brisanje (soft delete)
+    val deleted = repo.deleteById(newReview.id.toHexString())
+    println("Soft delete uspešan? $deleted")
+
+    // Pokušaj da dohvatiš review posle brisanja
+    val afterDelete = repo.findById(newReview.id.toHexString())
+    println("Review nakon brisanja (trebao bi biti sa hidden=true): $afterDelete")
+
+    // Dohvati sve visible review-e
+    val visibleReviews = repo.findAllVisible()
+    println("Visible reviews count: ${visibleReviews.size}")
+
+
+
+
+    println("==========TARIFF TESTS==========")
+    val rep = TariffRepository()
+
+    val tariff = Tariff(
+        tariff_type = "Standard",
+        duration = "08:00-18:00",
+        vehicle_type = "Automobil",
+        price = BigDecimal("10.00"),
+        price_unit = "ura",
+        created = LocalDateTime.now(),
+        modified = LocalDateTime.now(),
+        parking_location = testLocation.id
+    )
+
+    if (tariff.isValid()) {
+        rep.insert(tariff)
+    } else {
+        println("❌ Tariff nije validan!")
+    }
+
+    // 2️⃣ Dohvati sve Tariffe
+    println("\n📄 Svi Tariffi:")
+    val allTariffs = rep.findAll()
+    allTariffs.forEach { println(it) }
+
+    // 3️⃣ Dohvati po ID-u
+    val fetc = rep.findById(tariff.id.toHexString())
+    println("\n🔎 Dohvacen po ID-u: $fetc")
+
+    // 4️⃣ Azuriraj Tariff
+    val updatedTariff = fetc?.copy(
+        price = BigDecimal("12.50"),
+        modified = LocalDateTime.now()
+    )
+    if (updatedTariff != null) {
+        val updated = rep.update(updatedTariff)
+        println("✏️ Azuriran: $updated")
+    }
+
+    // 5️⃣ Soft delete
+    val del = rep.deleteById(tariff.id.toHexString())
+    println("\n🗑️ Soft delete uspesan? $del")
+
+    // 6️⃣ Dohvati sve vidljive Tariffe
+    println("\n📄 Svi vidljivi Tariffi:")
+    val visibleTariffs = rep.findAllVisible()
+    visibleTariffs.forEach { println(it) }
+
+    // 7️⃣ Dohvati po parking lokaciji
+    println("\n🅿️ Tariffi za parking lokaciju: $testLocation.id")
+    val tariffsByLocation = rep.findByParkingLocation(testLocation.id.toHexString())
+    tariffsByLocation.forEach { println(it) }
+
+    println("\n✅ Testiranje gotovo.")
+    */
 }
