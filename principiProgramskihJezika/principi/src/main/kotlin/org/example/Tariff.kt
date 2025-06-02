@@ -1,5 +1,7 @@
 package org.example
 
+import org.bson.codecs.pojo.annotations.BsonId
+import org.bson.types.ObjectId
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -8,7 +10,8 @@ import java.math.BigDecimal
 import java.util.UUID
 
 data class Tariff(
-    val id: UUID = UUID.randomUUID(),
+    @BsonId
+    val id: ObjectId = ObjectId.get(),
     val tariff_type: String? = null,
     val duration: String? = null,
     val vehicle_type: String? = null,
@@ -17,7 +20,7 @@ data class Tariff(
     val hidden: Boolean? = null,
     val created: LocalDateTime? = null,
     val modified: LocalDateTime? = null,
-    val parking_location: UUID? = null
+    val parking_location: ObjectId? = null
 ) {
 
     fun isValid(existingTariffs: List<Tariff> = emptyList()): Boolean {

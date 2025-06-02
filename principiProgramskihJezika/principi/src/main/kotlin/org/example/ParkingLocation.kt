@@ -1,10 +1,14 @@
 package org.example
 
-import java.time.LocalDateTime
+import java.util.Date
 import java.util.UUID
+import org.bson.codecs.pojo.annotations.BsonId
+import org.bson.types.ObjectId
+import java.time.LocalDateTime
 
 data class ParkingLocation(
-    val id: UUID = UUID.randomUUID(),
+    @BsonId
+    val id: ObjectId = ObjectId.get(),
     val name: String,
     val address: String,
     val location: LocationCoordinates,
@@ -17,10 +21,9 @@ data class ParkingLocation(
     val created: LocalDateTime? = null,
     val modified: LocalDateTime? = null,
     val description: String? = null,
-    val hidden: Boolean? = null,
-    val subscriber: UUID? = null
-)
-{
+    var hidden: Boolean? = null,
+    val subscriber: ObjectId? = null
+) {
     fun isValid(): Boolean {
         return isNameAndAddressValid() &&
                 isSpotCountsValid() &&

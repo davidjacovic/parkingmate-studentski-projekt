@@ -1,21 +1,24 @@
 package org.example
 
+import org.bson.codecs.pojo.annotations.BsonId
+import org.bson.types.ObjectId
 import java.time.LocalDateTime
 import java.math.BigDecimal
 import java.util.UUID
 
 data class Payment(
-    val id: UUID = UUID.randomUUID(),
+    @BsonId
+    val id: ObjectId = ObjectId.get(),
     val date: LocalDateTime? = null,
     val amount: BigDecimal? = null,
     val method: String? = null,
     val payment_status: String? = null, // "pending", "completed", "failed"
     val duration: Int? = null,
-    val hidden: Boolean? = null,
+    var hidden: Boolean? = null,
     val created: LocalDateTime? = null,
     val modified: LocalDateTime? = null,
-    val user: UUID? = null,
-    val parking_location: UUID? = null
+    val user: ObjectId? = null,
+    val parking_location: ObjectId? = null
 ){
     fun isValid(): Boolean {
         return isAmountValid() &&

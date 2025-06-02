@@ -1,10 +1,13 @@
+import org.bson.codecs.pojo.annotations.BsonId
+import org.bson.types.ObjectId
 import org.example.Vehicle
 import java.time.LocalDateTime
 import java.util.UUID
 import java.util.regex.Pattern
 
 data class User(
-    val id: UUID = UUID.randomUUID(),
+    @BsonId
+    val id: ObjectId = ObjectId.get(),
     val name: String? = null,
     val surname: String? = null,
     val username: String? = null,
@@ -13,7 +16,7 @@ data class User(
     val phone_number: String? = null,
     val credit_card_number: String? = null,
     val user_type: String? = null,
-    val hidden: Boolean? = null,
+    var hidden: Boolean? = null,
     val created_at: LocalDateTime? = null,
     val updated_at: LocalDateTime? = null,
     val vehicles: List<Vehicle> = emptyList()
@@ -56,3 +59,4 @@ data class User(
         return PASSWORD_REGEX.matcher(password_hash).matches()
     }
 }
+
