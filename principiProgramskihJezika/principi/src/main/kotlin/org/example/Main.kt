@@ -27,6 +27,8 @@ import java.util.*
 import skraper.main
 import org.bson.types.ObjectId
 import org.example.db.*
+import org.example.viewmodel.PaymentAdminViewModel
+import org.example.viewmodel.ReviewAdminViewModel
 
 
 @Composable
@@ -34,16 +36,38 @@ import org.example.db.*
 fun App() {
     var selectedEntity by remember { mutableStateOf<String?>(null) }
 
-    var users by remember { mutableStateOf(mutableListOf<User>()) }
-    var parkingLocations by remember { mutableStateOf(mutableListOf<ParkingLocation>()) }
-    var subscribers by remember { mutableStateOf(mutableListOf<Subscriber>()) }
-    var tariffs by remember { mutableStateOf(mutableListOf<Tariff>()) }
-    var reviews by remember { mutableStateOf(mutableListOf<Review>()) }
-    var payments by remember { mutableStateOf(mutableListOf<Payment>()) }
-
+    // 📦 Repozitorijumi
     val userRepo = UserRepository()
+    val vehicleRepo = VehicleRepository()
+    val userAdminViewModel = remember { UserAdminViewModel(userRepo, vehicleRepo) }
 
+    val parkingLocationRepo = ParkingLocationRepository()
+    val subscriberRepo = SubscribersRepository()
+    val tariffRepo = TariffRepository()
+    val parkingLocationAdminViewModel = remember {
+        ParkingLocationAdminViewModel(parkingLocationRepo, subscriberRepo, tariffRepo)
+    }
 
+    val reviewsRepo = ReviewsRepository()
+    val reviewAdminViewModel = remember { ReviewAdminViewModel(reviewsRepo) }
+
+    val paymentRepo = PaymentRepository()
+    val paymentAdminViewModel = remember { PaymentAdminViewModel(paymentRepo) }
+
+    // 🔄 Prati StateFlow-ove
+    val users by userAdminViewModel.users.collectAsState()
+    val userError by userAdminViewModel.error.collectAsState()
+
+    val parkingLocations by parkingLocationAdminViewModel.parkingLocations.collectAsState()
+    val subscribers by parkingLocationAdminViewModel.subscribers.collectAsState()
+    val tariffs by parkingLocationAdminViewModel.tariffs.collectAsState()
+    val parkingError by parkingLocationAdminViewModel.error.collectAsState()
+
+    val reviews by reviewAdminViewModel.reviews.collectAsState()
+    val reviewError by reviewAdminViewModel.error.collectAsState()
+
+    val payments by paymentAdminViewModel.payments.collectAsState()
+    val paymentError by paymentAdminViewModel.error.collectAsState()
 
     if (selectedEntity == null) {
         EntitySelectionScreen(onEntitySelected = { selectedEntity = it })
@@ -51,18 +75,9 @@ fun App() {
         when (selectedEntity) {
             "User" -> UserAdminUI(
                 users = users,
-                onAddUser = { newUser ->
-                    userRepo.insert(newUser)
-                    users = userRepo.findAll().toMutableList() // Osveži prikaz liste iz baze
-                },
-                onUpdateUser = { updatedUser ->
-                    userRepo.update(updatedUser)
-                    users = userRepo.findAll().toMutableList()
-                },
-                onDeleteUser = { userToDelete ->
-                    userRepo.deleteById(userToDelete.id.toHexString())
-                    users = userRepo.findAll().toMutableList()
-                },
+                onAddUser = { userAdminViewModel.addUser(it) },
+                onUpdateUser = { userAdminViewModel.updateUser(it) },
+                onDeleteUser = { userAdminViewModel.deleteUser(it) },
                 onBack = { selectedEntity = null }
             )
 
@@ -70,56 +85,62 @@ fun App() {
                 locations = parkingLocations,
                 subscribers = subscribers,
                 tariffs = tariffs,
-                onAddLocation = { newLocation, newSubscriber, newTariffs ->
-                    subscribers = subscribers.toMutableList().apply { add(newSubscriber) }
-                    parkingLocations = parkingLocations.toMutableList().apply {
-                        add(newLocation.copy(subscriber = newSubscriber.id))
-                    }
-                    tariffs = tariffs.toMutableList().apply { addAll(newTariffs) }
+                onAddLocation = { newLocation, subscriber, tariffsList ->
+                    parkingLocationAdminViewModel.addParkingLocation(
+                        newLocation,
+                        subscriber,
+                        tariffsList
+                    )
                 },
                 onUpdateLocation = { updatedLocation, updatedSubscriber ->
-                    parkingLocations = parkingLocations.map {
-                        if (it.id == updatedLocation.id) updatedLocation else it
-                    }.toMutableList()
-                    subscribers = subscribers.map {
-                        if (it.id == updatedSubscriber.id) updatedSubscriber else it
-                    }.toMutableList()
+                    parkingLocationAdminViewModel.updateParkingLocation(
+                        updatedLocation,
+                        updatedSubscriber
+                    )
                 },
                 onDeleteLocation = { locationToDelete ->
-                    parkingLocations = parkingLocations.filter { it.id != locationToDelete.id }.toMutableList()
+                    locationToDelete.id?.let { parkingLocationAdminViewModel.deleteParkingLocation(it.toHexString()) }
                 },
                 onAddTariff = { newTariff ->
-                    tariffs = tariffs.toMutableList().apply { add(newTariff) }
+                    parkingLocationAdminViewModel.addTariff(newTariff)
                 },
                 onDeleteTariff = { tariffToDelete ->
-                    tariffs = tariffs.filter { it.id != tariffToDelete.id }.toMutableList()
+                    tariffToDelete.id?.let { parkingLocationAdminViewModel.deleteTariff(it.toHexString()) }
                 },
                 onBack = { selectedEntity = null }
             )
+
             "Review" -> ReviewAdminUI(
                 users = users,
                 locations = parkingLocations,
                 reviews = reviews,
-                onAddReview = { newReview ->
-                    reviews = reviews.toMutableList().apply { add(newReview) }
-                },
+                onAddReview = { newReview -> reviewAdminViewModel.addReview(newReview) },
                 onBack = { selectedEntity = null }
             )
+
             "Payment" -> PaymentAdminUI(
                 users = users,
                 parkingLocations = parkingLocations,
                 tariffs = tariffs,
                 payments = payments,
-                onAddPayment = { newPayment ->
-                    payments = payments.toMutableList().apply { add(newPayment) }
-                },
+                onAddPayment = { newPayment -> paymentAdminViewModel.addPayment(newPayment) },
                 onBack = { selectedEntity = null }
             )
 
             else -> PlaceholderScreen(entity = selectedEntity!!, onBack = { selectedEntity = null })
         }
     }
+
+    // 🔴 Prikazuj sve error poruke iz ViewModela
+    val errorMessage = userError ?: parkingError ?: reviewError ?: paymentError
+    errorMessage?.let { errorMsg ->
+        LaunchedEffect(errorMsg) {
+            println(errorMsg)
+        }
+    }
 }
+
+
 
 @Composable
 fun EntitySelectionScreen(onEntitySelected: (String) -> Unit) {
@@ -350,7 +371,8 @@ fun AddUserScreen(
                     user_type = userType,
                     created_at = LocalDateTime.now(),
                     updated_at = LocalDateTime.now(),
-                    vehicles = vehicles
+                    vehicles = vehicles,
+                    hidden = false
                 )
 
                 when {
@@ -707,12 +729,15 @@ fun AddOrEditVehicleScreen(
         Row {
             Button(onClick = {
                 val newVehicle = Vehicle(
+                    id = vehicle?.id ?: ObjectId.get(),  // stari id ako edit, novi ako dodaješ
                     registration_number = registrationNumber,
                     vehicle_type = vehicleType,
                     created = vehicle?.created ?: LocalDateTime.now(),
                     modified = LocalDateTime.now(),
-                    user = vehicle?.user ?: null
+                    user = vehicle?.user ?: null,
+                    hidden = false
                 )
+
                 if (!newVehicle.isValid()) {
                     errorMessage = "Invalid data. Check registration number and vehicle type."
                     return@Button
@@ -874,7 +899,9 @@ fun AddParkingLocationScreen(
             total_spots = parseInt(subscriberTotal),
             reserved_spots = parseInt(subscriberReserved),
             waiting_line = parseInt(subscriberWaiting),
-            created = LocalDateTime.now()
+            created = LocalDateTime.now(),
+            modified = LocalDateTime.now(),
+            hidden = false
         )
 
         if (!subscriber.isValid()) {
@@ -893,8 +920,10 @@ fun AddParkingLocationScreen(
             available_invalid_spots = parseInt(availableInvalid),
             available_bus_spots = parseInt(availableBus),
             created = LocalDateTime.now(),
+            modified = LocalDateTime.now(),
             subscriber = subscriber.id,
-            description = if (description.isBlank()) null else description
+            description = if (description.isBlank()) null else description,
+            hidden = false
         )
 
         if (!location.isValid()) {
@@ -1045,6 +1074,7 @@ fun ParkingLocationListScreen(
         }
     }
 }
+
 @Composable
 fun EditParkingLocationScreen(
     location: ParkingLocation,
@@ -1092,12 +1122,14 @@ fun EditParkingLocationScreen(
         }
 
         val updatedSubscriber = Subscriber(
+            id = subscriber?.id ?: ObjectId.get(),
             available_spots = parseIntSafe(subscriberAvailable),
             total_spots = parseIntSafe(subscriberTotal),
             reserved_spots = parseIntSafe(subscriberReserved),
             waiting_line = parseIntSafe(subscriberWaiting),
             created = subscriber?.created ?: LocalDateTime.now(),
-            modified = LocalDateTime.now()
+            modified = LocalDateTime.now(),
+            hidden = false
         )
 
         if (!updatedSubscriber.isValid()) {
@@ -1117,7 +1149,8 @@ fun EditParkingLocationScreen(
             available_bus_spots = parseIntSafe(availableBus),
             modified = LocalDateTime.now(),
             subscriber = updatedSubscriber.id,
-            description = if (description.isBlank()) null else description
+            description = if (description.isBlank()) null else description,
+            hidden = false
         )
 
         if (!updatedLocation.isValid()) {
@@ -1171,7 +1204,11 @@ fun EditParkingLocationScreen(
 
         Spacer(Modifier.height(16.dp))
         Text("Tariffs", style = MaterialTheme.typography.subtitle1)
-        tariffs.forEach { tariff ->
+        // Filtriraj tarife za ovu lokaciju
+        val locationTariffs = tariffs.filter { it.parking_location == location.id }
+
+        // Prikaži samo filtrirane tarife
+        locationTariffs.forEach { tariff ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 elevation = 4.dp
@@ -1193,6 +1230,7 @@ fun EditParkingLocationScreen(
                 }
             }
         }
+
 
         Button(
             onClick = { showTariffForm = true },
@@ -1317,7 +1355,8 @@ fun AddTariffScreen(
             price_unit = priceUnit,
             parking_location = location?.id,
             created = LocalDateTime.now(),
-            modified = LocalDateTime.now()
+            modified = LocalDateTime.now(),
+            hidden = false
         )
 
         if (!newTariff.isValid()) {
@@ -1498,7 +1537,8 @@ fun ReviewAdminUI(
                                             created = LocalDateTime.now(),
                                             modified = LocalDateTime.now(),
                                             user = selectedUser!!.id,
-                                            parking_location = selectedLocation!!.id
+                                            parking_location = selectedLocation!!.id,
+                                            hidden = false
                                         )
                                         if (!newReview.isValid()) {
                                             errorMessage = "Review data is not valid."
@@ -1713,7 +1753,8 @@ fun PaymentAdminUI(
                                             user = selectedUser!!.id,
                                             parking_location = selectedLocation!!.id,
                                             created = currentDateTime,
-                                            modified = currentDateTime
+                                            modified = currentDateTime,
+                                            hidden = false
                                         )
                                         onAddPayment(payment)
                                         selectedUser = null
