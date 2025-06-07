@@ -38,6 +38,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.encodeToString
 import androidx.compose.foundation.lazy.itemsIndexed
+import kotlinx.coroutines.launch
+import org.example.uploadParkingLocationWithTariffs
+
 
 
 @Composable
@@ -1871,13 +1874,13 @@ fun PaymentItem(
         }
     }
 }
-
 @Composable
 fun SkraperAdminUI(onBack: () -> Unit) {
     var rawJson by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
     val parsedData = remember { mutableStateListOf<Pair<ParkingLocation, List<Tariff>>>() }
     var error by remember { mutableStateOf<String?>(null) }
     var filterText by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         try {
@@ -1888,8 +1891,6 @@ fun SkraperAdminUI(onBack: () -> Unit) {
             error = "Failed to scrape: ${e.message}"
         }
     }
-    println(rawJson)
-
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1923,49 +1924,60 @@ fun SkraperAdminUI(onBack: () -> Unit) {
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
         }
+        val filteredData = parsedData.mapIndexed { idx, pair -> idx to pair }
+            .filter { (_, pair) -> pair.first.name.contains(filterText, ignoreCase = true) }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            itemsIndexed(parsedData) { index: Int, item: Pair<ParkingLocation, List<Tariff>> ->
+            items(filteredData) { (index, item) ->
                 val (location, tariffs) = item
-
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
                     elevation = 4.dp
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    val success = uploadParkingLocationWithTariffs(location, tariffs)
+                                    if (success) {
+                                        println("Uploaded successfully.")
+                                    } else {
+                                        println("Upload failed.")
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        ) {
+                            Text("Upload to Server")
+                        }
+
                         OutlinedTextField(
                             value = location.name,
                             onValueChange = {
                                 parsedData[index] = parsedData[index].copy(
-                                    first = parsedData[index].first.copy(name = it)
+                                    first = location.copy(name = it)
                                 )
                             },
                             label = { Text("Name") },
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(Modifier.height(8.dp))
-
                         OutlinedTextField(
                             value = location.address,
                             onValueChange = {
                                 parsedData[index] = parsedData[index].copy(
-                                    first = parsedData[index].first.copy(address = it)
+                                    first = location.copy(address = it)
                                 )
                             },
                             label = { Text("Address") },
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(Modifier.height(8.dp))
-
                         OutlinedTextField(
                             value = location.description ?: "",
                             onValueChange = {
                                 parsedData[index] = parsedData[index].copy(
-                                    first = parsedData[index].first.copy(description = it.ifBlank { null })
+                                    first = location.copy(description = it.ifBlank { null })
                                 )
                             },
                             label = { Text("Description") },
@@ -1985,9 +1997,7 @@ fun SkraperAdminUI(onBack: () -> Unit) {
                                         location.location.coordinates.getOrNull(1) ?: 0.0
                                     )
                                     parsedData[index] = parsedData[index].copy(
-                                        first = parsedData[index].first.copy(
-                                            location = location.location.copy(coordinates = coords)
-                                        )
+                                        first = location.copy(location = location.location.copy(coordinates = coords))
                                     )
                                 },
                                 label = { Text("Longitude") },
@@ -2002,9 +2012,7 @@ fun SkraperAdminUI(onBack: () -> Unit) {
                                         newLat
                                     )
                                     parsedData[index] = parsedData[index].copy(
-                                        first = parsedData[index].first.copy(
-                                            location = location.location.copy(coordinates = coords)
-                                        )
+                                        first = location.copy(location = location.location.copy(coordinates = coords))
                                     )
                                 },
                                 label = { Text("Latitude") },
@@ -2060,9 +2068,7 @@ fun SkraperAdminUI(onBack: () -> Unit) {
 
                             tariffs.forEachIndexed { tIndex, tariff ->
                                 Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp, horizontal = 8.dp)
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                                 ) {
                                     OutlinedTextField(
                                         value = tariff.tariff_type ?: "",
@@ -2086,7 +2092,7 @@ fun SkraperAdminUI(onBack: () -> Unit) {
                                                 }
                                             )
                                         },
-                                        label = { Text("Duration (HH:MM–HH:MM)") },
+                                        label = { Text("Duration") },
                                         modifier = Modifier.fillMaxWidth()
                                     )
 
@@ -2139,6 +2145,7 @@ fun SkraperAdminUI(onBack: () -> Unit) {
         }
     }
 }
+
 
 
 

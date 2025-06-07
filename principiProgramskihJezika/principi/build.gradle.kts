@@ -39,6 +39,10 @@ dependencies {
     implementation("org.json:json:20240303")
 
     implementation("org.litote.kmongo:kmongo:4.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
+
 
 }
 
