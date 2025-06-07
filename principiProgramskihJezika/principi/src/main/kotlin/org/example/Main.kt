@@ -24,11 +24,20 @@ import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
 import java.math.BigDecimal
 import java.util.*
-import skraper.main
 import org.bson.types.ObjectId
 import org.example.db.*
 import org.example.viewmodel.PaymentAdminViewModel
 import org.example.viewmodel.ReviewAdminViewModel
+import org.example.skraper.ucitajParkingLokacijeJson
+import org.example.skraper.parseScrapedJsonObjects
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.encodeToString
+import androidx.compose.foundation.lazy.itemsIndexed
 
 
 @Composable
@@ -47,6 +56,7 @@ fun App() {
     val parkingLocationAdminViewModel = remember {
         ParkingLocationAdminViewModel(parkingLocationRepo, subscriberRepo, tariffRepo)
     }
+
 
     val reviewsRepo = ReviewsRepository()
     val reviewAdminViewModel = remember { ReviewAdminViewModel(reviewsRepo) }
@@ -139,7 +149,6 @@ fun App() {
         }
     }
 }
-
 
 
 @Composable
@@ -241,7 +250,6 @@ fun TextFieldWithLabel(
 }
 
 
-
 @Composable
 fun UserAdminUI(
     users: List<User>,
@@ -275,7 +283,6 @@ fun UserAdminUI(
                 ) {
                     NavigationButton("Add person") { selectedTab = it }
                     NavigationButton("People") { selectedTab = it }
-                    NavigationButton("Scraper") { selectedTab = it }
                     NavigationButton("Generator") { selectedTab = it }
                     Spacer(Modifier.weight(1f))
                     NavigationButton("About") { selectedTab = it }
@@ -295,10 +302,12 @@ fun UserAdminUI(
                             },
                             onBack = { selectedUserForEdit = null }
                         )
+
                         selectedTab == "Add person" -> AddUserScreen(
                             onAddUser = onAddUser,
                             onBack = { selectedTab = "People" }
                         )
+
                         selectedTab == "People" -> PeopleScreen(users) { selectedUserForEdit = it }
                         else -> Text("Coming soon...")
                     }
@@ -378,7 +387,7 @@ fun AddUserScreen(
                 when {
                     !user.isUsernameValid() -> errorMessage = "Invalid username (min 8 characters)"
                     !user.isEmailValid() -> errorMessage = "Invalid email format"
-                    !user.isPasswordValid()-> errorMessage = "You need stronger password"
+                    !user.isPasswordValid() -> errorMessage = "You need stronger password"
                     !user.isPhoneNumberValid() -> errorMessage = "Invalid phone number"
                     !user.isCreditCardValid() -> errorMessage = "Invalid credit card number"
                     !user.isUserTypeValid() -> errorMessage = "User type must be 'admin' or 'user'"
@@ -765,7 +774,6 @@ fun AddOrEditVehicleScreen(
 }
 
 
-
 @Composable
 fun ParkingLocationAdminUI(
     locations: List<ParkingLocation>,
@@ -804,6 +812,7 @@ fun ParkingLocationAdminUI(
                 ) {
                     NavigationButton("Add location") { selectedTab = it }
                     NavigationButton("Locations") { selectedTab = it }
+                    NavigationButton("Scraper") { selectedTab = it }
 
                     Spacer(Modifier.weight(1f))
                     NavigationButton("About") { selectedTab = it }
@@ -830,6 +839,7 @@ fun ParkingLocationAdminUI(
                                 onDeleteTariff = { onDeleteTariff(it) }
                             )
                         }
+
                         selectedLocationForTariff != null -> {
                             AddTariffScreen(
                                 location = selectedLocationForTariff!!,
@@ -840,11 +850,16 @@ fun ParkingLocationAdminUI(
                                 onCancel = { selectedLocationForTariff = null }
                             )
                         }
+
                         selectedTab == "Add location" -> AddParkingLocationScreen(onAddLocation)
                         selectedTab == "Locations" -> ParkingLocationListScreen(
                             locations,
                             onLocationClick = { selectedLocationForEdit = it },
                             onAddTariffClick = { selectedLocationForTariff = it }
+                        )
+
+                        selectedTab == "Scraper" -> SkraperAdminUI(
+                            onBack = { selectedTab = "AddLocation" }
                         )
                     }
                 }
@@ -986,7 +1001,13 @@ fun AddParkingLocationScreen(
 
         Spacer(Modifier.height(8.dp))
         Text("Available Spots", style = MaterialTheme.typography.subtitle1)
-        RowInputs(availableRegular, { availableRegular = it }, availableInvalid, { availableInvalid = it }, availableBus, { availableBus = it })
+        RowInputs(
+            availableRegular,
+            { availableRegular = it },
+            availableInvalid,
+            { availableInvalid = it },
+            availableBus,
+            { availableBus = it })
 
         Spacer(Modifier.height(8.dp))
         Text("Subscriber Info", style = MaterialTheme.typography.subtitle1)
@@ -1193,7 +1214,13 @@ fun EditParkingLocationScreen(
 
         Spacer(Modifier.height(8.dp))
         Text("Available Spots", style = MaterialTheme.typography.subtitle1)
-        RowInputs(availableRegular, { availableRegular = it }, availableInvalid, { availableInvalid = it }, availableBus, { availableBus = it })
+        RowInputs(
+            availableRegular,
+            { availableRegular = it },
+            availableInvalid,
+            { availableInvalid = it },
+            availableBus,
+            { availableBus = it })
 
         Spacer(Modifier.height(8.dp))
         Text("Subscriber Info", style = MaterialTheme.typography.subtitle1)
@@ -1418,7 +1445,6 @@ fun AddTariffScreen(
 }
 
 
-
 @Composable
 fun ReviewAdminUI(
     users: List<User>,
@@ -1559,6 +1585,7 @@ fun ReviewAdminUI(
                                 }
                             }
                         }
+
                         "View reviews" -> {
                             val filteredReviews = if (selectedUser != null && selectedLocation != null) {
                                 reviews.filter { it.user == selectedUser!!.id && it.parking_location == selectedLocation!!.id }
@@ -1600,6 +1627,7 @@ fun ReviewAdminUI(
                                 }
                             }
                         }
+
                         "About" -> {
                             Text("Review Admin UI\nVersion 1.0\nDesigned similarly to Parking Location Admin.")
                         }
@@ -1627,7 +1655,6 @@ fun ReviewItem(review: Review) {
         }
     }
 }
-
 
 
 @Composable
@@ -1845,6 +1872,274 @@ fun PaymentItem(
     }
 }
 
+@Composable
+fun SkraperAdminUI(onBack: () -> Unit) {
+    var rawJson by remember { mutableStateOf<List<JsonObject>>(emptyList()) }
+    val parsedData = remember { mutableStateListOf<Pair<ParkingLocation, List<Tariff>>>() }
+    var error by remember { mutableStateOf<String?>(null) }
+    var filterText by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        try {
+            rawJson = ucitajParkingLokacijeJson()
+            parsedData.clear()
+            parsedData.addAll(parseScrapedJsonObjects(rawJson))
+        } catch (e: Exception) {
+            error = "Failed to scrape: ${e.message}"
+        }
+    }
+    println(rawJson)
+
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = onBack) {
+                Text("Back")
+            }
+            Spacer(Modifier.width(16.dp))
+            Text("Parsed Parking Data", style = MaterialTheme.typography.h5)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = filterText,
+            onValueChange = { filterText = it },
+            label = { Text("Filter by location name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        if (error != null) {
+            Text(error!!, color = Color.Red)
+        }
+
+        val intField: @Composable (String, Int, (Int) -> Unit) -> Unit = { label, value, onUpdate ->
+            OutlinedTextField(
+                value = value.toString(),
+                onValueChange = { onUpdate(it.toIntOrNull() ?: 0) },
+                label = { Text(label) },
+                modifier = Modifier.weight(1f).padding(4.dp)
+            )
+        }
+
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            itemsIndexed(parsedData) { index: Int, item: Pair<ParkingLocation, List<Tariff>> ->
+                val (location, tariffs) = item
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    elevation = 4.dp
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        OutlinedTextField(
+                            value = location.name,
+                            onValueChange = {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = parsedData[index].first.copy(name = it)
+                                )
+                            },
+                            label = { Text("Name") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = location.address,
+                            onValueChange = {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = parsedData[index].first.copy(address = it)
+                                )
+                            },
+                            label = { Text("Address") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = location.description ?: "",
+                            onValueChange = {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = parsedData[index].first.copy(description = it.ifBlank { null })
+                                )
+                            },
+                            label = { Text("Description") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(8.dp))
+                        Text("Coordinates", fontWeight = FontWeight.SemiBold)
+
+                        Row(Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = location.location.coordinates.getOrNull(0)?.toString() ?: "0.0",
+                                onValueChange = {
+                                    val newLon = it.toDoubleOrNull() ?: 0.0
+                                    val coords = listOf(
+                                        newLon,
+                                        location.location.coordinates.getOrNull(1) ?: 0.0
+                                    )
+                                    parsedData[index] = parsedData[index].copy(
+                                        first = parsedData[index].first.copy(
+                                            location = location.location.copy(coordinates = coords)
+                                        )
+                                    )
+                                },
+                                label = { Text("Longitude") },
+                                modifier = Modifier.weight(1f).padding(end = 4.dp)
+                            )
+                            OutlinedTextField(
+                                value = location.location.coordinates.getOrNull(1)?.toString() ?: "0.0",
+                                onValueChange = {
+                                    val newLat = it.toDoubleOrNull() ?: 0.0
+                                    val coords = listOf(
+                                        location.location.coordinates.getOrNull(0) ?: 0.0,
+                                        newLat
+                                    )
+                                    parsedData[index] = parsedData[index].copy(
+                                        first = parsedData[index].first.copy(
+                                            location = location.location.copy(coordinates = coords)
+                                        )
+                                    )
+                                },
+                                label = { Text("Latitude") },
+                                modifier = Modifier.weight(1f).padding(start = 4.dp)
+                            )
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        Text("Total Spots", fontWeight = FontWeight.SemiBold)
+
+                        Row(Modifier.fillMaxWidth()) {
+                            intField("Regular", location.total_regular_spots) {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = location.copy(total_regular_spots = it)
+                                )
+                            }
+                            intField("Invalid", location.total_invalid_spots) {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = location.copy(total_invalid_spots = it)
+                                )
+                            }
+                            intField("Bus", location.total_bus_spots) {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = location.copy(total_bus_spots = it)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        Text("Available Spots", fontWeight = FontWeight.SemiBold)
+
+                        Row(Modifier.fillMaxWidth()) {
+                            intField("Regular", location.available_regular_spots) {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = location.copy(available_regular_spots = it)
+                                )
+                            }
+                            intField("Invalid", location.available_invalid_spots) {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = location.copy(available_invalid_spots = it)
+                                )
+                            }
+                            intField("Bus", location.available_bus_spots) {
+                                parsedData[index] = parsedData[index].copy(
+                                    first = location.copy(available_bus_spots = it)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        if (tariffs.isNotEmpty()) {
+                            Text("Tariffs:", fontWeight = FontWeight.Bold)
+
+                            tariffs.forEachIndexed { tIndex, tariff ->
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp, horizontal = 8.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = tariff.tariff_type ?: "",
+                                        onValueChange = {
+                                            parsedData[index] = parsedData[index].copy(
+                                                second = parsedData[index].second.toMutableList().apply {
+                                                    this[tIndex] = this[tIndex].copy(tariff_type = it)
+                                                }
+                                            )
+                                        },
+                                        label = { Text("Tariff Type") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = tariff.duration ?: "",
+                                        onValueChange = {
+                                            parsedData[index] = parsedData[index].copy(
+                                                second = parsedData[index].second.toMutableList().apply {
+                                                    this[tIndex] = this[tIndex].copy(duration = it.ifBlank { null })
+                                                }
+                                            )
+                                        },
+                                        label = { Text("Duration (HH:MM–HH:MM)") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = tariff.vehicle_type ?: "",
+                                        onValueChange = {
+                                            parsedData[index] = parsedData[index].copy(
+                                                second = parsedData[index].second.toMutableList().apply {
+                                                    this[tIndex] = this[tIndex].copy(vehicle_type = it.ifBlank { null })
+                                                }
+                                            )
+                                        },
+                                        label = { Text("Vehicle Type") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+
+                                    OutlinedTextField(
+                                        value = (tariff.price?.divide(BigDecimal(100)))?.toPlainString() ?: "",
+                                        onValueChange = {
+                                            val newPrice = it.toBigDecimalOrNull()
+                                            parsedData[index] = parsedData[index].copy(
+                                                second = parsedData[index].second.toMutableList().apply {
+                                                    this[tIndex] = this[tIndex].copy(price = newPrice ?: BigDecimal.ZERO)
+                                                }
+                                            )
+                                        },
+                                        label = { Text("Price") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                    )
+
+                                    OutlinedTextField(
+                                        value = tariff.price_unit ?: "",
+                                        onValueChange = {
+                                            parsedData[index] = parsedData[index].copy(
+                                                second = parsedData[index].second.toMutableList().apply {
+                                                    this[tIndex] = this[tIndex].copy(price_unit = it)
+                                                }
+                                            )
+                                        },
+                                        label = { Text("Price Unit") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 
 fun main() = application {
@@ -1854,425 +2149,424 @@ fun main() = application {
     }
 
 
+    /*
+        println("==========SUBSCRIBERS TESTS==========")
+        val subscribersTest = SubscribersRepository()
 
-/*
-    println("==========SUBSCRIBERS TESTS==========")
-    val subscribersTest = SubscribersRepository()
-
-    // 1. Kreiraj Subscriber
-    val subscribers = Subscriber(
-        available_spots = 5,
-        reserved_spots = 3,
-        total_spots = 10,
-        waiting_line = 2,
-        created = LocalDateTime.now(),
-        modified = LocalDateTime.now(),
-        hidden = false
-    )
-
-    // Ubaci u bazu
-    subscribersTest.insert(subscribers)
-    println("Ubacio subscriber sa ID: ${subscribers.id}")
-
-    // 2. Dohvati po ID-u
-    val fetche = subscribersTest.findById(subscribers.id.toHexString())
-    println("Dohvatio subscriber: $fetche")
-
-    // 3. Update subscriber - npr. promeni reserved_spots
-    if (fetche != null) {
-        val updatedSubscriber = fetche.copy(
-            reserved_spots = 4,
-            modified = LocalDateTime.now()
+        // 1. Kreiraj Subscriber
+        val subscribers = Subscriber(
+            available_spots = 5,
+            reserved_spots = 3,
+            total_spots = 10,
+            waiting_line = 2,
+            created = LocalDateTime.now(),
+            modified = LocalDateTime.now(),
+            hidden = false
         )
-        val updateResult = subscribersTest.update(updatedSubscriber)
-        println("Update uspešan? $updateResult")
-    }
 
-    // 4. Dohvati ponovo da vidiš update
-    val updatedFetched = subscribersTest.findById(subscribers.id.toHexString())
-    println("Dohvatio nakon update-a: $updatedFetched")
+        // Ubaci u bazu
+        subscribersTest.insert(subscribers)
+        println("Ubacio subscriber sa ID: ${subscribers.id}")
 
-    // 5. Soft delete
-    val deleteResult = subscribersTest.deleteById(subscribers.id.toHexString())
-    println("Soft delete uspešan? $deleteResult")
+        // 2. Dohvati po ID-u
+        val fetche = subscribersTest.findById(subscribers.id.toHexString())
+        println("Dohvatio subscriber: $fetche")
 
-    // 6. Pokušaj dohvatiti obrisanog (trebalo bi da postoji ali sa hidden=true)
-    val afterDelet = subscribersTest.findById(subscribers.id.toHexString())
-    println("Dohvatio nakon soft delete: $afterDelet")
+        // 3. Update subscriber - npr. promeni reserved_spots
+        if (fetche != null) {
+            val updatedSubscriber = fetche.copy(
+                reserved_spots = 4,
+                modified = LocalDateTime.now()
+            )
+            val updateResult = subscribersTest.update(updatedSubscriber)
+            println("Update uspešan? $updateResult")
+        }
 
-    // 7. Dohvati sve vidljive (hidden != true)
-    val visibleSubscribers = subscribersTest.findAllVisible()
-    println("Svi vidljivi subscriberi: $visibleSubscribers")
+        // 4. Dohvati ponovo da vidiš update
+        val updatedFetched = subscribersTest.findById(subscribers.id.toHexString())
+        println("Dohvatio nakon update-a: $updatedFetched")
+
+        // 5. Soft delete
+        val deleteResult = subscribersTest.deleteById(subscribers.id.toHexString())
+        println("Soft delete uspešan? $deleteResult")
+
+        // 6. Pokušaj dohvatiti obrisanog (trebalo bi da postoji ali sa hidden=true)
+        val afterDelet = subscribersTest.findById(subscribers.id.toHexString())
+        println("Dohvatio nakon soft delete: $afterDelet")
+
+        // 7. Dohvati sve vidljive (hidden != true)
+        val visibleSubscribers = subscribersTest.findAllVisible()
+        println("Svi vidljivi subscriberi: $visibleSubscribers")
 
 
 
 
 
-    println("==========PARKING LOCATION TESTS==========")
-    val parkingLocationRepository = ParkingLocationRepository()
+        println("==========PARKING LOCATION TESTS==========")
+        val parkingLocationRepository = ParkingLocationRepository()
 
-    // Kreiraj LocationCoordinates
-    val locationCoordinates = LocationCoordinates(
-        coordinates = listOf(15.966568, 45.815399)
-    )
-
-    // Kreiraj ParkingLocation
-    val now = Date()
-    val testLocation = ParkingLocation(
-        id = ObjectId(), // ObjectId automatski kreiran
-        name = "Test Parking",
-        address = "Main Street 123",
-        location = locationCoordinates,
-        total_regular_spots = 100,
-        total_invalid_spots = 5,
-        total_bus_spots = 3,
-        available_regular_spots = 90,
-        available_invalid_spots = 5,
-        available_bus_spots = 2,
-        created = LocalDateTime.now(),
-        modified = LocalDateTime.now(),
-        description = "Parking in center of city",
-        hidden = false
-    )
-
-    // Validacija
-    if (testLocation.isValid()) {
-        // Ubaci ParkingLocation
-        parkingLocationRepository.insert(testLocation)
-
-        // Prikaz svih parking lokacija
-        val allLocations = parkingLocationRepository.findAll()
-        println("✅ Svi ParkingLocations: $allLocations")
-
-        // Ažuriraj parkingLocation
-        val updatedLocation = testLocation.copy(
-            available_regular_spots = 80,
-            modified = LocalDateTime.now() // novo vreme
+        // Kreiraj LocationCoordinates
+        val locationCoordinates = LocationCoordinates(
+            coordinates = listOf(15.966568, 45.815399)
         )
-        val updateResult = parkingLocationRepository.update(updatedLocation)
-        println("✅ Update uspešan? $updateResult")
-        println("ID: ${updatedLocation.id}")
 
-        // Dohvati po ID-u
-        val fetchedLocation = parkingLocationRepository.findById(testLocation.id.toHexString()) // važno!
-        println("✅ Fetched by ID: $fetchedLocation")
+        // Kreiraj ParkingLocation
+        val now = Date()
+        val testLocation = ParkingLocation(
+            id = ObjectId(), // ObjectId automatski kreiran
+            name = "Test Parking",
+            address = "Main Street 123",
+            location = locationCoordinates,
+            total_regular_spots = 100,
+            total_invalid_spots = 5,
+            total_bus_spots = 3,
+            available_regular_spots = 90,
+            available_invalid_spots = 5,
+            available_bus_spots = 2,
+            created = LocalDateTime.now(),
+            modified = LocalDateTime.now(),
+            description = "Parking in center of city",
+            hidden = false
+        )
 
-        // Obrisi parkingLocation
-        val deleteResult = parkingLocationRepository.deleteById(testLocation.id.toHexString()) // važno!
-        println("✅ Delete uspešan? $deleteResult")
-    } else {
-        println("❌ ParkingLocation nije validan!")
-    }
+        // Validacija
+        if (testLocation.isValid()) {
+            // Ubaci ParkingLocation
+            parkingLocationRepository.insert(testLocation)
 
+            // Prikaz svih parking lokacija
+            val allLocations = parkingLocationRepository.findAll()
+            println("✅ Svi ParkingLocations: $allLocations")
 
+            // Ažuriraj parkingLocation
+            val updatedLocation = testLocation.copy(
+                available_regular_spots = 80,
+                modified = LocalDateTime.now() // novo vreme
+            )
+            val updateResult = parkingLocationRepository.update(updatedLocation)
+            println("✅ Update uspešan? $updateResult")
+            println("ID: ${updatedLocation.id}")
 
+            // Dohvati po ID-u
+            val fetchedLocation = parkingLocationRepository.findById(testLocation.id.toHexString()) // važno!
+            println("✅ Fetched by ID: $fetchedLocation")
 
-    println("==========PAYMENT TESTS==========")
-    val paymentRepo = PaymentRepository()
-
-    val userId = ObjectId() // testni user
-    val parkingLocationId = ObjectId() // testni parking location
-
-    val payment = Payment(
-        amount = BigDecimal("9.99"),
-        method = "card",
-        payment_status = "pending",
-        duration = 30,
-        created = LocalDateTime.now(),
-        modified = LocalDateTime.now(),
-        hidden = false,
-        user = userId,
-        parking_location = parkingLocationId
-    )
-
-    // Validacija i insert
-    if (payment.isValid()) {
-        paymentRepo.insert(payment)
-
-        // Dohvati sve
-        val allPayments = paymentRepo.findAll()
-        println("✅ Svi Payments: $allPayments")
-
-        // Dohvati po ID-u
-        val fetchedById = paymentRepo.findById(payment.id.toHexString())
-        println("✅ Fetched by ID: $fetchedById")
-
-        // Dohvati po statusu
-        val pendingPayments = paymentRepo.findByStatus("pending")
-        println("✅ Pending Payments: $pendingPayments")
-
-        // Dohvati po user-u
-        val byUser = paymentRepo.findByUser(userId.toHexString())
-        println("✅ Payments by User: $byUser")
-
-        // Dohvati po lokaciji
-        val byLocation = paymentRepo.findByParkingLocation(parkingLocationId.toHexString())
-        println("✅ Payments by Location: $byLocation")
-
-        // Update
-        val updatedPayment = payment.copy(payment_status = "completed", modified = LocalDateTime.now())
-        val updated = paymentRepo.update(updatedPayment)
-        println("✅ Update uspešan? $updated")
-
-        // Brisanje
-        val deleted = paymentRepo.deleteById(payment.id.toHexString())
-        println("✅ Delete uspešan? $deleted")
-    } else {
-        println("❌ Payment nije validan!")
-    }
+            // Obrisi parkingLocation
+            val deleteResult = parkingLocationRepository.deleteById(testLocation.id.toHexString()) // važno!
+            println("✅ Delete uspešan? $deleteResult")
+        } else {
+            println("❌ ParkingLocation nije validan!")
+        }
 
 
 
 
-    println("==========USER TESTS==========")
-    val userRepository = UserRepository()
+        println("==========PAYMENT TESTS==========")
+        val paymentRepo = PaymentRepository()
 
-    // Kreiraj testnog user-a
-    val testUser = User(
-        name = "Milan",
-        surname = "Jovanovic",
-        username = "milan.jovanovic",
-        email = "milan@example.com",
-        password_hash = "Passw0rd@2025", // Za test
-        phone_number = "381641234567",
-        credit_card_number = "1234567890123456",
-        user_type = "user",
-        hidden = false,
-        created_at = LocalDateTime.now(),
-        updated_at = LocalDateTime.now(),
-        vehicles = emptyList()
-    )
+        val userId = ObjectId() // testni user
+        val parkingLocationId = ObjectId() // testni parking location
 
-    // Validacija
-    val isValid = testUser.isUsernameValid() &&
-            testUser.isEmailValid() &&
-            testUser.isPasswordValid() &&
-            testUser.isPhoneNumberValid() &&
-            testUser.isCreditCardValid() &&
-            testUser.isUserTypeValid()
+        val payment = Payment(
+            amount = BigDecimal("9.99"),
+            method = "card",
+            payment_status = "pending",
+            duration = 30,
+            created = LocalDateTime.now(),
+            modified = LocalDateTime.now(),
+            hidden = false,
+            user = userId,
+            parking_location = parkingLocationId
+        )
 
-    if (isValid) {
-        // Ubaci user-a
-        userRepository.insert(testUser)
+        // Validacija i insert
+        if (payment.isValid()) {
+            paymentRepo.insert(payment)
 
-        // Prikaži sve user-e
-        val allUsers = userRepository.findAll()
-        println("✅ Svi User-i: $allUsers")
+            // Dohvati sve
+            val allPayments = paymentRepo.findAll()
+            println("✅ Svi Payments: $allPayments")
 
-        // Ažuriraj user-a
+            // Dohvati po ID-u
+            val fetchedById = paymentRepo.findById(payment.id.toHexString())
+            println("✅ Fetched by ID: $fetchedById")
+
+            // Dohvati po statusu
+            val pendingPayments = paymentRepo.findByStatus("pending")
+            println("✅ Pending Payments: $pendingPayments")
+
+            // Dohvati po user-u
+            val byUser = paymentRepo.findByUser(userId.toHexString())
+            println("✅ Payments by User: $byUser")
+
+            // Dohvati po lokaciji
+            val byLocation = paymentRepo.findByParkingLocation(parkingLocationId.toHexString())
+            println("✅ Payments by Location: $byLocation")
+
+            // Update
+            val updatedPayment = payment.copy(payment_status = "completed", modified = LocalDateTime.now())
+            val updated = paymentRepo.update(updatedPayment)
+            println("✅ Update uspešan? $updated")
+
+            // Brisanje
+            val deleted = paymentRepo.deleteById(payment.id.toHexString())
+            println("✅ Delete uspešan? $deleted")
+        } else {
+            println("❌ Payment nije validan!")
+        }
+
+
+
+
+        println("==========USER TESTS==========")
+        val userRepository = UserRepository()
+
+        // Kreiraj testnog user-a
+        val testUser = User(
+            name = "Milan",
+            surname = "Jovanovic",
+            username = "milan.jovanovic",
+            email = "milan@example.com",
+            password_hash = "Passw0rd@2025", // Za test
+            phone_number = "381641234567",
+            credit_card_number = "1234567890123456",
+            user_type = "user",
+            hidden = false,
+            created_at = LocalDateTime.now(),
+            updated_at = LocalDateTime.now(),
+            vehicles = emptyList()
+        )
+
+        // Validacija
+        val isValid = testUser.isUsernameValid() &&
+                testUser.isEmailValid() &&
+                testUser.isPasswordValid() &&
+                testUser.isPhoneNumberValid() &&
+                testUser.isCreditCardValid() &&
+                testUser.isUserTypeValid()
+
+        if (isValid) {
+            // Ubaci user-a
+            userRepository.insert(testUser)
+
+            // Prikaži sve user-e
+            val allUsers = userRepository.findAll()
+            println("✅ Svi User-i: $allUsers")
+
+            // Ažuriraj user-a
+            val updatedUser = testUser.copy(
+                phone_number = "381651234567",
+                updated_at = LocalDateTime.now()
+            )
+            val updateResult = userRepository.update(updatedUser)
+            println("✅ Update uspešan? $updateResult")
+
+            // Pronađi po username-u
+            val fetchedByUsername = userRepository.findByUsername("milan.jovanovic")
+            println("✅ Fetched by username: $fetchedByUsername")
+
+            // Pronađi po email-u
+            val fetchedByEmail = userRepository.findByEmail("milan@example.com")
+            println("✅ Fetched by email: $fetchedByEmail")
+
+            // Pronađi po user_type
+            val fetchedByUserType = userRepository.findByUserType("user")
+            println("✅ Users by user_type: $fetchedByUserType")
+
+            // Pronađi vidljive user-e
+            val visibleUsers = userRepository.findVisible()
+            println("✅ Vidljivi User-i: $visibleUsers")
+
+            // Dohvati po ID-u
+            val fetchedById = userRepository.findById(testUser.id.toHexString())
+            println("✅ Fetched by ID: $fetchedById")
+
+            // Obriši user-a
+            val deleteResult = userRepository.deleteById(testUser.id.toHexString())
+            println("✅ Delete uspešan? $deleteResult")
+        } else {
+            println("❌ Test user nije validan!")
+        }
+
+
+
+
+        println("==========VEHICLE TESTS==========")
+        val vehicleRepo = VehicleRepository()
+
+        // 1️⃣ Kreiraj testno vozilo
+        //val userId = testUser.id // Pretpostavimo da je userId ObjectId od postojećeg korisnika
+        val vehicle = Vehicle(
+            registration_number = "ZG1234AB",
+            vehicle_type = "car",
+            created = LocalDateTime.now(),
+            modified = LocalDateTime.now(),
+            user = testUser.id,
+            hidden = false
+        )
+
+        // 2️⃣ Validacija
+        if (vehicle.isValid()) {
+            println("✅ Vozilo je validno!")
+
+            // 3️⃣ Ubacivanje vozila
+            vehicleRepo.insert(vehicle)
+
+            // 4️⃣ Dohvati po ID-u
+            val fetched = vehicleRepo.findById(vehicle.id.toHexString())
+            println("✅ Dohvaceno vozilo: $fetched")
+
+            // 5️⃣ Ažuriranje vozila (npr. promena tipa)
+            val updatedVehicle = vehicle.copy(
+                vehicle_type = "truck",
+                modified = LocalDateTime.now()
+            )
+            val updateResult = vehicleRepo.update(updatedVehicle)
+            println("✅ Update uspešan? $updateResult")
+
+            // 6️⃣ Dohvati sva vozila
+            val allVehicles = vehicleRepo.findAll()
+            println("✅ Sva vozila: $allVehicles")
+
+            // 7️⃣ Dohvati vozila po tipu
+            val trucks = vehicleRepo.findByVehicleType("truck")
+            println("✅ Vozila tipa 'truck': $trucks")
+
+            // 8️⃣ Dohvati vozila po korisniku
+            val userVehicles = vehicleRepo.findByUser(userId.toHexString())
+            println("✅ Vozila za korisnika $userId: $userVehicles")
+
+            // 9️⃣ Dohvati po registracionom broju
+            val byRegNumber = vehicleRepo.findByRegistrationNumber("ZG1234AB")
+            println("✅ Vozilo po registracionom broju: $byRegNumber")
+
+            // 🔟 Obrisi vozilo
+            //val deleteResult = vehicleRepo.deleteById(vehicle.id.toHexString())
+            //println("✅ Brisanje uspešno? $deleteResult")
+        } else {
+            println("❌ Vozilo nije validno!")
+        }
+
+
+
+
+        println("==========UPDATED USER==========")
+    // Ažuriraj user-a (dodaj vozilo u vehicles listu)
         val updatedUser = testUser.copy(
-            phone_number = "381651234567",
+            vehicles = listOf(vehicle),
             updated_at = LocalDateTime.now()
         )
         val updateResult = userRepository.update(updatedUser)
         println("✅ Update uspešan? $updateResult")
 
-        // Pronađi po username-u
-        val fetchedByUsername = userRepository.findByUsername("milan.jovanovic")
-        println("✅ Fetched by username: $fetchedByUsername")
+    // Dohvati vozila za user-a (koristi testUser.id)
+        val userVehicles = vehicleRepo.findByUser(testUser.id.toHexString())
+        println("✅ Vozila za korisnika ${testUser.id}: $userVehicles")
 
-        // Pronađi po email-u
-        val fetchedByEmail = userRepository.findByEmail("milan@example.com")
-        println("✅ Fetched by email: $fetchedByEmail")
 
-        // Pronađi po user_type
-        val fetchedByUserType = userRepository.findByUserType("user")
-        println("✅ Users by user_type: $fetchedByUserType")
 
-        // Pronađi vidljive user-e
-        val visibleUsers = userRepository.findVisible()
-        println("✅ Vidljivi User-i: $visibleUsers")
+
+        println("==========REVIEW TEST==========")
+        val repo = ReviewsRepository()
+
+        // Kreiraj novi review
+        val newReview = Review(
+            rating = 4,
+            review_text = "Dobar parking, pristojna cena.",
+            review_date = LocalDateTime.now().minusDays(1),
+            hidden = false,
+            created = LocalDateTime.now().minusDays(2),
+            modified = LocalDateTime.now().minusDays(1),
+            user = testUser.id,
+            parking_location = testLocation.id
+        )
+
+        // Ubaci review u bazu
+        repo.insert(newReview)
 
         // Dohvati po ID-u
-        val fetchedById = userRepository.findById(testUser.id.toHexString())
-        println("✅ Fetched by ID: $fetchedById")
+        val fetched = repo.findById(newReview.id.toHexString())
+        println("Dohvacen review: $fetched")
 
-        // Obriši user-a
-        val deleteResult = userRepository.deleteById(testUser.id.toHexString())
-        println("✅ Delete uspešan? $deleteResult")
-    } else {
-        println("❌ Test user nije validan!")
-    }
+        // Ažuriraj review (npr. promeni rating)
+        val updatedReview = fetched?.copy(rating = 5, modified = LocalDateTime.now())
+        if (updatedReview != null) {
+            val success = repo.update(updatedReview)
+            println("Update uspešan? $success")
+
+            // Dohvati opet i proveri update
+            val updatedFetched = repo.findById(updatedReview.id.toHexString())
+            println("Ažurirani review: $updatedFetched")
+        }
+
+        // Brisanje (soft delete)
+        val deleted = repo.deleteById(newReview.id.toHexString())
+        println("Soft delete uspešan? $deleted")
+
+        // Pokušaj da dohvatiš review posle brisanja
+        val afterDelete = repo.findById(newReview.id.toHexString())
+        println("Review nakon brisanja (trebao bi biti sa hidden=true): $afterDelete")
+
+        // Dohvati sve visible review-e
+        val visibleReviews = repo.findAllVisible()
+        println("Visible reviews count: ${visibleReviews.size}")
 
 
 
 
-    println("==========VEHICLE TESTS==========")
-    val vehicleRepo = VehicleRepository()
+        println("==========TARIFF TESTS==========")
+        val rep = TariffRepository()
 
-    // 1️⃣ Kreiraj testno vozilo
-    //val userId = testUser.id // Pretpostavimo da je userId ObjectId od postojećeg korisnika
-    val vehicle = Vehicle(
-        registration_number = "ZG1234AB",
-        vehicle_type = "car",
-        created = LocalDateTime.now(),
-        modified = LocalDateTime.now(),
-        user = testUser.id,
-        hidden = false
-    )
+        val tariff = Tariff(
+            tariff_type = "Standard",
+            duration = "08:00-18:00",
+            vehicle_type = "Automobil",
+            price = BigDecimal("10.00"),
+            price_unit = "ura",
+            created = LocalDateTime.now(),
+            modified = LocalDateTime.now(),
+            parking_location = testLocation.id
+        )
 
-    // 2️⃣ Validacija
-    if (vehicle.isValid()) {
-        println("✅ Vozilo je validno!")
+        if (tariff.isValid()) {
+            rep.insert(tariff)
+        } else {
+            println("❌ Tariff nije validan!")
+        }
 
-        // 3️⃣ Ubacivanje vozila
-        vehicleRepo.insert(vehicle)
+        // 2️⃣ Dohvati sve Tariffe
+        println("\n📄 Svi Tariffi:")
+        val allTariffs = rep.findAll()
+        allTariffs.forEach { println(it) }
 
-        // 4️⃣ Dohvati po ID-u
-        val fetched = vehicleRepo.findById(vehicle.id.toHexString())
-        println("✅ Dohvaceno vozilo: $fetched")
+        // 3️⃣ Dohvati po ID-u
+        val fetc = rep.findById(tariff.id.toHexString())
+        println("\n🔎 Dohvacen po ID-u: $fetc")
 
-        // 5️⃣ Ažuriranje vozila (npr. promena tipa)
-        val updatedVehicle = vehicle.copy(
-            vehicle_type = "truck",
+        // 4️⃣ Azuriraj Tariff
+        val updatedTariff = fetc?.copy(
+            price = BigDecimal("12.50"),
             modified = LocalDateTime.now()
         )
-        val updateResult = vehicleRepo.update(updatedVehicle)
-        println("✅ Update uspešan? $updateResult")
+        if (updatedTariff != null) {
+            val updated = rep.update(updatedTariff)
+            println("✏️ Azuriran: $updated")
+        }
 
-        // 6️⃣ Dohvati sva vozila
-        val allVehicles = vehicleRepo.findAll()
-        println("✅ Sva vozila: $allVehicles")
+        // 5️⃣ Soft delete
+        val del = rep.deleteById(tariff.id.toHexString())
+        println("\n🗑️ Soft delete uspesan? $del")
 
-        // 7️⃣ Dohvati vozila po tipu
-        val trucks = vehicleRepo.findByVehicleType("truck")
-        println("✅ Vozila tipa 'truck': $trucks")
+        // 6️⃣ Dohvati sve vidljive Tariffe
+        println("\n📄 Svi vidljivi Tariffi:")
+        val visibleTariffs = rep.findAllVisible()
+        visibleTariffs.forEach { println(it) }
 
-        // 8️⃣ Dohvati vozila po korisniku
-        val userVehicles = vehicleRepo.findByUser(userId.toHexString())
-        println("✅ Vozila za korisnika $userId: $userVehicles")
+        // 7️⃣ Dohvati po parking lokaciji
+        println("\n🅿️ Tariffi za parking lokaciju: $testLocation.id")
+        val tariffsByLocation = rep.findByParkingLocation(testLocation.id.toHexString())
+        tariffsByLocation.forEach { println(it) }
 
-        // 9️⃣ Dohvati po registracionom broju
-        val byRegNumber = vehicleRepo.findByRegistrationNumber("ZG1234AB")
-        println("✅ Vozilo po registracionom broju: $byRegNumber")
-
-        // 🔟 Obrisi vozilo
-        //val deleteResult = vehicleRepo.deleteById(vehicle.id.toHexString())
-        //println("✅ Brisanje uspešno? $deleteResult")
-    } else {
-        println("❌ Vozilo nije validno!")
-    }
-
-
-
-
-    println("==========UPDATED USER==========")
-// Ažuriraj user-a (dodaj vozilo u vehicles listu)
-    val updatedUser = testUser.copy(
-        vehicles = listOf(vehicle),
-        updated_at = LocalDateTime.now()
-    )
-    val updateResult = userRepository.update(updatedUser)
-    println("✅ Update uspešan? $updateResult")
-
-// Dohvati vozila za user-a (koristi testUser.id)
-    val userVehicles = vehicleRepo.findByUser(testUser.id.toHexString())
-    println("✅ Vozila za korisnika ${testUser.id}: $userVehicles")
-
-
-
-
-    println("==========REVIEW TEST==========")
-    val repo = ReviewsRepository()
-
-    // Kreiraj novi review
-    val newReview = Review(
-        rating = 4,
-        review_text = "Dobar parking, pristojna cena.",
-        review_date = LocalDateTime.now().minusDays(1),
-        hidden = false,
-        created = LocalDateTime.now().minusDays(2),
-        modified = LocalDateTime.now().minusDays(1),
-        user = testUser.id,
-        parking_location = testLocation.id
-    )
-
-    // Ubaci review u bazu
-    repo.insert(newReview)
-
-    // Dohvati po ID-u
-    val fetched = repo.findById(newReview.id.toHexString())
-    println("Dohvacen review: $fetched")
-
-    // Ažuriraj review (npr. promeni rating)
-    val updatedReview = fetched?.copy(rating = 5, modified = LocalDateTime.now())
-    if (updatedReview != null) {
-        val success = repo.update(updatedReview)
-        println("Update uspešan? $success")
-
-        // Dohvati opet i proveri update
-        val updatedFetched = repo.findById(updatedReview.id.toHexString())
-        println("Ažurirani review: $updatedFetched")
-    }
-
-    // Brisanje (soft delete)
-    val deleted = repo.deleteById(newReview.id.toHexString())
-    println("Soft delete uspešan? $deleted")
-
-    // Pokušaj da dohvatiš review posle brisanja
-    val afterDelete = repo.findById(newReview.id.toHexString())
-    println("Review nakon brisanja (trebao bi biti sa hidden=true): $afterDelete")
-
-    // Dohvati sve visible review-e
-    val visibleReviews = repo.findAllVisible()
-    println("Visible reviews count: ${visibleReviews.size}")
-
-
-
-
-    println("==========TARIFF TESTS==========")
-    val rep = TariffRepository()
-
-    val tariff = Tariff(
-        tariff_type = "Standard",
-        duration = "08:00-18:00",
-        vehicle_type = "Automobil",
-        price = BigDecimal("10.00"),
-        price_unit = "ura",
-        created = LocalDateTime.now(),
-        modified = LocalDateTime.now(),
-        parking_location = testLocation.id
-    )
-
-    if (tariff.isValid()) {
-        rep.insert(tariff)
-    } else {
-        println("❌ Tariff nije validan!")
-    }
-
-    // 2️⃣ Dohvati sve Tariffe
-    println("\n📄 Svi Tariffi:")
-    val allTariffs = rep.findAll()
-    allTariffs.forEach { println(it) }
-
-    // 3️⃣ Dohvati po ID-u
-    val fetc = rep.findById(tariff.id.toHexString())
-    println("\n🔎 Dohvacen po ID-u: $fetc")
-
-    // 4️⃣ Azuriraj Tariff
-    val updatedTariff = fetc?.copy(
-        price = BigDecimal("12.50"),
-        modified = LocalDateTime.now()
-    )
-    if (updatedTariff != null) {
-        val updated = rep.update(updatedTariff)
-        println("✏️ Azuriran: $updated")
-    }
-
-    // 5️⃣ Soft delete
-    val del = rep.deleteById(tariff.id.toHexString())
-    println("\n🗑️ Soft delete uspesan? $del")
-
-    // 6️⃣ Dohvati sve vidljive Tariffe
-    println("\n📄 Svi vidljivi Tariffi:")
-    val visibleTariffs = rep.findAllVisible()
-    visibleTariffs.forEach { println(it) }
-
-    // 7️⃣ Dohvati po parking lokaciji
-    println("\n🅿️ Tariffi za parking lokaciju: $testLocation.id")
-    val tariffsByLocation = rep.findByParkingLocation(testLocation.id.toHexString())
-    tariffsByLocation.forEach { println(it) }
-
-    println("\n✅ Testiranje gotovo.")
-    */
+        println("\n✅ Testiranje gotovo.")
+        */
 }
