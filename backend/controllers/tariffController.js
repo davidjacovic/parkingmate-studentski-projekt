@@ -1,15 +1,7 @@
 var TariffModel = require('../models/tariffModel.js');
 
-/**
- * tariffController.js
- *
- * @description :: Server-side logic for managing tariffs.
- */
 module.exports = {
 
-    /**
-     * tariffController.list()
-     */
     list: function (req, res) {
         TariffModel.find(function (err, tariffs) {
             if (err) {
@@ -23,9 +15,6 @@ module.exports = {
         });
     },
 
-    /**
-     * tariffController.show()
-     */
     show: function (req, res) {
         var id = req.params.id;
 
@@ -47,12 +36,9 @@ module.exports = {
         });
     },
 
-    /**
-     * tariffController.create()
-     */
     create: function (req, res) {
         var tariff = new TariffModel({
-
+            // ovde dodaj polja ako želiš da kreiraš odmah
         });
 
         tariff.save(function (err, tariff) {
@@ -67,9 +53,6 @@ module.exports = {
         });
     },
 
-    /**
-     * tariffController.update()
-     */
     update: function (req, res) {
         var id = req.params.id;
 
@@ -87,6 +70,10 @@ module.exports = {
                 });
             }
 
+            // update polja, na primer:
+            // tariff.duration = req.body.duration || tariff.duration;
+            // tariff.price = req.body.price || tariff.price;
+            // ...
 
             tariff.save(function (err, tariff) {
                 if (err) {
@@ -101,9 +88,6 @@ module.exports = {
         });
     },
 
-    /**
-     * tariffController.remove()
-     */
     remove: function (req, res) {
         var id = req.params.id;
 
@@ -118,11 +102,11 @@ module.exports = {
             return res.status(204).json();
         });
     },
-    
+
     byLocation: async (req, res) => {
         try {
             const locationId = req.params.id;
-            const tariffs = await Tariff.find({ parking_location: locationId }).sort({ created: -1 });
+            const tariffs = await TariffModel.find({ parking_location: locationId }).sort({ created: -1 });
             res.json(tariffs);
         } catch (err) {
             res.status(500).json({ message: 'Failed to fetch tariffs' });

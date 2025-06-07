@@ -10,8 +10,9 @@ var paymentSchema = new Schema({
     hidden: Boolean,
     created: Date,
     modified: Date,
-    user: { type: Schema.Types.ObjectId, ref: 'User' },
-    parking_location: { type: Schema.Types.ObjectId, ref: 'ParkingLocation' }
+    user: { type: Schema.Types.ObjectId, ref: 'user' },
+    parking_location: { type: Schema.Types.ObjectId, ref: 'ParkingLocation' },
+     vehicle_plate: String
 });
 
 module.exports = mongoose.model('payment', paymentSchema);
