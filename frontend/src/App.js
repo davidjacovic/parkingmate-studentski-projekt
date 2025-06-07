@@ -15,6 +15,7 @@ import ProximitySearch from './components/ProximitySearch';
 import CoverageAnalysis from './components/CoverageAnalysis';
 import LocationsPage from './components/LocationsPage';
 import { useTokenExpirationNotification } from './components/useTokenExpirationNotification';
+import AdminHomepage from './components/AdminHomepage';
 
 function App() {
     const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
@@ -80,22 +81,33 @@ function App() {
                 <div className="App">
                     <Header />
                     <Routes>
-                        <Route path="/" element={
-                            <Homepage
-                                nearestParkingId={nearestParkingId}
-                                parkingSpots={parkingSpots}
-                                userLocation={userLocation}
-                                setUserLocation={setUserLocation}
-                            />}
-                        />
-                        <Route path="/location/:id" element={<LocationDetails />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/logout" element={<Logout />} />
-                        <Route path="/profile" element={<Profil />} />
-                        <Route path="/payment" element={<Payment />} />
-                        <Route path="/locations/*" element={<LocationsPage />} />
-                    </Routes>
+  {user?.user_type === 'admin' ? (
+    <>
+      <Route path="/admin" element={<AdminHomepage />} />
+      <Route path="*" element={<AdminHomepage />} />
+    </>
+  ) : (
+    <>
+      <Route path="/" element={
+        <Homepage
+          nearestParkingId={nearestParkingId}
+          parkingSpots={parkingSpots}
+          userLocation={userLocation}
+          setUserLocation={setUserLocation}
+        />
+      } />
+      <Route path="/location/:id" element={<LocationDetails />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/logout" element={<Logout />} />
+      <Route path="/profile" element={<Profil />} />
+      <Route path="/payment" element={<Payment />} />
+      <Route path="/locations/*" element={<LocationsPage />} />
+      {/* Ostale rute koje nisi admin mogu videti */}
+    </>
+  )}
+</Routes>
+
 
                     {/* Notifikacija za isteka tokena */}
                     {showNotification && (

@@ -37,19 +37,24 @@ function Login() {
 
 
             if (data && data.user && data.user._id) {
-                localStorage.setItem('user', JSON.stringify(data.user));
-                localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('token', data.token);
 
-                // Izvuci i sačuvaj vreme isteka tokena
-                const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
-                const expiresAt = tokenPayload.exp * 1000; // milisekunde
-                localStorage.setItem('tokenExpiresAt', expiresAt);
+    // Izvuci i sačuvaj vreme isteka tokena
+    const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+    const expiresAt = tokenPayload.exp * 1000; // milisekunde
+    localStorage.setItem('tokenExpiresAt', expiresAt);
 
-                setUserContext(data.user);
-                navigate('/');
-            } else {
-                setError('Login failed: Invalid user data');
-            }
+    setUserContext(data.user);
+
+    // 👉 Redirekcija na osnovu tipa korisnika
+    if (data.user.user_type === 'admin') {
+        navigate('/admin');  // napravi rutu za admina
+    } else {
+        navigate('/');
+    }
+}
+
 
         } catch (err) {
             setError('Login failed: ' + err.message);
