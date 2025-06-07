@@ -1,4 +1,4 @@
-package skraper
+package org.example.skraper//package skraper
 
 import java.io.File
 import it.skrape.core.htmlDocument
@@ -10,7 +10,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import org.example.ParkingLocation
-
+import java.math.BigDecimal
+import org.example.Tariff
+import java.time.LocalDateTime
+import org.example.LocationCoordinates
 
 //podatkovana struktura za dnevne podatke parkirisca
 @Serializable
@@ -20,7 +23,7 @@ data class Dnevni(
     val naVoljo: String?
 )
 
-//podatkovana struktura za abonente parkirisca
+////podatkovana struktura za abonente parkirisca
 @Serializable
 data class Abonenti(
     val naVoljo: String?,
@@ -29,7 +32,7 @@ data class Abonenti(
     val cakalnaVrsta: String?
 )
 
-//glavna podatkovana struktura za informacije o prakiriscu
+////glavna podatkovana struktura za informacije o prakiriscu
 @Serializable
 data class ParkirisceInfo(
     val parkirisce: String,
@@ -37,7 +40,7 @@ data class ParkirisceInfo(
     val abonenti: Abonenti?
 )
 
-//podatkovana struktura za tarife parkirisca
+///podatkovana struktura za tarife parkirisca
 @Serializable
 data class ParkirisceTarifa(
     val tarifa: String,
@@ -60,14 +63,14 @@ data class ParkirisceLokacijaPodaci(
 
     )
 
-//podatkovana struktura za GeoJson
+////podatkovana struktura za GeoJson
 data class GeoJsonFeature(
     val name: String,
     val stMestBus: Int,
     val stMestInv: Int
 )
 
-//funkcija za nalaganje GeoJSON podatkov iz datoteke
+////funkcija za nalaganje GeoJSON podatkov iz datoteke
 fun ucitajGeoJsonPutanju(geoJsonFilePath: String): Map<String, GeoJsonFeature> {
     val geoJsonString = File(geoJsonFilePath).readText()
     val json = Json.parseToJsonElement(geoJsonString).jsonObject
@@ -88,27 +91,25 @@ fun skraper(url: String, geoJsonPodaci: Map<String, GeoJsonFeature>): Parkirisce
 
     var rezultat: ParkirisceLokacijaPodaci? = null
     skrape(HttpFetcher) {
-        request { this.url = url }
-
+       request { this.url = url }
         extract {
-            htmlDocument {
+           htmlDocument {
                 val firstH1 = h1 { findFirst { text } }
-                val normalizedName = firstH1.lowercase()
-                val geo = geoJsonPodaci[normalizedName]
+               val normalizedName = firstH1.lowercase()
+               val geo = geoJsonPodaci[normalizedName]
                 val blocks = findAll("div.block-item.block-text")
 
-                var opisText = ""
-                blocks.forEach { block ->
-                    val heading = block.findFirst("h2")?.text ?: ""
-                    if (heading == "Opis") {
+               var opisText = ""
+               blocks.forEach { block ->
+                 val heading = block.findFirst("h2")?.text ?: ""
+                   if (heading == "Opis") {
                         val paragraphs = block.findAll("p").joinToString("\n") { it.text.trim() }
                         opisText = paragraphs
                     }
                 }
 
                 val tarife: List<ParkirisceTarifa>? = try {
-                    val cenaSection = findAll("div.prose")
-                        .firstOrNull { it.findFirst("h2")?.text?.contains("Cena parkiranja", ignoreCase = true) == true }
+                    val cenaSection = findAll("div.prose").firstOrNull { it.findFirst("h2")?.text?.contains("Cena parkiranja", ignoreCase = true) == true }
 
                     if (cenaSection != null) {
                         val listaTarifa = mutableListOf<ParkirisceTarifa>()
@@ -141,10 +142,10 @@ fun skraper(url: String, geoJsonPodaci: Map<String, GeoJsonFeature>): Parkirisce
 
                 var lat: Double? = null
                 var lng: Double? = null
-                val googleMapsLinkElement = try {
+               val googleMapsLinkElement = try {
                     findAll("a[title='Odpri lokacijo v Google Maps']").firstOrNull()
                 } catch (e: Exception) {
-                    null
+                   null
                 }
                 val googleMapsLink = googleMapsLinkElement?.attribute("href")
                 if (!googleMapsLink.isNullOrBlank()) {
@@ -169,20 +170,20 @@ fun skraper(url: String, geoJsonPodaci: Map<String, GeoJsonFeature>): Parkirisce
                     stMestBus = geo?.stMestBus,
                     stMestInv = geo?.stMestInv
                 )
-            }
+           }
         }
     }
     return rezultat
 }
 fun ucitajParkingLokacijeJson(): List<JsonObject> {
-    val geoJsonMapa = ucitajGeoJsonPutanju("C:/Users/CHP/Desktop/git/parkingmate-studentski-projekt/skrape/skraper2/podaciSaStranice/molparkirisca/output.geojson")
+    val geoJsonMapa = ucitajGeoJsonPutanju("C:\\Users\\Windows11\\Desktop\\Projekat\\parkingmate-studentski-projekt\\skrape\\skraper2\\podaciSaStranice\\molparkirisca\\output.geojson")
 
-    val parkiriscaZasedenost = mutableMapOf<String, ParkirisceInfo>()
+  val parkiriscaZasedenost = mutableMapOf<String, ParkirisceInfo>()
     skrape(HttpFetcher) {
         request {
             url = "https://www.lpt.si/parkirisca/informacije-za-parkiranje/prikaz-zasedenosti-parkirisc"
         }
-        extract {
+       extract {
             htmlDocument {
                 table {
                     findFirst("tbody") {
@@ -261,9 +262,9 @@ fun ucitajParkingLokacijeJson(): List<JsonObject> {
 
                                 val fullUrl = "https://www.lpt.si/parkirisca/lokacije-in-opis-parkirisc/parkirisca-za-osebna-vozila/$seoName"
 
-                                try {
-                                    val lokacija = skraper(fullUrl, geoJsonMapa)
-                                    if (lokacija != null) {
+                               try {
+                                   val lokacija = skraper(fullUrl, geoJsonMapa)
+                                   if (lokacija != null) {
                                         val zasedenost = parkiriscaZasedenost[ime.lowercase().trim()]
                                         val obj = buildJsonObject {
                                             put("lokacija", lokacija.lokacija)
@@ -316,6 +317,59 @@ fun ucitajParkingLokacijeJson(): List<JsonObject> {
     return koncnaLista
 }
 
+fun parseScrapedJsonObjects(
+    jsonObjects: List<JsonObject>
+): List<Pair<ParkingLocation, List<Tariff>>> {
+    return jsonObjects.mapNotNull { obj ->
+        try {
+            val location = ParkingLocation(
+                name = obj["lokacija"]?.jsonPrimitive?.content ?: return@mapNotNull null,
+                address = obj["lokacija"]?.jsonPrimitive?.content ?: "Unknown",
+                description = obj["opis"]?.jsonPrimitive?.content,
+                location = LocationCoordinates(
+                    coordinates = listOf(
+                        obj["location"]?.jsonObject?.get("coordinates")?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                        obj["location"]?.jsonObject?.get("coordinates")?.jsonArray?.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: 0.0
+                    )
+                ),
+                total_regular_spots = obj["dnevni"]?.jsonObject?.get("naVoljo")?.jsonPrimitive?.intOrNull ?: 0,
+                available_regular_spots = obj["dnevni"]?.jsonObject?.get("prosta")?.jsonPrimitive?.intOrNull ?: 0,
+                total_invalid_spots = obj["stMestInv"]?.jsonPrimitive?.intOrNull ?: 0,
+                available_invalid_spots = 0,
+                total_bus_spots = obj["stMestBus"]?.jsonPrimitive?.intOrNull ?: 0,
+                available_bus_spots = 0,
+                subscriber = null,
+                hidden = false,
+                created = LocalDateTime.now(),
+                modified = LocalDateTime.now()
+            )
+
+            val tariffs = obj["tarife"]?.jsonArray?.mapNotNull { json ->
+                val t = json.jsonObject
+                Tariff(
+                    tariff_type = t["tarifa"]?.jsonPrimitive?.content ?: return@mapNotNull null,
+                    duration = t["cas"]?.jsonPrimitive?.content?.ifBlank { null },
+                    vehicle_type = t["tip"]?.jsonPrimitive?.content?.ifBlank { null },
+                    price = t["cena"]?.jsonPrimitive?.content?.filter { it.isDigit() || it == '.' }
+                        ?.toBigDecimalOrNull() ?: BigDecimal.ZERO,
+                    price_unit = t["enotaMere"]?.jsonPrimitive?.content ?: "EUR",
+                    parking_location = null,
+                    created = LocalDateTime.now(),
+                    modified = LocalDateTime.now(),
+                    hidden = false
+                )
+            } ?: emptyList()
+
+            location to tariffs
+        } catch (e: Exception) {
+            println("Skipping invalid entry: ${e.message}")
+            null
+        }
+    }
+}
+
+
+
 fun main() {
     val jsonObjekti = ucitajParkingLokacijeJson()
 
@@ -323,11 +377,12 @@ fun main() {
 
 
 
-// sad imaš listu ParkingLocation objekata spremnu za UI
+//// sad imaš listu ParkingLocation objekata spremnu za UI
 
     //DEO ZA PROVERU DA LI SKENER RADI
-    /*val outputFile = File("C:/Users/CHP/Desktop/git/parkingmate-studentski-projekt/skrape/finalSkraper/parking.json")
-    outputFile.writeText(Json { prettyPrint = true }.encodeToString(JsonArray(koncnaLista)))
-    println("Podatki uspešno zapisani.")*/
+    val outputFile = File("C:/Users/CHP/Desktop/git/parkingmate-studentski-projekt/skrape/finalSkraper/parking.json")
+    outputFile.writeText(Json { prettyPrint = true }.encodeToString(JsonArray(jsonObjekti)))
+
+    println("Podatki uspešno zapisani.")
 }
 
