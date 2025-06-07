@@ -20,6 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^6.9.0",
     "morgan": "~1.9.1",
-    "node-cron": "^4.0.7"
+    "multer": "^2.0.1",
+    "node-cron": "^4.0.7",
+    "recharts": "^2.15.3"
   }
 }
