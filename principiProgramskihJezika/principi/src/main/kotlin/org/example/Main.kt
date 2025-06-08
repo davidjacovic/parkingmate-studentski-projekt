@@ -54,12 +54,10 @@ fun App() {
     val userAdminViewModel = remember { UserAdminViewModel(userRepo, vehicleRepo) }
 
     val parkingLocationRepo = ParkingLocationRepository()
-    val subscriberRepo = SubscribersRepository()
     val tariffRepo = TariffRepository()
     val parkingLocationAdminViewModel = remember {
-        ParkingLocationAdminViewModel(parkingLocationRepo, subscriberRepo, tariffRepo)
+        ParkingLocationAdminViewModel(parkingLocationRepo, tariffRepo)
     }
-
 
     val reviewsRepo = ReviewsRepository()
     val reviewAdminViewModel = remember { ReviewAdminViewModel(reviewsRepo) }
@@ -72,7 +70,6 @@ fun App() {
     val userError by userAdminViewModel.error.collectAsState()
 
     val parkingLocations by parkingLocationAdminViewModel.parkingLocations.collectAsState()
-    val subscribers by parkingLocationAdminViewModel.subscribers.collectAsState()
     val tariffs by parkingLocationAdminViewModel.tariffs.collectAsState()
     val parkingError by parkingLocationAdminViewModel.error.collectAsState()
 
@@ -96,20 +93,15 @@ fun App() {
 
             "ParkingLocation" -> ParkingLocationAdminUI(
                 locations = parkingLocations,
-                subscribers = subscribers,
                 tariffs = tariffs,
-                onAddLocation = { newLocation, subscriber, tariffsList ->
+                onAddLocation = { newLocation, tariffsList ->
                     parkingLocationAdminViewModel.addParkingLocation(
                         newLocation,
-                        subscriber,
                         tariffsList
                     )
                 },
-                onUpdateLocation = { updatedLocation, updatedSubscriber ->
-                    parkingLocationAdminViewModel.updateParkingLocation(
-                        updatedLocation,
-                        updatedSubscriber
-                    )
+                onUpdateLocation = { updatedLocation ->
+                    parkingLocationAdminViewModel.updateParkingLocation(updatedLocation)
                 },
                 onDeleteLocation = { locationToDelete ->
                     locationToDelete.id?.let { parkingLocationAdminViewModel.deleteParkingLocation(it.toHexString()) }
@@ -140,11 +132,15 @@ fun App() {
                 onBack = { selectedEntity = null }
             )
 
+            "Vehicle" -> VehicleAdminUI(
+                onBack = { selectedEntity = null }
+            )
+
             else -> PlaceholderScreen(entity = selectedEntity!!, onBack = { selectedEntity = null })
         }
     }
 
-    // 🔴 Prikazuj sve error poruke iz ViewModela
+    //  Prikazuj sve error poruke iz ViewModela
     val errorMessage = userError ?: parkingError ?: reviewError ?: paymentError
     errorMessage?.let { errorMsg ->
         LaunchedEffect(errorMsg) {
@@ -164,7 +160,7 @@ fun EntitySelectionScreen(onEntitySelected: (String) -> Unit) {
             Text("Select Entity", fontSize = 24.sp)
             Spacer(Modifier.height(20.dp))
 
-            listOf("User", "ParkingLocation", "Payment", "Review").forEach { entity ->
+            listOf("User", "ParkingLocation", "Payment", "Review", "Vehicle").forEach { entity ->
                 Button(
                     onClick = { onEntitySelected(entity) },
                     modifier = Modifier.padding(8.dp)
@@ -286,7 +282,7 @@ fun UserAdminUI(
                 ) {
                     NavigationButton("Add person") { selectedTab = it }
                     NavigationButton("People") { selectedTab = it }
-                    NavigationButton("Generator") { selectedTab = it }
+                    NavigationButton("Generate") { selectedTab = it }
                     Spacer(Modifier.weight(1f))
                     NavigationButton("About") { selectedTab = it }
                 }
@@ -312,7 +308,11 @@ fun UserAdminUI(
                         )
 
                         selectedTab == "People" -> PeopleScreen(users) { selectedUserForEdit = it }
+
+                        selectedTab == "Generate" -> GenerateFakeUserScreen()
                         else -> Text("Coming soon...")
+
+
                     }
                 }
             }
@@ -776,14 +776,12 @@ fun AddOrEditVehicleScreen(
     }
 }
 
-
 @Composable
 fun ParkingLocationAdminUI(
     locations: List<ParkingLocation>,
-    subscribers: List<Subscriber>,
     tariffs: List<Tariff>,
-    onAddLocation: (ParkingLocation, Subscriber, List<Tariff>) -> Unit,
-    onUpdateLocation: (ParkingLocation, Subscriber) -> Unit,
+    onAddLocation: (ParkingLocation, List<Tariff>) -> Unit,
+    onUpdateLocation: (ParkingLocation) -> Unit,
     onDeleteLocation: (ParkingLocation) -> Unit,
     onAddTariff: (Tariff) -> Unit,
     onDeleteTariff: (Tariff) -> Unit,
@@ -792,7 +790,6 @@ fun ParkingLocationAdminUI(
     var selectedTab by remember { mutableStateOf("Add location") }
     var selectedLocationForEdit by remember { mutableStateOf<ParkingLocation?>(null) }
     var selectedLocationForTariff by remember { mutableStateOf<ParkingLocation?>(null) }
-    var selectedLocationForDetail by remember { mutableStateOf<ParkingLocation?>(null) }
 
     MaterialTheme {
         Column {
@@ -816,7 +813,7 @@ fun ParkingLocationAdminUI(
                     NavigationButton("Add location") { selectedTab = it }
                     NavigationButton("Locations") { selectedTab = it }
                     NavigationButton("Scraper") { selectedTab = it }
-
+                    NavigationButton("Generate") { selectedTab = it }
                     Spacer(Modifier.weight(1f))
                     NavigationButton("About") { selectedTab = it }
                 }
@@ -824,13 +821,11 @@ fun ParkingLocationAdminUI(
                 Box(Modifier.fillMaxSize().padding(16.dp)) {
                     when {
                         selectedLocationForEdit != null -> {
-                            val subscriber = subscribers.find { it.id == selectedLocationForEdit!!.subscriber }
                             EditParkingLocationScreen(
                                 location = selectedLocationForEdit!!,
-                                subscriber = subscriber,
                                 tariffs = tariffs,
-                                onSave = { updatedLocation, updatedSubscriber ->
-                                    onUpdateLocation(updatedLocation, updatedSubscriber)
+                                onSave = { updatedLocation ->
+                                    onUpdateLocation(updatedLocation)
                                     selectedLocationForEdit = null
                                 },
                                 onDelete = {
@@ -855,6 +850,7 @@ fun ParkingLocationAdminUI(
                         }
 
                         selectedTab == "Add location" -> AddParkingLocationScreen(onAddLocation)
+
                         selectedTab == "Locations" -> ParkingLocationListScreen(
                             locations,
                             onLocationClick = { selectedLocationForEdit = it },
@@ -864,6 +860,8 @@ fun ParkingLocationAdminUI(
                         selectedTab == "Scraper" -> SkraperAdminUI(
                             onBack = { selectedTab = "AddLocation" }
                         )
+
+                        selectedTab == "Generate" -> GenerateFakeParkingLocationScreen()
                     }
                 }
             }
@@ -873,7 +871,7 @@ fun ParkingLocationAdminUI(
 
 @Composable
 fun AddParkingLocationScreen(
-    onAddLocation: (ParkingLocation, Subscriber, List<Tariff>) -> Unit
+    onAddLocation: (ParkingLocation, List<Tariff>) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -887,11 +885,6 @@ fun AddParkingLocationScreen(
     var availableRegular by remember { mutableStateOf("0") }
     var availableInvalid by remember { mutableStateOf("0") }
     var availableBus by remember { mutableStateOf("0") }
-
-    var subscriberTotal by remember { mutableStateOf("0") }
-    var subscriberAvailable by remember { mutableStateOf("0") }
-    var subscriberReserved by remember { mutableStateOf("0") }
-    var subscriberWaiting by remember { mutableStateOf("0") }
 
     var description by remember { mutableStateOf("") }
 
@@ -912,21 +905,6 @@ fun AddParkingLocationScreen(
             return
         }
 
-        val subscriber = Subscriber(
-            available_spots = parseInt(subscriberAvailable),
-            total_spots = parseInt(subscriberTotal),
-            reserved_spots = parseInt(subscriberReserved),
-            waiting_line = parseInt(subscriberWaiting),
-            created = LocalDateTime.now(),
-            modified = LocalDateTime.now(),
-            hidden = false
-        )
-
-        if (!subscriber.isValid()) {
-            errorMessage = "Subscriber data is invalid."
-            return
-        }
-
         val location = ParkingLocation(
             name = name,
             address = address,
@@ -939,7 +917,6 @@ fun AddParkingLocationScreen(
             available_bus_spots = parseInt(availableBus),
             created = LocalDateTime.now(),
             modified = LocalDateTime.now(),
-            subscriber = subscriber.id,
             description = if (description.isBlank()) null else description,
             hidden = false
         )
@@ -951,8 +928,9 @@ fun AddParkingLocationScreen(
 
         val updatedTariffs = tariffs.map { it.copy(parking_location = location.id) }
 
-        onAddLocation(location, subscriber, updatedTariffs)
+        onAddLocation(location, updatedTariffs)
 
+        // Reset all fields
         name = ""
         address = ""
         longitude = "0.0"
@@ -963,10 +941,6 @@ fun AddParkingLocationScreen(
         availableRegular = "0"
         availableInvalid = "0"
         availableBus = "0"
-        subscriberTotal = "0"
-        subscriberAvailable = "0"
-        subscriberReserved = "0"
-        subscriberWaiting = "0"
         description = ""
         tariffs = emptyList()
         errorMessage = null
@@ -1011,13 +985,6 @@ fun AddParkingLocationScreen(
             { availableInvalid = it },
             availableBus,
             { availableBus = it })
-
-        Spacer(Modifier.height(8.dp))
-        Text("Subscriber Info", style = MaterialTheme.typography.subtitle1)
-        TextFieldWithLabel("Total Spots", subscriberTotal) { subscriberTotal = it }
-        TextFieldWithLabel("Available Spots", subscriberAvailable) { subscriberAvailable = it }
-        TextFieldWithLabel("Reserved Spots", subscriberReserved) { subscriberReserved = it }
-        TextFieldWithLabel("Waiting Line", subscriberWaiting) { subscriberWaiting = it }
 
         Spacer(Modifier.height(16.dp))
         Text("Tariffs", style = MaterialTheme.typography.subtitle1)
@@ -1069,6 +1036,7 @@ fun AddParkingLocationScreen(
 }
 
 
+
 @Composable
 fun ParkingLocationListScreen(
     locations: List<ParkingLocation>,
@@ -1098,13 +1066,11 @@ fun ParkingLocationListScreen(
         }
     }
 }
-
 @Composable
 fun EditParkingLocationScreen(
     location: ParkingLocation,
-    subscriber: Subscriber?,
     tariffs: List<Tariff>,
-    onSave: (ParkingLocation, Subscriber) -> Unit,
+    onSave: (ParkingLocation) -> Unit,
     onDelete: (ParkingLocation) -> Unit,
     onBack: () -> Unit,
     onAddTariff: (ParkingLocation, Tariff) -> Unit,
@@ -1125,11 +1091,6 @@ fun EditParkingLocationScreen(
     var availableInvalid by remember { mutableStateOf(location.available_invalid_spots.toString()) }
     var availableBus by remember { mutableStateOf(location.available_bus_spots.toString()) }
 
-    var subscriberTotal by remember { mutableStateOf(subscriber?.total_spots?.toString() ?: "0") }
-    var subscriberAvailable by remember { mutableStateOf(subscriber?.available_spots?.toString() ?: "0") }
-    var subscriberReserved by remember { mutableStateOf(subscriber?.reserved_spots?.toString() ?: "0") }
-    var subscriberWaiting by remember { mutableStateOf(subscriber?.waiting_line?.toString() ?: "0") }
-
     var showTariffForm by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
@@ -1145,22 +1106,6 @@ fun EditParkingLocationScreen(
             return
         }
 
-        val updatedSubscriber = Subscriber(
-            id = subscriber?.id ?: ObjectId.get(),
-            available_spots = parseIntSafe(subscriberAvailable),
-            total_spots = parseIntSafe(subscriberTotal),
-            reserved_spots = parseIntSafe(subscriberReserved),
-            waiting_line = parseIntSafe(subscriberWaiting),
-            created = subscriber?.created ?: LocalDateTime.now(),
-            modified = LocalDateTime.now(),
-            hidden = false
-        )
-
-        if (!updatedSubscriber.isValid()) {
-            errorMessage = "Subscriber data is invalid."
-            return
-        }
-
         val updatedLocation = location.copy(
             name = name,
             address = address,
@@ -1172,7 +1117,6 @@ fun EditParkingLocationScreen(
             available_invalid_spots = parseIntSafe(availableInvalid),
             available_bus_spots = parseIntSafe(availableBus),
             modified = LocalDateTime.now(),
-            subscriber = updatedSubscriber.id,
             description = if (description.isBlank()) null else description,
             hidden = false
         )
@@ -1182,7 +1126,7 @@ fun EditParkingLocationScreen(
             return
         }
 
-        onSave(updatedLocation, updatedSubscriber)
+        onSave(updatedLocation)
     }
 
     if (showTariffForm) {
@@ -1225,19 +1169,10 @@ fun EditParkingLocationScreen(
             availableBus,
             { availableBus = it })
 
-        Spacer(Modifier.height(8.dp))
-        Text("Subscriber Info", style = MaterialTheme.typography.subtitle1)
-        TextFieldWithLabel("Total Spots", subscriberTotal) { subscriberTotal = it }
-        TextFieldWithLabel("Available Spots", subscriberAvailable) { subscriberAvailable = it }
-        TextFieldWithLabel("Reserved Spots", subscriberReserved) { subscriberReserved = it }
-        TextFieldWithLabel("Waiting Line", subscriberWaiting) { subscriberWaiting = it }
-
         Spacer(Modifier.height(16.dp))
         Text("Tariffs", style = MaterialTheme.typography.subtitle1)
-        // Filtriraj tarife za ovu lokaciju
         val locationTariffs = tariffs.filter { it.parking_location == location.id }
 
-        // Prikaži samo filtrirane tarife
         locationTariffs.forEach { tariff ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -1260,7 +1195,6 @@ fun EditParkingLocationScreen(
                 }
             }
         }
-
 
         Button(
             onClick = { showTariffForm = true },
@@ -1485,6 +1419,7 @@ fun ReviewAdminUI(
                 ) {
                     NavigationButton("Add review") { selectedTab = it }
                     NavigationButton("View reviews") { selectedTab = it }
+                    NavigationButton("Generate") { selectedTab = it }
                     Spacer(Modifier.weight(1f))
                     NavigationButton("About") { selectedTab = it }
                 }
@@ -1630,6 +1565,7 @@ fun ReviewAdminUI(
                                 }
                             }
                         }
+                        "Generate" -> {GenerateFakeReviewScreen()}
 
                         "About" -> {
                             Text("Review Admin UI\nVersion 1.0\nDesigned similarly to Parking Location Admin.")
@@ -2145,7 +2081,242 @@ fun SkraperAdminUI(onBack: () -> Unit) {
         }
     }
 }
+@Composable
+fun GenerateFakeParkingLocationScreen() {
+    var count by remember { mutableStateOf("5") }
+    var generatedLocations by remember { mutableStateOf<List<ParkingLocation>>(emptyList()) }
 
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Generate Fake Parking Locations", style = MaterialTheme.typography.h6)
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = count,
+            onValueChange = { count = it },
+            label = { Text("Number of locations") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Button(onClick = {
+            val num = count.toIntOrNull() ?: 0
+            if (num > 0) {
+                generatedLocations = List(num) { FakeDataGenerator.generateFakeParkingLocation() }
+            }
+        }) {
+            Text("Generate")
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn {
+            items(generatedLocations) { location ->
+                Card(Modifier.fillMaxWidth().padding(4.dp)) {
+                    Column(Modifier.padding(8.dp)) {
+                        Text("Name: ${location.name}")
+                        Text("Address: ${location.address}")
+                        Text("Coordinates: ${location.location.coordinates.joinToString()}")
+                        Text("Description: ${location.description}")
+                        Text("Total regular spots: ${location.total_regular_spots}")
+                        Text("Total invalid spots: ${location.total_invalid_spots}")
+                        Text("Total bus spots: ${location.total_bus_spots}")
+                        Text("Available regular spots: ${location.available_regular_spots}")
+                        Text("Available invalid spots: ${location.available_invalid_spots}")
+                        Text("Available bus spots: ${location.available_bus_spots}")
+                        Text("Created: ${location.created}")
+                        Text("Modified: ${location.modified}")
+                        Text("Hidden: ${location.hidden}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GenerateFakeUserScreen() {
+    var count by remember { mutableStateOf("5") }
+    var generatedUsers by remember { mutableStateOf<List<UserUpload>>(emptyList()) }
+
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Generate Fake Users", style = MaterialTheme.typography.h6)
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = count,
+            onValueChange = { count = it },
+            label = { Text("Number of users") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Button(onClick = {
+            val num = count.toIntOrNull() ?: 0
+            if (num > 0) {
+                generatedUsers = List(num) { FakeDataGenerator.generateFakeUser() }
+            }
+        }) {
+            Text("Generate")
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn {
+            items(generatedUsers) { user ->
+                Card(Modifier.fillMaxWidth().padding(4.dp)) {
+                    Column(Modifier.padding(8.dp)) {
+                        Text("Username: ${user.username}")
+                        Text("Email: ${user.email}")
+                        Text("Phone: ${user.phone_number}")
+                        Text("Password: ${user.password}")
+                        Text("User Type: ${user.user_type}")
+                        Text("Credit Card: ${user.credit_card_number}")
+                        Text("Created: ${user.created_at}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun VehicleAdminUI(
+    onBack: () -> Unit
+) {
+    var selectedTab by remember { mutableStateOf("Generate") }
+
+    MaterialTheme {
+        Column {
+            TopAppBar(
+                title = { Text("Vehicle Admin") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                backgroundColor = Color(0xFFEEEEEE)
+            )
+
+            Row(Modifier.fillMaxSize()) {
+                Column(
+                    Modifier
+                        .width(180.dp)
+                        .fillMaxHeight()
+                        .background(Color(0xFFF5F5F5))
+                        .padding(10.dp)
+                ) {
+                    NavigationButton("Generate") { selectedTab = it }
+                    Spacer(Modifier.weight(1f))
+                    NavigationButton("About") { selectedTab = it }
+                }
+                Box(Modifier.fillMaxSize().padding(16.dp)) {
+                    when (selectedTab) {
+                       "Generate" -> GenerateFakeVehicleScreen()
+
+                        else -> Text("Coming soon...")
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun GenerateFakeVehicleScreen() {
+    var numberInput by remember { mutableStateOf("5") }
+    var generatedVehicles by remember { mutableStateOf<List<VehicleUpload>>(emptyList()) }
+
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Generate Fake Vehicles", style = MaterialTheme.typography.h6)
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = numberInput,
+            onValueChange = { numberInput = it },
+            label = { Text("Number of vehicles") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Button(onClick = {
+            val count = numberInput.toIntOrNull() ?: 0
+            if (count > 0) {
+                generatedVehicles = List(count) { FakeDataGenerator.generateFakeVehicle() }
+            }
+        }) {
+            Text("Generate")
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn {
+            items(generatedVehicles) { vehicle ->
+                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Column(Modifier.padding(8.dp)) {
+                        Text("Registration: ${vehicle.registration_number}")
+                        Text("Type: ${vehicle.vehicle_type}")
+                        Text("Created: ${vehicle.created}")
+                        Text("Modified: ${vehicle.modified}")
+                        Text("User: ${vehicle.user}")
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun GenerateFakeReviewScreen() {
+    var numberInput by remember { mutableStateOf("5") }
+    var generatedReviews by remember { mutableStateOf<List<ReviewUpload>>(emptyList()) }
+
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Generate Fake Reviews", style = MaterialTheme.typography.h6)
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = numberInput,
+            onValueChange = { numberInput = it },
+            label = { Text("Number of reviews") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Button(onClick = {
+            val count = numberInput.toIntOrNull() ?: 0
+            if (count > 0) {
+                generatedReviews = List(count) { FakeDataGenerator.generateFakeReview() }
+            }
+        }) {
+            Text("Generate")
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn {
+            items(generatedReviews) { review ->
+                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Column(Modifier.padding(8.dp)) {
+                        Text("Rating: ${review.rating}")
+                        Text("Text: ${review.review_text}")
+                        Text("Date: ${review.review_date}")
+                        Text("User ID: ${review.user}")
+                        Text("Parking Location ID: ${review.parking_location}")
+                    }
+                }
+            }
+        }
+    }
+}
 
 
 
