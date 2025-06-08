@@ -1,5 +1,8 @@
 var Parking_locationModel = require('../models/parkingLocationModel.js');
 const ParkingLog = require('../models/parkingLogModel.js');
+const UserModel = require('../models/userModel');
+const ParkingLocationModel = require('../models/parkingLocationModel');
+
 // or the correct relative path to your model
 
 
@@ -57,56 +60,97 @@ module.exports = {
             return res.json(parking_location);
         });
     },
-
     create: function (req, res) {
-        var data = req.body;
+        try {
+            console.log('create parkingLocation called');
+            console.log('req.user:', req.user);       // log korisnika (token)
+            console.log('req.body:', req.body);       // log body requesta
+            // pretpostavka da je user tu, ili zameni po potrebi
+            var data = req.body;
 
-        var parking_location = new Parking_locationModel({
-            name: data.name,
-            address: data.address,
-            location: data.location,
-            total_regular_spots: data.total_regular_spots,
-            total_invalid_spots: data.total_invalid_spots,
-            total_bus_spots: data.total_bus_spots,
-            available_regular_spots: data.available_regular_spots,
-            available_invalid_spots: data.available_invalid_spots,
-            available_bus_spots: data.available_bus_spots,
-            created: new Date(),
-            modified: new Date(),
-            description: data.description,
-            hidden: data.hidden,
-            subscriber: data.subscriber
-        });
+            var parking_location = new Parking_locationModel({
+                name: data.name,
+                address: data.address,
+                location: {
+                    type: 'Point',
+                    coordinates: data.location.coordinates // očekujem [lng, lat]
+                },
+                total_regular_spots: data.total_regular_spots,
+                total_invalid_spots: data.total_invalid_spots,
+                total_bus_spots: data.total_bus_spots,
+                available_regular_spots: data.available_regular_spots,
+                available_invalid_spots: data.available_invalid_spots,
+                available_bus_spots: data.available_bus_spots,
+                created: new Date(),
+                modified: new Date(),
+                description: data.description,
+                hidden: data.hidden
+            });
 
-        parking_location.save(function (err, parking_location) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when creating parking_location',
-                    error: err
+            parking_location.save(function (err, parking_location) {
+                if (err) {
+                    console.error('Error when creating parking_location:', err);
+                    return res.status(500).json({
+                        message: 'Error when creating parking_location',
+                        error: err.message || err
+                    });
+                }
+
+                console.log('Parking location saved:', parking_location);
+
+                // ako treba formatirati koordinate, pozovi funkciju
+                if (typeof convertDecimalCoordinates === 'function') {
+                    convertDecimalCoordinates(parking_location);
+                }
+
+                // Kreiraj inicijalni log zapisa
+                const log = new ParkingLog({
+                    parkingLocationId: parking_location._id,
+                    available_regular_spots: parking_location.available_regular_spots,
+                    available_invalid_spots: parking_location.available_invalid_spots,
+                    available_bus_spots: parking_location.available_bus_spots
                 });
-            }
-            convertDecimalCoordinates(parking_location);
-            return res.status(201).json(parking_location);
-        });
+
+                log.save(err => {
+                    if (err) {
+                        console.error('Error saving parking log:', err);
+                    } else {
+                        console.log('Initial parking log saved.');
+                    }
+                });
+
+                return res.status(201).json(parking_location);
+            });
+
+        } catch (error) {
+            console.error('Unexpected error in create:', error);
+            return res.status(500).json({ message: 'Server error', error: error.message });
+        }
     },
 
-    update: function (req, res) {
-        var id = req.params.id;
-        var data = req.body;
 
-        Parking_locationModel.findOne({ _id: id }, function (err, parking_location) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting parking_location',
-                    error: err
-                });
-            }
+    update: async function (req, res) {
+        const id = req.params.id;
+        const data = req.body;
+
+        console.log('🛠 UPDATE pozvan za ID:', id);
+        console.log('📥 Podaci za update:', data);
+
+        try {
+            const parking_location = await Parking_locationModel.findById(id);
             if (!parking_location) {
-                return res.status(404).json({
-                    message: 'No such parking_location'
-                });
+                console.warn('⚠️ Parking lokacija nije pronađena za ID:', id);
+                return res.status(404).json({ message: 'No such parking_location' });
             }
 
+            console.log('✅ Lokacija pronađena:', parking_location.name);
+
+            // Log promena
+            if (data.name !== undefined) console.log(`🔄 Menjam name: ${parking_location.name} -> ${data.name}`);
+            if (data.address !== undefined) console.log(`🔄 Menjam address: ${parking_location.address} -> ${data.address}`);
+            if (data.location !== undefined) console.log(`🔄 Menjam location:`, data.location);
+
+            // Update polja ako postoje u data
             parking_location.name = data.name !== undefined ? data.name : parking_location.name;
             parking_location.address = data.address !== undefined ? data.address : parking_location.address;
             parking_location.location = data.location !== undefined ? data.location : parking_location.location;
@@ -118,34 +162,43 @@ module.exports = {
             parking_location.available_bus_spots = data.available_bus_spots !== undefined ? data.available_bus_spots : parking_location.available_bus_spots;
             parking_location.description = data.description !== undefined ? data.description : parking_location.description;
             parking_location.hidden = data.hidden !== undefined ? data.hidden : parking_location.hidden;
-            parking_location.subscriber = data.subscriber !== undefined ? data.subscriber : parking_location.subscriber;
             parking_location.modified = new Date();
 
-            parking_location.save(function (err, parking_location) {
-                if (err) {
-                    return res.status(500).json({
-                        message: 'Error when updating parking_location.',
-                        error: err
-                    });
-                }
-                convertDecimalCoordinates(parking_location);
-                return res.json(parking_location);
+            await parking_location.save();
+
+            console.log('✅ Uspesno sacuvana izmenjena lokacija:', parking_location._id);
+            convertDecimalCoordinates(parking_location);
+            return res.json(parking_location);
+
+        } catch (err) {
+            console.error('❌ Greška prilikom updejta:', err);
+            return res.status(500).json({
+                message: 'Error when updating parking_location.',
+                error: err
             });
-        });
+        }
+    },
+    remove: async function (req, res) {
+        const id = req.params.id;
+        console.log('🗑 DELETE pozvan za parkingLocation:', id);
+
+        try {
+            const location = await ParkingLocationModel.findById(id);
+            if (!location) {
+                console.warn('❓ Lokacija nije pronađena');
+                return res.status(404).json({ message: 'Lokacija nije pronađena.' });
+            }
+
+            await ParkingLocationModel.findByIdAndDelete(id);
+            console.log('✅ Lokacija obrisana:', id);
+            return res.status(204).json();
+        } catch (err) {
+            console.error('❌ Greška pri brisanju lokacije:', err);
+            return res.status(500).json({ message: 'Greška pri brisanju lokacije.', error: err });
+        }
+
     },
 
-    remove: function (req, res) {
-        var id = req.params.id;
-        Parking_locationModel.findByIdAndRemove(id, function (err, parking_location) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when deleting the parking_location.',
-                    error: err
-                });
-            }
-            return res.status(204).json();
-        });
-    },
 
     nearby: async function (req, res) {
         const { lat, lng, radius } = req.query;
@@ -228,33 +281,33 @@ module.exports = {
         }
     },
 
-   filteredParkingLocations: async function (req, res) {
-  const filterRegular = req.query.regular === 'true';
-  const filterInvalid = req.query.invalid === 'true';
-  const filterElectric = req.query.electric === 'true';
-  const filterBus = req.query.bus === 'true';
+    filteredParkingLocations: async function (req, res) {
+        const filterRegular = req.query.regular === 'true';
+        const filterInvalid = req.query.invalid === 'true';
+        const filterElectric = req.query.electric === 'true';
+        const filterBus = req.query.bus === 'true';
 
-  // Build MongoDB query filters
-  const orFilters = [];
+        // Build MongoDB query filters
+        const orFilters = [];
 
-  if (filterRegular) orFilters.push({ available_regular_spots: { $gt: 0 } });
-  if (filterInvalid) orFilters.push({ available_invalid_spots: { $gt: 0 } });
-  if (filterElectric) orFilters.push({ available_electric_spots: { $gt: 0 } });
-  if (filterBus) orFilters.push({ available_bus_spots: { $gt: 0 } });
+        if (filterRegular) orFilters.push({ available_regular_spots: { $gt: 0 } });
+        if (filterInvalid) orFilters.push({ available_invalid_spots: { $gt: 0 } });
+        if (filterElectric) orFilters.push({ available_electric_spots: { $gt: 0 } });
+        if (filterBus) orFilters.push({ available_bus_spots: { $gt: 0 } });
 
-  try {
-    let query = {};
-    if (orFilters.length > 0) {
-      query = { $or: orFilters };
+        try {
+            let query = {};
+            if (orFilters.length > 0) {
+                query = { $or: orFilters };
+            }
+
+            const locations = await Parking_locationModel.find(query);
+            res.json(locations);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ message: 'Error fetching filtered parking locations' });
+        }
     }
-
-    const locations = await Parking_locationModel.find(query);
-    res.json(locations);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Error fetching filtered parking locations' });
-  }
-}
 
 
 };

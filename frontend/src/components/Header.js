@@ -22,52 +22,43 @@ function Header() {
             </h2>
             <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {user ? (
-                    user.user_type === 'admin' ? (
-                        <>
-                            <Link to="/" style={{ textDecoration: 'none', color: '#007bff' }}>
-                                Admin Home
-                            </Link>
-                            <button
-                                onClick={handleLogout}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: 0,
-                                    margin: 0,
-                                    textDecoration: 'none',
-                                    color: '#007bff',
-                                    cursor: 'pointer',
-                                    font: 'inherit',
-                                }}
-                            >
-                                Logout
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>
-                                Profile
-                            </Link>
-                            <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
-                                Pay Parking
-                            </Link>
-                            <button
-                                onClick={handleLogout}
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    padding: 0,
-                                    margin: 0,
-                                    textDecoration: 'none',
-                                    color: '#007bff',
-                                    cursor: 'pointer',
-                                    font: 'inherit',
-                                }}
-                            >
-                                Logout
-                            </button>
-                        </>
-                    )
+                    <>
+                        {user.user_type === 'admin' && (
+                            <>
+                                <Link to="/" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Admin Home
+                                </Link>
+                                <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Pay Parking
+                                </Link>
+                            </>
+                        )}
+                        {user.user_type === 'user' && (
+                            <>
+                                <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Profile
+                                </Link>
+                                <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Pay Parking
+                                </Link>
+                            </>
+                        )}
+                        <button
+                            onClick={handleLogout}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                margin: 0,
+                                textDecoration: 'none',
+                                color: '#007bff',
+                                cursor: 'pointer',
+                                font: 'inherit',
+                            }}
+                        >
+                            Logout
+                        </button>
+                    </>
                 ) : (
                     <>
                         <Link to="/login">Login</Link>

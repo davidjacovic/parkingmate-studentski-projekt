@@ -81,32 +81,44 @@ function App() {
                 <div className="App">
                     <Header />
                     <Routes>
-  {user?.user_type === 'admin' ? (
-    <>
-      <Route path="/admin" element={<AdminHomepage />} />
-      <Route path="*" element={<AdminHomepage />} />
-    </>
-  ) : (
-    <>
-      <Route path="/" element={
-        <Homepage
-          nearestParkingId={nearestParkingId}
-          parkingSpots={parkingSpots}
-          userLocation={userLocation}
-          setUserLocation={setUserLocation}
-        />
-      } />
-      <Route path="/location/:id" element={<LocationDetails />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/logout" element={<Logout />} />
-      <Route path="/profile" element={<Profil />} />
-      <Route path="/payment" element={<Payment />} />
-      <Route path="/locations/*" element={<LocationsPage />} />
-      {/* Ostale rute koje nisi admin mogu videti */}
-    </>
-  )}
-</Routes>
+                        {user?.user_type === 'admin' ? (
+                            <>
+                            <Route path="/" element={
+                                    <Homepage
+                                        nearestParkingId={nearestParkingId}
+                                        parkingSpots={parkingSpots}
+                                        userLocation={userLocation}
+                                        setUserLocation={setUserLocation}
+                                    />
+                                } />
+                                <Route path="/location/:id" element={<LocationDetails />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/logout" element={<Logout />} />
+                                <Route path="/payment" element={<Payment />} />
+                                <Route path="/admin" element={<AdminHomepage />} />
+                                <Route path="*" element={<AdminHomepage />} />
+                            </>
+                        ) : (
+                            <>
+                                <Route path="/" element={
+                                    <Homepage
+                                        nearestParkingId={nearestParkingId}
+                                        parkingSpots={parkingSpots}
+                                        userLocation={userLocation}
+                                        setUserLocation={setUserLocation}
+                                    />
+                                } />
+                                <Route path="/location/:id" element={<LocationDetails />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
+                                <Route path="/logout" element={<Logout />} />
+                                <Route path="/profile" element={<Profil />} />
+                                <Route path="/payment" element={<Payment />} />
+                                <Route path="/locations/*" element={<LocationsPage />} />
+                                {/* Ostale rute koje nisi admin mogu videti */}
+                            </>
+                        )}
+                    </Routes>
 
 
                     {/* Notifikacija za isteka tokena */}

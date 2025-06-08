@@ -1,4 +1,5 @@
 const ReviewsModel = require('../models/reviewsModel.js');
+const UserModel = require('../models/userModel');
 
 /**
  * reviewsController.js
@@ -132,20 +133,33 @@ module.exports = {
   /**
    * Delete a review
    */
-  remove: function (req, res) {
-    const id = req.params.id;
+  remove: async function (req, res) {
+  const id = req.params.id;
 
-    ReviewsModel.findByIdAndRemove(id, function (err) {
-      if (err) {
-        return res.status(500).json({
-          message: 'Error when deleting the review.',
-          error: err
-        });
-      }
+  if (!req.user) {
+    return res.status(401).json({ message: 'Niste autentifikovani' });
+  }
 
-      return res.status(204).json();
+  try {
+    const user = await UserModel.findById(req.user.userId);
+    if (!user || user.user_type !== 'admin') {
+      return res.status(403).json({ message: 'Samo admin može da briše komentare.' });
+    }
+
+    const review = await ReviewsModel.findById(id);
+    if (!review) {
+      return res.status(404).json({ message: 'Komentar nije pronađen.' });
+    }
+
+    await ReviewsModel.findByIdAndDelete(id);
+    return res.status(204).json();
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Greška pri brisanju komentara.',
+      error: err
     });
-  },
+  }
+},
 
   /**
    * List reviews by parking location

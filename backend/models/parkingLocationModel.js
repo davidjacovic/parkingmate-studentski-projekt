@@ -1,12 +1,5 @@
 var mongoose = require('mongoose');
 var Schema   = mongoose.Schema;
-
-/*
-* izbrisano: total_electric_spots: Number, available_electric_spots: Number, working_hours: String, 
-* zamenjeno: latitude i longitude sa location
-*
-*/
-
 var parking_locationSchema = new Schema({
     name: String,
     address: String,
@@ -31,11 +24,9 @@ var parking_locationSchema = new Schema({
     created: { type: Date, default: Date.now },
     modified: { type: Date, default: Date.now },
     description: String,
-    hidden: Boolean,
-    subscriber: { type: Schema.Types.ObjectId, ref: 'Subscriber' }
+    hidden: Boolean
 });
 
-// 👇 Dodaj indeks za geospatial upite
 parking_locationSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('parking_location', parking_locationSchema);
