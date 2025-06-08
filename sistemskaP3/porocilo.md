@@ -86,3 +86,42 @@ Za izboljšanje procesa bi lahko dodali naslednje GitHub Actions workflowe:
 - Release workflow: Samodejno objavljanje verzij in generiranje dokumentacije ali changelogov.
 
 - Rollback workflow: V primeru neuspešnega deploya samodejno povrnitev na prejšnjo stabilno verzijo.
+
+## Webhook in avtomatska posodobitev
+Na našem strežniku (VM na Azure) smo nastavili preprost webhook strežnik v Node.js (Express), ki posluša na portu 3000.
+
+Webhook prejme sporočilo iz GitHub Actions in zažene skripto, ki:
+
+- ustavi in odstrani obstoječe Docker containere
+
+- prenese najnovejše slike z Docker Huba
+
+- zažene nove containere z najnovejšo verzijo aplikacije
+
+## Skripta update-backend.sh
+```
+
+#!/bin/bash
+
+echo "Stopping old backend container..."
+docker stop myapp-backend || true
+docker rm myapp-backend || true
+
+echo "Stopping old frontend container..."
+docker stop myapp-frontend || true
+docker rm myapp-frontend || true
+
+echo "Pulling latest backend image..."
+docker pull davidjacovic/myapp-backend:latest
+
+echo "Pulling latest frontend image..."
+docker pull davidjacovic/myapp-frontend:latest
+
+echo "Starting new backend container..."
+docker run -d --name myapp-backend -p 3002:3002 davidjacovic/myapp-backend:latest
+
+echo "Starting new frontend container..."
+docker run -d --name myapp-frontend -p 3000:3000 davidjacovic/myapp-frontend:latest
+
+echo "Update complete!"
+```
