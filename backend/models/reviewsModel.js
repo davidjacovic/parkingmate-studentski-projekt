@@ -8,7 +8,7 @@ var reviewsSchema = new Schema({
     hidden: Boolean,
     created: Date,
     modified: Date,
-    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    user: { type: Schema.Types.ObjectId, ref: 'user' },
     parking_location: { type: Schema.Types.ObjectId, ref: 'ParkingLocation' }
 });
 

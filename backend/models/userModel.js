@@ -12,6 +12,7 @@ var userSchema = new Schema({
     password_hash: String,
     phone_number: String,
     credit_card_number: String,
+    avatar: { type: String, default: '' },
     created_at: {
         type: Date,
         default: Date.now,

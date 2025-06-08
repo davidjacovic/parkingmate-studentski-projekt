@@ -3,9 +3,38 @@ const VehicleModel = require('../models/vehicleModel');
 
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET;
-/*
-* dodata validacija iz modela u funkciju create
-*/
+const bcrypt = require('bcrypt');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Folder gde čuvamo avatara (kreiraj ovaj folder 'uploads/avatars')
+const avatarStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const dir = './uploads/avatars';
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname);
+        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+        cb(null, uniqueName);
+    }
+});
+
+const uploadAvatar = multer({
+    storage: avatarStorage,
+    limits: { fileSize: 1024 * 1024 * 5 }, // max 5MB
+    fileFilter: function (req, file, cb) {
+        // prihvata samo slike
+        if (!file.mimetype.startsWith('image/')) {
+            return cb(new Error('Samo slike su dozvoljene!'), false);
+        }
+        cb(null, true);
+    }
+});
 
 /**
  * userController.js
@@ -13,6 +42,44 @@ const SECRET = process.env.JWT_SECRET;
  * @description :: Server-side logic for managing users.
  */
 module.exports = {
+    uploadAvatar: async function (req, res) {
+    try {
+        console.log('--- Avatar upload request received ---');
+
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            console.log('No token provided');
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const decoded = jwt.verify(token, SECRET);
+        console.log('Token decoded:', decoded);
+
+        if (!req.file) {
+            console.log('No file uploaded in request');
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        console.log('File info:', req.file);
+
+        const avatarPath = `/uploads/avatars/${req.file.filename}`;
+        console.log('Avatar path set to:', avatarPath);
+
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            decoded.userId,
+            { avatar: avatarPath, updated_at: new Date() },
+            { new: true }
+        ).lean();
+
+        console.log('User updated with new avatar:', updatedUser.avatar);
+
+        res.json({ avatar: updatedUser.avatar });
+    } catch (err) {
+        console.error('Error uploading avatar:', err);
+        res.status(500).json({ message: 'Upload avatara nije uspeo.' });
+    }
+},
+
 
     create: async function (req, res) {
         try {
@@ -41,15 +108,16 @@ module.exports = {
                 return res.status(400).json({ message: 'Phone number is invalid.' });
             }
 
-            const userData = {
-                username: username.trim(),
-                email: email.toLowerCase(),
-                password_hash: password,
-                created_at: new Date(),
-                updated_at: new Date(),
-                user_type: 'user',
-                hidden: false,
-            };
+
+const userData = {
+    username: username.trim(),
+    email: email.toLowerCase(),
+    password_hash: password,
+    created_at: new Date(),
+    updated_at: new Date(),
+    user_type: 'user',
+    hidden: false,
+};
 
             if (credit_card_number) userData.credit_card_number = credit_card_number;
             if (phone_number) userData.phone_number = phone_number;
@@ -143,7 +211,7 @@ module.exports = {
             const token = req.headers.authorization?.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            const allowedFields = ['email', 'phone_number', 'credit_card_number', 'username'];
+            const allowedFields = ['email', 'phone_number', 'credit_card_number', 'username','avatar'];
             const updates = {};
 
             allowedFields.forEach((field) => {
@@ -167,6 +235,9 @@ module.exports = {
             if (updates.credit_card_number && !cardRegex.test(updates.credit_card_number)) {
                 return res.status(400).json({ message: 'Broj kartice mora imati tačno 16 cifara.' });
             }
+            if (req.body.avatar) {
+    updates.avatar = req.body.avatar;
+}
 
             updates.updated_at = new Date();
 
@@ -181,6 +252,32 @@ module.exports = {
             console.error('Update error:', err);
             res.status(500).json({ message: 'Greška pri ažuriranju profila.' });
         }
+    },
+
+    refreshToken: function (req, res) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'Unauthorized' });
     }
+
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid token' });
+        }
+
+        // Opcionalno: proveri da li korisnik i dalje postoji i nije deaktiviran
+
+        const newToken = jwt.sign(
+            { userId: decoded.userId, username: decoded.username, email: decoded.email },
+            SECRET,
+            { expiresIn: '1h' }
+        );
+
+        res.json({ token: newToken });
+    });
+}
+
 
 };
