@@ -42,3 +42,47 @@ docker push davidjacovic/myapp-backend:latest
 Ker imamo Dockerfile tako v backendu kot v frontendu, se isti proces ponavlja tudi za frontend in rezultat je naslednji:
 
 ![Slike na repozitoriju](slike\Screenshot%202025-06-08%20152940.png)
+
+
+
+## GitHub Actions workflows
+
+Najprej smo GitHub secrets nastavili na naslednji način na GitHub: Settings → Secrets and variables → Actions → New repository secret 
+
+Tukaj smo ustvarili secret:
+
+![secret](slike\Screenshot%202025-06-08%20160616.png)
+
+In nato na enak način dodali še enega:
+
+![secrets](slike\Screenshot%202025-06-08%20160633.png)
+
+## Opis CI/CD workflowa
+
+V našem GitHub Actions workflowu smo nastavili avtomatsko gradnjo Docker slik ob vsakem pushu na repozitorij. Workflow poteka v naslednjih korakih:
+
+- Checkout repozitorija — pridobitev najnovejše verzije kode
+
+- Build Docker slike za backend in frontend
+
+- Prijava na Docker Hub z uporabo GitHub Secrets
+
+- Push Docker slike na Docker Hub
+
+- Pošiljanje webhook sporočila na naš VM na Azure, da je nova verzija pripravljena za deploy
+
+- Webhook sproži posodobitveno skripto na strežniku
+
+S tem zagotavljamo, da je vsak push avtomatsko zgrajen in dostavljen na produkcijsko okolje brez ročnega posega.
+
+## Predlog dodatnih workflowov
+
+Za izboljšanje procesa bi lahko dodali naslednje GitHub Actions workflowe:
+
+- Testiranje kode: Zaženemo unit in integracijske teste, preden izgradimo sliko, da preprečimo nepopolno kodo v produkciji.
+
+- Linting in statična analiza: Samodejna kontrola kakovosti kode (npr. ESLint, SonarQube), ki opozori na napake in varnostne ranljivosti.
+
+- Release workflow: Samodejno objavljanje verzij in generiranje dokumentacije ali changelogov.
+
+- Rollback workflow: V primeru neuspešnega deploya samodejno povrnitev na prejšnjo stabilno verzijo.
