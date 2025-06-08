@@ -1,30 +1,16 @@
 var express = require('express');
 var router = express.Router();
 var reviewsController = require('../controllers/reviewsController.js');
+const { authenticateToken } = require('../middlewares/auth');
 
-/*
- * GET
- */
+
 router.get('/', reviewsController.list);
-
-/*
- * GET
- */
+router.get('/parking/:parkingId', reviewsController.listByParkingLocation);
 router.get('/:id', reviewsController.show);
-
-/*
- * POST
- */
-router.post('/', reviewsController.create);
-
-/*
- * PUT
- */
+router.get('/byId/:id', reviewsController.getById);
+router.post('/', authenticateToken, reviewsController.create);
 router.put('/:id', reviewsController.update);
 
-/*
- * DELETE
- */
-router.delete('/:id', reviewsController.remove);
+router.delete('/:id', authenticateToken, reviewsController.remove);
 
 module.exports = router;

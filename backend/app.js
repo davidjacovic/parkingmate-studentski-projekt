@@ -95,21 +95,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
-
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Access token not found' });
-
-  jwt.verify(token, SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid or expired token' });
-    req.user = user;
-    next();
-  });
-}
-
+const { authenticateToken } = require('./middlewares/auth');
 
 
 // Mounting routers
@@ -118,7 +106,7 @@ app.use('/vehicles', authenticateToken, vehicleRouter);
 app.use('/users', usersRouter);
 app.use('/tariffs', tariffRouter);
 app.use('/subscribers',authenticateToken,  subscribersRouter);
-app.use('/reviews', authenticateToken, reviewsRouter);
+app.use('/reviews', reviewsRouter);
 app.use('/payments', authenticateToken, paymentRouter);
 app.use('/parkingLocations', parkingLocationRouter);
 
@@ -137,3 +125,5 @@ app.use(function(err, req, res, next) {
 });
 
 module.exports = app;
+
+

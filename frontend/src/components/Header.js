@@ -23,10 +23,39 @@ function Header() {
             <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {user ? (
                     <>
-                        <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>Profile</Link>
-                        <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>Pay Parking</Link>
-                        <Link to="/locations" style={{ textDecoration: 'none', color: '#007bff' }}>Locations</Link>
-                        <button onClick={handleLogout} style={{ background: 'none', border: 'none', padding: 0, margin: 0, textDecoration: 'none', color: '#007bff', cursor: 'pointer', font: 'inherit' }}>
+                        {user.user_type === 'admin' && (
+                            <>
+                                <Link to="/" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Admin Home
+                                </Link>
+                                <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Pay Parking
+                                </Link>
+                            </>
+                        )}
+                        {user.user_type === 'user' && (
+                            <>
+                                <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Profile
+                                </Link>
+                                <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
+                                    Pay Parking
+                                </Link>
+                            </>
+                        )}
+                        <button
+                            onClick={handleLogout}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                padding: 0,
+                                margin: 0,
+                                textDecoration: 'none',
+                                color: '#007bff',
+                                cursor: 'pointer',
+                                font: 'inherit',
+                            }}
+                        >
                             Logout
                         </button>
                     </>
@@ -37,7 +66,6 @@ function Header() {
                     </>
                 )}
             </nav>
-
         </header>
     );
 }
