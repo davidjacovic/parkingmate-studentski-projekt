@@ -352,11 +352,11 @@ function LocationDetails() {
           <ul>
             {tariffs.map((tariff) => (
               <li key={tariff._id} style={{ marginBottom: '1rem' }}>
-                <strong>Tip vozila:</strong> {tariff.vehicle_type}
+                <strong>Tip vozila:</strong> {tariff.tariff_type}
                 <br />
                 <strong>Trajanje:</strong> {tariff.duration}
                 <br />
-                <strong>Tip tarife:</strong> {tariff.tariff_type}
+                <strong>Tip tarife:</strong> {tariff.vehicle_type}
                 <br />
                 <strong>Cena:</strong>{' '}
                 {tariff.price ? parseFloat(tariff.price.$numberDecimal || tariff.price).toFixed(2) : '-'} {tariff.price_unit}
