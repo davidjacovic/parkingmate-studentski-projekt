@@ -5,15 +5,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.example.ParkingLocation
-import org.example.Subscriber
 import org.example.Tariff
 import org.example.db.ParkingLocationRepository
-import org.example.db.SubscribersRepository
 import org.example.db.TariffRepository
 
 class ParkingLocationAdminViewModel(
     private val parkingLocationRepo: ParkingLocationRepository,
-    private val subscriberRepo: SubscribersRepository,
     private val tariffRepo: TariffRepository
 ) {
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
@@ -21,8 +18,6 @@ class ParkingLocationAdminViewModel(
     private val _parkingLocations = MutableStateFlow<List<ParkingLocation>>(emptyList())
     val parkingLocations: StateFlow<List<ParkingLocation>> = _parkingLocations.asStateFlow()
 
-    private val _subscribers = MutableStateFlow<List<Subscriber>>(emptyList())
-    val subscribers: StateFlow<List<Subscriber>> = _subscribers.asStateFlow()
 
     private val _tariffs = MutableStateFlow<List<Tariff>>(emptyList())
     val tariffs: StateFlow<List<Tariff>> = _tariffs.asStateFlow()
@@ -38,7 +33,6 @@ class ParkingLocationAdminViewModel(
         coroutineScope.launch {
             try {
                 _parkingLocations.value = parkingLocationRepo.findAll()
-                _subscribers.value = subscriberRepo.findAllVisible()
                 _tariffs.value = tariffRepo.findAllVisible()
                 _error.value = null
             } catch (e: Exception) {
@@ -47,14 +41,13 @@ class ParkingLocationAdminViewModel(
         }
     }
 
-    fun addParkingLocation(parkingLocation: ParkingLocation, subscriber: Subscriber, tariffs: List<Tariff>) {
+    fun addParkingLocation(parkingLocation: ParkingLocation,  tariffs: List<Tariff>) {
         coroutineScope.launch {
             try {
-                // 1️⃣ Dodaj subscriber
-                subscriberRepo.insert(subscriber)
+
 
                 // 2️⃣ Dodaj parkingLocation (koristi ID subscriber-a)
-                val newLocation = parkingLocation.copy(subscriber = subscriber.id)
+                val newLocation = parkingLocation.copy()
                 parkingLocationRepo.insert(newLocation)
 
                 // 3️⃣ Dodaj tarife
@@ -68,10 +61,9 @@ class ParkingLocationAdminViewModel(
         }
     }
 
-    fun updateParkingLocation(updatedLocation: ParkingLocation, updatedSubscriber: Subscriber) {
+    fun updateParkingLocation(updatedLocation: ParkingLocation) {
         coroutineScope.launch {
             try {
-                subscriberRepo.update(updatedSubscriber)
                 parkingLocationRepo.update(updatedLocation)
                 loadAll()
                 _error.value = null
