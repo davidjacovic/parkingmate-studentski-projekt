@@ -99,99 +99,275 @@ function timeToMinutes(t) {
  */
 module.exports = {
   // controllers/paymentController.js (dopuni existing module.exports):
-getUserPaymentHistory: async (req, res) => {
-  try {
-    console.log('🔍 getUserPaymentHistory req.user:', req.user);
+  getUserPaymentHistory: async (req, res) => {
+    try {
+      console.log('🔍 getUserPaymentHistory req.user:', req.user);
 
-    const userId = req.user.userId;
-    if (!userId) {
-      console.error('❌ No userId found in token');
-      return res.status(401).json({ message: 'Unauthorized' });
+      const userId = req.user.userId;
+      if (!userId) {
+        console.error('❌ No userId found in token');
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const payments = await PaymentModel.find({ user: userId }).sort({ date: -1 });
+      console.log(`Found ${payments.length} payments`);
+      res.json(payments);
+
+    } catch (err) {
+      console.error('Error in getUserPaymentHistory:', err);
+      res.status(500).json({ message: 'Server error', error: err.message });
     }
+  },
 
-    const payments = await PaymentModel.find({ user: userId }).sort({ date: -1 });
-    console.log(`Found ${payments.length} payments`);
-    res.json(payments);
+  createAndCalculatePayment: async (req, res) => {
+    try {
+      const userId = req.user && (req.user._id || req.user.userId);
+      const { locationId, duration, method = 'card', credit_card, vehicle_plate } = req.body;
 
-  } catch (err) {
-    console.error('Error in getUserPaymentHistory:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-},
+      console.log(`[createAndCalculatePayment] User: ${userId}, Location: ${locationId}, Duration: ${duration}, Method: ${method}, Card: ${credit_card}, Plate: ${vehicle_plate}`);
+
+      if (!userId || !locationId || !duration || !credit_card || !vehicle_plate) {
+        console.warn('[createAndCalculatePayment] Nedostaju potrebni podaci');
+        return res.status(400).json({ message: 'Nedostaju potrebni podaci' });
+      }
+
+      const tariffs = await TariffModel.find({
+        parking_location: locationId,
+        hidden: false,
+      }).sort({ created: -1 });
+
+      console.log(`[createAndCalculatePayment] Dohvaceno tarifa: ${tariffs.length}`);
+
+      if (tariffs.length === 0) {
+        console.warn('[createAndCalculatePayment] Nema tarifa za odabranu lokaciju');
+        return res.status(404).json({ message: 'Nema tarifa za odabranu lokaciju' });
+      }
+
+      const now = new Date();
+      const startTimeStr = now.toTimeString().slice(0, 5);
+      const endDate = new Date(now.getTime() + duration * 60 * 60 * 1000);
+      const endTimeStr = endDate.toTimeString().slice(0, 5);
+
+      console.log(`[createAndCalculatePayment] Vreme pocetka: ${startTimeStr}, vreme kraja: ${endTimeStr}`);
+
+      // Filtriraj samo tarife koje važe u trenutku početka
+      const applicableTariffs = tariffs.filter((tariff) => {
+        return timeIntervalsOverlap(startTimeStr, startTimeStr, tariff.duration);
+      });
 
 
+      console.log(`[createAndCalculatePayment] Vazeci tarifa: ${applicableTariffs.length}`);
+
+      if (applicableTariffs.length === 0) {
+        console.warn('[createAndCalculatePayment] Nema važećih tarifa za ovo vreme');
+        return res.status(404).json({ message: 'Nema važećih tarifa za ovo vreme' });
+      }
+
+      let finalPrice = null;
+      let selectedTariff = null;
+
+      for (const tariff of applicableTariffs) {
+        const price = calculatePrice(duration, tariff);
+        console.log(`[createAndCalculatePayment] Provera tarife ID ${tariff._id || tariff.id} - cena: ${price}`);
+        if (price !== null && (finalPrice === null || price < finalPrice)) {
+          finalPrice = price;
+          selectedTariff = tariff;
+        }
+      }
+
+      if (finalPrice === null) {
+        console.warn('[createAndCalculatePayment] Nema odgovarajuće tarife za odabrano trajanje');
+        return res.status(400).json({ message: 'Nema odgovarajuće tarife za odabrano trajanje' });
+      }
+
+      console.log(`[createAndCalculatePayment] Izabrana tarifa ID: ${selectedTariff._id || selectedTariff.id}, cena: ${finalPrice}`);
+
+      const payment = new PaymentModel({
+        date: now,
+        amount: mongoose.Types.Decimal128.fromString(finalPrice.toFixed(2)),
+        method,
+        payment_status: 'completed',
+        duration,
+        hidden: false,
+        created: now,
+        modified: now,
+        user: userId,
+        parking_location: locationId,
+        vehicle_plate: vehicle_plate,
+      });
+
+      await payment.save();
+
+      console.log('[createAndCalculatePayment] Placanje uspesno sacuvano');
+
+      res.status(200).json({
+        price: finalPrice.toFixed(2),
+        unit: selectedTariff.price_unit,
+        message: 'Plaćanje uspešno',
+      });
+    } catch (error) {
+      console.error('[createAndCalculatePayment] Greška pri plaćanju:', error.message);
+      res.status(500).json({ message: 'Greška pri plaćanju', error: error.message });
+    }
+  },
+  getTariffsByLocation: async (req, res) => {
+    try {
+      const locationId = req.params.locationId;
+      const tariffs = await TariffModel.find({ parking_location: locationId, hidden: false });
+      res.status(200).json(tariffs);
+    } catch (error) {
+      res.status(500).json({ message: 'Neuspelo dohvatanje tarifa' });
+    }
+  },
+  checkActivePayment: async (req, res) => {
+    try {
+      const userId = req.user && (req.user._id || req.user.userId);
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const now = new Date();
+
+      // Nadji aktivna placanja gde (date + duration) > now
+      // Pretpostavljam da 'date' je početak plaćanja, duration u satima
+      const activePayment = await PaymentModel.findOne({
+        user: userId,
+        payment_status: 'completed',
+        $expr: {
+          $gt: [
+            { $add: ["$date", { $multiply: ["$duration", 3600 * 1000] }] },
+            now,
+          ]
+        }
+      }).sort({ date: -1 });
+
+      if (!activePayment) {
+        return res.status(200).json({ active: false });
+      }
+
+      // Izračunaj vreme do isteka u ms
+      const endTime = new Date(activePayment.date.getTime() + activePayment.duration * 3600 * 1000);
+      const remainingMs = endTime.getTime() - now.getTime();
+
+      return res.status(200).json({
+        active: true,
+        expiresAt: endTime,
+        remainingMs,
+      });
+    } catch (err) {
+      console.error('Error checking active payment:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  },
+  listUserPayments: function (req, res) {
+    try {
+      console.log('User iz tokena:', req.user);
+
+      const userIdRaw = req.user && (req.user.id || req.user.userId);
+      console.log('Raw User ID:', userIdRaw);
+
+      if (!userIdRaw) {
+        console.log('Nema userId u tokenu!');
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const mongoose = require('mongoose');
+      let userId;
+      try {
+        userId = mongoose.Types.ObjectId(userIdRaw);
+      } catch (e) {
+        console.log('User ID nije validan ObjectId:', userIdRaw);
+        return res.status(400).json({ message: 'Invalid user ID format' });
+      }
+
+      PaymentModel.find({ user: userId }, function (err, payments) {
+        if (err) {
+          console.error('Greška pri dohvatanju uplata:', err);
+          return res.status(500).json({
+            message: 'Error when getting user payments',
+            error: err.message,
+          });
+        }
+        console.log('Uplate za korisnika:', payments);
+        return res.json(payments);
+      });
+    } catch (err) {
+      console.error('Nešto nije u redu u listUserPayments:', err);
+      return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+  },
 
   getActivePaymentsForUser: async (req, res) => {
     try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Unauthorized: token missing' });
-    }
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'Unauthorized: token missing' });
+      }
 
-    const token = authHeader.split(' ')[1];
-    let decoded;
-    try {
-      decoded = jwt.verify(token, SECRET);
-    } catch {
-      return res.status(401).json({ message: 'Unauthorized: invalid token' });
-    }
+      const token = authHeader.split(' ')[1];
+      let decoded;
+      try {
+        decoded = jwt.verify(token, SECRET);
+      } catch {
+        return res.status(401).json({ message: 'Unauthorized: invalid token' });
+      }
 
-    const userId = decoded.id || decoded._id || decoded.userId;
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: 'Invalid user ID' });
-    }
+      const userId = decoded.id || decoded._id || decoded.userId;
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
 
-    const now = new Date();
+      const now = new Date();
 
-    const payments = await PaymentModel.aggregate([
-      {
-        $match: {
-          user: mongoose.Types.ObjectId(userId),
-          payment_status: 'completed',
-          hidden: { $ne: true },
-        }
-      },
-      {
-        $addFields: {
-          expiresAt: {
-            $add: [
-              "$date",
-              { $multiply: ["$duration", 60 * 60 * 1000] }
-            ]
+      const payments = await PaymentModel.aggregate([
+        {
+          $match: {
+            user: mongoose.Types.ObjectId(userId),
+            payment_status: 'completed',
+            hidden: { $ne: true },
+          }
+        },
+        {
+          $addFields: {
+            expiresAt: {
+              $add: [
+                "$date",
+                { $multiply: ["$duration", 60 * 60 * 1000] }
+              ]
+            }
+          }
+        },
+        {
+          $match: {
+            expiresAt: { $gt: now }
+          }
+        },
+        {
+          $project: {
+            vehicle_plate: 1,
+            date: 1,
+            duration: 1,
+            amount: 1,
+            expiresAt: 1,
           }
         }
-      },
-      {
-        $match: {
-          expiresAt: { $gt: now }
-        }
-      },
-      {
-        $project: {
-          vehicle_plate: 1,
-          date: 1,
-          duration: 1,
-          amount: 1,
-          expiresAt: 1,
-        }
-      }
-    ]);
+      ]);
 
-    const formatted = payments.map(p => ({
-      vehiclePlate: p.vehicle_plate || '',
-      date: p.date,
-      duration: p.duration,
-      amount: p.amount ? parseFloat(p.amount.toString()) : null,
-      expiresAt: new Date(p.expiresAt).getTime()
-    }));
+      const formatted = payments.map(p => ({
+        vehiclePlate: p.vehicle_plate || '',
+        date: p.date,
+        duration: p.duration,
+        amount: p.amount ? parseFloat(p.amount.toString()) : null,
+        expiresAt: new Date(p.expiresAt).getTime()
+      }));
 
-    return res.json(formatted);
+      return res.json(formatted);
 
-  } catch (err) {
-    console.error('Error in getActivePaymentsForUser:', err);
-    return res.status(500).json({ message: 'Server error', error: err.message });
-  }
-},
+    } catch (err) {
+      console.error('Error in getActivePaymentsForUser:', err);
+      return res.status(500).json({ message: 'Server error', error: err.message });
+    }
+  },
   /**
    * List all payments
    */
@@ -384,185 +560,5 @@ getUserPaymentHistory: async (req, res) => {
   /**
    * createAndCalculatePayment
    */
-  createAndCalculatePayment: async (req, res) => {
-    try {
-      const userId = req.user && (req.user._id || req.user.userId);
-      const { locationId, duration, method = 'card', credit_card, vehicle_plate } = req.body;
 
-      console.log(`[createAndCalculatePayment] User: ${userId}, Location: ${locationId}, Duration: ${duration}, Method: ${method}, Card: ${credit_card}, Plate: ${vehicle_plate}`);
-
-      if (!userId || !locationId || !duration || !credit_card || !vehicle_plate) {
-        console.warn('[createAndCalculatePayment] Nedostaju potrebni podaci');
-        return res.status(400).json({ message: 'Nedostaju potrebni podaci' });
-      }
-
-      const tariffs = await TariffModel.find({
-        parking_location: locationId,
-        hidden: false,
-      }).sort({ created: -1 });
-
-      console.log(`[createAndCalculatePayment] Dohvaceno tarifa: ${tariffs.length}`);
-
-      if (tariffs.length === 0) {
-        console.warn('[createAndCalculatePayment] Nema tarifa za odabranu lokaciju');
-        return res.status(404).json({ message: 'Nema tarifa za odabranu lokaciju' });
-      }
-
-      const now = new Date();
-      const startTimeStr = now.toTimeString().slice(0, 5);
-      const endDate = new Date(now.getTime() + duration * 60 * 60 * 1000);
-      const endTimeStr = endDate.toTimeString().slice(0, 5);
-
-      console.log(`[createAndCalculatePayment] Vreme pocetka: ${startTimeStr}, vreme kraja: ${endTimeStr}`);
-
-      const applicableTariffs = tariffs
-        .filter((tariff) => {
-          const overlaps = timeIntervalsOverlap(startTimeStr, endTimeStr, tariff.duration);
-          console.log(`[createAndCalculatePayment] Tarifa ID: ${tariff._id || tariff.id} sa trajanjem '${tariff.duration}' poklapa se sa intervalom: ${overlaps}`);
-          return overlaps;
-        })
-        .sort((a, b) => {
-          return parseFloat(a.price) - parseFloat(b.price);
-        });
-
-      console.log(`[createAndCalculatePayment] Vazeci tarifa: ${applicableTariffs.length}`);
-
-      if (applicableTariffs.length === 0) {
-        console.warn('[createAndCalculatePayment] Nema važećih tarifa za ovo vreme');
-        return res.status(404).json({ message: 'Nema važećih tarifa za ovo vreme' });
-      }
-
-      let finalPrice = null;
-      let selectedTariff = null;
-
-      for (const tariff of applicableTariffs) {
-        const price = calculatePrice(duration, tariff);
-        console.log(`[createAndCalculatePayment] Provera tarife ID ${tariff._id || tariff.id} - cena: ${price}`);
-        if (price !== null && (finalPrice === null || price < finalPrice)) {
-          finalPrice = price;
-          selectedTariff = tariff;
-        }
-      }
-
-      if (finalPrice === null) {
-        console.warn('[createAndCalculatePayment] Nema odgovarajuće tarife za odabrano trajanje');
-        return res.status(400).json({ message: 'Nema odgovarajuće tarife za odabrano trajanje' });
-      }
-
-      console.log(`[createAndCalculatePayment] Izabrana tarifa ID: ${selectedTariff._id || selectedTariff.id}, cena: ${finalPrice}`);
-
-      const payment = new PaymentModel({
-        date: now,
-        amount: mongoose.Types.Decimal128.fromString(finalPrice.toFixed(2)),
-        method,
-        payment_status: 'completed',
-        duration,
-        hidden: false,
-        created: now,
-        modified: now,
-        user: userId,
-        parking_location: locationId,
-         vehicle_plate: vehicle_plate,
-      });
-
-      await payment.save();
-
-      console.log('[createAndCalculatePayment] Placanje uspesno sacuvano');
-
-      res.status(200).json({
-        price: finalPrice.toFixed(2),
-        unit: selectedTariff.price_unit,
-        message: 'Plaćanje uspešno',
-      });
-    } catch (error) {
-      console.error('[createAndCalculatePayment] Greška pri plaćanju:', error.message);
-      res.status(500).json({ message: 'Greška pri plaćanju', error: error.message });
-    }
-  },
-  getTariffsByLocation: async (req, res) => {
-    try {
-      const locationId = req.params.locationId;
-      const tariffs = await TariffModel.find({ parking_location: locationId, hidden: false });
-      res.status(200).json(tariffs);
-    } catch (error) {
-      res.status(500).json({ message: 'Neuspelo dohvatanje tarifa' });
-    }
-  },
-  checkActivePayment: async (req, res) => {
-    try {
-      const userId = req.user && (req.user._id || req.user.userId);
-      if (!userId) {
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-
-      const now = new Date();
-
-      // Nadji aktivna placanja gde (date + duration) > now
-      // Pretpostavljam da 'date' je početak plaćanja, duration u satima
-      const activePayment = await PaymentModel.findOne({
-        user: userId,
-        payment_status: 'completed',
-        $expr: {
-          $gt: [
-            { $add: ["$date", { $multiply: ["$duration", 3600 * 1000] }] },
-            now,
-          ]
-        }
-      }).sort({ date: -1 });
-
-      if (!activePayment) {
-        return res.status(200).json({ active: false });
-      }
-
-      // Izračunaj vreme do isteka u ms
-      const endTime = new Date(activePayment.date.getTime() + activePayment.duration * 3600 * 1000);
-      const remainingMs = endTime.getTime() - now.getTime();
-
-      return res.status(200).json({
-        active: true,
-        expiresAt: endTime,
-        remainingMs,
-      });
-    } catch (err) {
-      console.error('Error checking active payment:', err);
-      res.status(500).json({ message: 'Server error' });
-    }
-  },
-  listUserPayments: function (req, res) {
-    try {
-      console.log('User iz tokena:', req.user);
-
-      const userIdRaw = req.user && (req.user.id || req.user.userId);
-      console.log('Raw User ID:', userIdRaw);
-
-      if (!userIdRaw) {
-        console.log('Nema userId u tokenu!');
-        return res.status(401).json({ message: 'Unauthorized' });
-      }
-
-      const mongoose = require('mongoose');
-      let userId;
-      try {
-        userId = mongoose.Types.ObjectId(userIdRaw);
-      } catch (e) {
-        console.log('User ID nije validan ObjectId:', userIdRaw);
-        return res.status(400).json({ message: 'Invalid user ID format' });
-      }
-
-      PaymentModel.find({ user: userId }, function (err, payments) {
-        if (err) {
-          console.error('Greška pri dohvatanju uplata:', err);
-          return res.status(500).json({
-            message: 'Error when getting user payments',
-            error: err.message,
-          });
-        }
-        console.log('Uplate za korisnika:', payments);
-        return res.json(payments);
-      });
-    } catch (err) {
-      console.error('Nešto nije u redu u listUserPayments:', err);
-      return res.status(500).json({ message: 'Server error', error: err.message });
-    }
-  }
 };
