@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { io } from 'socket.io-client';
 
 function Payment() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,118 +15,133 @@ function Payment() {
     const [countdowns, setCountdowns] = useState({});
     const notifiedExpiredPlates = useRef(new Set());
     const countdownInterval = useRef(null);
+    const socket = useRef(null);
 
-   const formatTime = (ms) => {
-  if (ms <= 0) return '00:00:00';
-  let totalSeconds = Math.floor(ms / 1000);
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-  totalSeconds %= 3600;
-  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-  const seconds = String(totalSeconds % 60).padStart(2, '0');
-  return `${hours}:${minutes}:${seconds}`;
-};
+    const formatTime = (ms) => {
+        if (ms <= 0) return '00:00:00';
+        let totalSeconds = Math.floor(ms / 1000);
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        totalSeconds %= 3600;
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    };
 
-const initializeCountdowns = (payments) => {
-  const now = Date.now();
-  const initialCountdowns = {};
-  payments.forEach(({ vehiclePlate, expiresAt }) => {
-    const diff = expiresAt - now;
-    initialCountdowns[vehiclePlate] = diff > 0 ? formatTime(diff) : 'Isteklo';
-  });
-  return initialCountdowns;
-};
+    const initializeCountdowns = (payments) => {
+        const now = Date.now();
+        const initialCountdowns = {};
+        payments.forEach(({ vehiclePlate, expiresAt }) => {
+            const diff = expiresAt - now;
+            initialCountdowns[vehiclePlate] = diff > 0 ? formatTime(diff) : 'Isteklo';
+        });
+        return initialCountdowns;
+    };
+    useEffect(() => {
+        socket.current = io('http://localhost:3002');  // adresu servera promeni po potrebi
 
+        // sluša notifikacije sa servera
+        socket.current.on('parking-expired', ({ vehiclePlate }) => {
+            alert(`Vreme za vozilo ${vehiclePlate} je isteklo. (preko Socket.IO)`);
+        });
+
+        return () => {
+            socket.current.disconnect();
+        };
+    }, []);
 
     // 1) Load activePayments from localStorage on mount
     useEffect(() => {
-  try {
-    const savedPayments = JSON.parse(localStorage.getItem('activePayments'));
-    if (Array.isArray(savedPayments)) {
-      // Filtriraj samo validna (neistekla) plaćanja
-      const validPayments = savedPayments.filter(p => 
-        p.expiresAt > Date.now() &&
-        p.vehiclePlate &&
-        p.vehiclePlate.trim() !== ''
-      );
-      setActivePayments(validPayments);
-      setCountdowns(initializeCountdowns(validPayments));
-    } else {
-      setActivePayments([]);
-      setCountdowns({});
-    }
-  } catch (error) {
-    setActivePayments([]);
-    setCountdowns({});
-  }
-}, []);
+        try {
+            const savedPayments = JSON.parse(localStorage.getItem('activePayments'));
+            if (Array.isArray(savedPayments)) {
+                // Filtriraj samo validna (neistekla) plaćanja
+                const validPayments = savedPayments.filter(p =>
+                    p.expiresAt > Date.now() &&
+                    p.vehiclePlate &&
+                    p.vehiclePlate.trim() !== ''
+                );
+                setActivePayments(validPayments);
+                setCountdowns(initializeCountdowns(validPayments));
+            } else {
+                setActivePayments([]);
+                setCountdowns({});
+            }
+        } catch (error) {
+            setActivePayments([]);
+            setCountdowns({});
+        }
+    }, []);
 
 
     // 2) Fetch active payments from backend
-   useEffect(() => {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    console.warn('[Payment] No token found in localStorage, skipping fetch active payments');
-    return;
-  }
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            console.warn('[Payment] No token found in localStorage, skipping fetch active payments');
+            return;
+        }
 
-  fetch('http://localhost:3002/payments/active-for-user', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-    .then(res => {
-      if (!res.ok) throw new Error(`Failed to fetch active payments, status: ${res.status}`);
-      return res.json();
-    })
-    .then(data => {
-      if (Array.isArray(data)) {
-        const validPayments = data.filter(p => p.expiresAt > Date.now());
-        setActivePayments(validPayments);
-        localStorage.setItem('activePayments', JSON.stringify(validPayments));
-        setCountdowns(initializeCountdowns(validPayments));
-      } else {
-        setActivePayments([]);
-        setCountdowns({});
-      }
-    })
-    .catch(err => {
-      console.error('[Payment] Error fetching active payments:', err);
-    });
-}, []);
+        fetch('http://localhost:3002/payments/active-for-user', {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then(res => {
+                if (!res.ok) throw new Error(`Failed to fetch active payments, status: ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const validPayments = data.filter(p => p.expiresAt > Date.now());
+                    setActivePayments(validPayments);
+                    localStorage.setItem('activePayments', JSON.stringify(validPayments));
+                    setCountdowns(initializeCountdowns(validPayments));
+                } else {
+                    setActivePayments([]);
+                    setCountdowns({});
+                }
+            })
+            .catch(err => {
+                console.error('[Payment] Error fetching active payments:', err);
+            });
+    }, []);
 
     // Countdown for active payments
-   useEffect(() => {
-  if (countdownInterval.current) clearInterval(countdownInterval.current);
+    useEffect(() => {
+        if (countdownInterval.current) clearInterval(countdownInterval.current);
 
-  countdownInterval.current = setInterval(() => {
-    setCountdowns(prevCountdowns => {
-      const now = Date.now();
-      const newCountdowns = {};
-      const stillActive = [];
+        countdownInterval.current = setInterval(() => {
+            setCountdowns(prevCountdowns => {
+                const now = Date.now();
+                const newCountdowns = {};
+                const stillActive = [];
 
-      activePayments.forEach(({ vehiclePlate, expiresAt }) => {
-        const diff = expiresAt - now;
-        if (diff > 0) {
-          newCountdowns[vehiclePlate] = formatTime(diff);
-          stillActive.push({ vehiclePlate, expiresAt });
-        } else {
-          newCountdowns[vehiclePlate] = 'Isteklo';
-          if (!notifiedExpiredPlates.current.has(vehiclePlate)) {
-            notifiedExpiredPlates.current.add(vehiclePlate);
-            alert(`Vreme za vozilo ${vehiclePlate} je isteklo.`);
-          }
-        }
-      });
+                activePayments.forEach(({ vehiclePlate, expiresAt }) => {
+                    const diff = expiresAt - now;
+                    if (diff > 0) {
+                        newCountdowns[vehiclePlate] = formatTime(diff);
+                        stillActive.push({ vehiclePlate, expiresAt });
+                    } else {
+                        newCountdowns[vehiclePlate] = 'Isteklo';
 
-      if (stillActive.length !== activePayments.length) {
-        setActivePayments(stillActive);
-        localStorage.setItem('activePayments', JSON.stringify(stillActive));
-      }
+                        if (!notifiedExpiredPlates.current.has(vehiclePlate)) {
+                            notifiedExpiredPlates.current.add(vehiclePlate);
 
-      return newCountdowns;
-    });
-  }, 1000);
+                            // POŠALJI SERVERU NOTIFIKACIJU
+                            socket.current.emit('notify-expired', { vehiclePlate });
+                        }
+                    }
+                });
 
-  return () => clearInterval(countdownInterval.current);
-}, [activePayments]);
+                if (stillActive.length !== activePayments.length) {
+                    setActivePayments(stillActive);
+                    localStorage.setItem('activePayments', JSON.stringify(stillActive));
+                }
+
+                return newCountdowns;
+            });
+        }, 1000);
+
+        return () => clearInterval(countdownInterval.current);
+    }, [activePayments]);
 
     // Search locations
     useEffect(() => {

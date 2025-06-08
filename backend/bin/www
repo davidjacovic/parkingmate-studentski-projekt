@@ -21,9 +21,67 @@ app.set('port', port);
 
 var server = http.createServer(app);
 
-/**
- * Listen on provided port, on all network interfaces.
- */
+
+// Dodaj socket.io
+const socketIo = require('socket.io');
+const io = socketIo(server, {
+  cors: { origin: "*" }, // ili podesiti za tvoju frontend adresu
+});
+
+// Middleware za autentifikaciju tokena preko socket.io
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) {
+    return next(new Error("Unauthorized"));
+  }
+  // Validiraj token, npr jwt.verify(token, SECRET, ...)
+  socket.user = { userId: "pretpostavimo" };
+  next();
+});
+
+const PaymentModel = require('../models/paymentModel');
+
+io.on('connection', (socket) => {
+  console.log('Novi klijent povezan:', socket.id, 'User:', socket.user.userId);
+
+  async function sendActivePayments() {
+    try {
+      const payments = await PaymentModel.find({
+        user: socket.user.userId,
+        payment_status: 'completed',
+        hidden: false,
+      }).lean();
+
+      const now = Date.now();
+      const paymentsWithExpires = payments.map(p => {
+        const expiresAt = new Date(p.date).getTime() + p.duration * 60 * 60 * 1000;
+        return {
+          vehiclePlate: p.vehicle_plate,
+          expiresAt,
+          amount: p.amount,
+          date: p.date,
+        };
+      }).filter(p => p.expiresAt > now);
+
+      socket.emit('activePayments', paymentsWithExpires);
+    } catch (err) {
+      console.error('Greška pri dohvatu aktivnih plaćanja:', err);
+    }
+  }
+
+  sendActivePayments();
+
+  socket.on('paymentMade', (paymentData) => {
+    io.to(socket.id).emit('newPayment', paymentData);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Klijent se odjavio:', socket.id);
+  });
+});
+
+var port = normalizePort(process.env.PORT || '3002');
+app.set('port', port);
 
 server.listen(port);
 server.on('error', onError);

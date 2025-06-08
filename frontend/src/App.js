@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { UserContext } from "./userContext";
 import { findNearestParking } from './utils/geoUtils';  // <-- import funkcije
@@ -16,10 +16,13 @@ import CoverageAnalysis from './components/CoverageAnalysis';
 import LocationsPage from './components/LocationsPage';
 import { useTokenExpirationNotification } from './components/useTokenExpirationNotification';
 import AdminHomepage from './components/AdminHomepage';
+import { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
+
 
 function App() {
     const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
-
+    const [notification, setNotification] = useState(null);
     // logout funkcija
     function logout() {
         localStorage.removeItem('user');
@@ -28,7 +31,20 @@ function App() {
         setUser(null);
         window.location.href = '/login';  // redirect na login
     }
+    useEffect(() => {
+        if (!user) return;  // ako nije ulogovan, ne otvaraj socket
 
+        const socket = io('http://localhost:3002');  // ili tvoj socket server URL
+
+        // Slušaj event sa servera, npr. 'parking-expired'
+        socket.on('parking-expired', ({ vehiclePlate }) => {
+            setNotification(`Vreme za vozilo ${vehiclePlate} je isteklo!`);
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [user]);
     // extend sesije - refresovanje tokena (primer)
     async function extendSession() {
         const token = localStorage.getItem('token');
@@ -83,7 +99,7 @@ function App() {
                     <Routes>
                         {user?.user_type === 'admin' ? (
                             <>
-                            <Route path="/" element={
+                                <Route path="/" element={
                                     <Homepage
                                         nearestParkingId={nearestParkingId}
                                         parkingSpots={parkingSpots}
@@ -139,6 +155,26 @@ function App() {
                             <button onClick={handleLogout}>No, log me out</button>
                         </div>
                     )}
+
+                    {notification && (
+                        <div style={{
+                            position: 'fixed',
+                            bottom: 20,
+                            right: 20,
+                            backgroundColor: 'white',
+                            border: '1px solid red',
+                            padding: 15,
+                            zIndex: 1000,
+                            borderRadius: 5,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                            color: 'red',
+                            fontWeight: 'bold',
+                        }}>
+                            {notification}
+                            <button onClick={() => setNotification(null)} style={{ marginLeft: 10 }}>X</button>
+                        </div>
+                    )}
+
                 </div>
             </UserContext.Provider>
         </BrowserRouter>
