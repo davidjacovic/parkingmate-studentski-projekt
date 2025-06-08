@@ -1,3 +1,17 @@
+# CI/CD projektno poročilo
+
+Naziv skupine: SVD
+Členi skupine: Sara Vesković, Vojin Keser, David Jaćović
+
+## Povzetek naloge
+
+V okviru projektne naloge smo vzpostavili osnovni CI/CD workflow za naš projekt ParkingMate. To vključuje:
+- Gradnjo in nalaganje Docker slik na Docker Hub
+- Uporabo GitHub Actions za avtomatizacijo procesov
+- Sprejemanje webhook sporočil na VM-ju (Azure)
+- Samodejni zagon in obnavljanje PM2 procesov za webhook strežnik
+- Priprava skripte za nadgradnjo Docker containerja na strežniku 
+
 ## Docker Hub
 
 Najprej je vodja skupine ustvaril račun na Docker Hub.
