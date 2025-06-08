@@ -11,9 +11,6 @@ router.get('/byId/:id', reviewsController.getById);
 router.post('/', authenticateToken, reviewsController.create);
 router.put('/:id', reviewsController.update);
 
-/*
- * DELETE
- */
-router.delete('/:id', reviewsController.remove);
+router.delete('/:id', authenticateToken, reviewsController.remove);
 
 module.exports = router;
