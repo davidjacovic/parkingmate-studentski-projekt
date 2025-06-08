@@ -18,7 +18,6 @@ data class ParkingLocationUploadDTO(
     val modified: String,
     val description: String? = null,
     val hidden: Boolean = false,
-    val subscriber: String? = null
 )
 
 fun ParkingLocation.toUploadDTO(): ParkingLocationUploadDTO {
@@ -37,6 +36,5 @@ fun ParkingLocation.toUploadDTO(): ParkingLocationUploadDTO {
         modified = this.modified?.toString() ?: now,
         description = this.description,
         hidden = this.hidden ?: false,
-        subscriber = this.subscriber?.toHexString()
     )
 }
