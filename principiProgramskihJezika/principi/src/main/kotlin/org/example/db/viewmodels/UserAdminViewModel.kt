@@ -1,3 +1,5 @@
+package org.example.db.viewmodels
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -7,7 +9,7 @@ import kotlinx.coroutines.launch
 import org.example.db.UserRepository
 import org.example.db.VehicleRepository
 import org.example.Vehicle
-import User
+import org.example.User
 
 class UserAdminViewModel(
     private val userRepository: UserRepository,

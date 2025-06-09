@@ -1,3 +1,5 @@
+package org.example
+
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import org.example.Vehicle

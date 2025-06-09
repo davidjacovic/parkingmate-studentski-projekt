@@ -23,24 +23,18 @@ import org.example.*
 import java.time.LocalDateTime
 import androidx.compose.foundation.lazy.items
 import java.math.BigDecimal
-import java.util.*
 import org.bson.types.ObjectId
 import org.example.db.*
-import org.example.viewmodel.PaymentAdminViewModel
-import org.example.viewmodel.ReviewAdminViewModel
+import org.example.db.viewmodels.PaymentAdminViewModel
+import org.example.db.viewmodels.ReviewAdminViewModel
+import org.example.db.viewmodels.UserAdminViewModel
+import org.example.db.viewmodels.ParkingLocationAdminViewModel
 import org.example.skraper.ucitajParkingLokacijeJson
 import org.example.skraper.parseScrapedJsonObjects
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.encodeToString
-import androidx.compose.foundation.lazy.itemsIndexed
 import kotlinx.coroutines.launch
-import org.example.uploadParkingLocationWithTariffs
-
+import org.example.FakeDataGenerator.generateFakeVehicleForUser
+import org.example.FakeDataGenerator.generateFakeReview
 
 
 @Composable
@@ -148,6 +142,7 @@ fun App() {
         }
     }
 }
+
 
 
 @Composable
@@ -1817,6 +1812,7 @@ fun SkraperAdminUI(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var filterText by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
+    val uploader = remember { ScraperDataUploader() }
 
     LaunchedEffect(Unit) {
         try {
@@ -1852,6 +1848,24 @@ fun SkraperAdminUI(onBack: () -> Unit) {
             Text(error!!, color = Color.Red)
         }
 
+        Button(
+            onClick = {
+                coroutineScope.launch {
+                    try {
+                        uploader.bulkInsertOrUpdate(parsedData)
+                        println("✅ All items inserted or updated.")
+                    } catch (e: Exception) {
+                        error = "DB Upload failed: ${e.message}"
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Upload All to DB")
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         val intField: @Composable (String, Int, (Int) -> Unit) -> Unit = { label, value, onUpdate ->
             OutlinedTextField(
                 value = value.toString(),
@@ -1860,6 +1874,7 @@ fun SkraperAdminUI(onBack: () -> Unit) {
                 modifier = Modifier.weight(1f).padding(4.dp)
             )
         }
+
         val filteredData = parsedData.mapIndexed { idx, pair -> idx to pair }
             .filter { (_, pair) -> pair.first.name.contains(filterText, ignoreCase = true) }
 
@@ -1871,22 +1886,6 @@ fun SkraperAdminUI(onBack: () -> Unit) {
                     elevation = 4.dp
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    val success = uploadParkingLocationWithTariffs(location, tariffs)
-                                    if (success) {
-                                        println("Uploaded successfully.")
-                                    } else {
-                                        println("Upload failed.")
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                        ) {
-                            Text("Upload to Server")
-                        }
-
                         OutlinedTextField(
                             value = location.name,
                             onValueChange = {
@@ -2081,10 +2080,13 @@ fun SkraperAdminUI(onBack: () -> Unit) {
         }
     }
 }
+
 @Composable
 fun GenerateFakeParkingLocationScreen() {
     var count by remember { mutableStateOf("5") }
     var generatedLocations by remember { mutableStateOf<List<ParkingLocation>>(emptyList()) }
+    val coroutineScope = rememberCoroutineScope()
+    val repo = remember { ParkingLocationRepository() }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Generate Fake Parking Locations", style = MaterialTheme.typography.h6)
@@ -2114,21 +2116,43 @@ fun GenerateFakeParkingLocationScreen() {
 
         LazyColumn {
             items(generatedLocations) { location ->
-                Card(Modifier.fillMaxWidth().padding(4.dp)) {
+                var uploadStatus by remember { mutableStateOf<String?>(null) }
+
+                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     Column(Modifier.padding(8.dp)) {
                         Text("Name: ${location.name}")
                         Text("Address: ${location.address}")
                         Text("Coordinates: ${location.location.coordinates.joinToString()}")
                         Text("Description: ${location.description}")
                         Text("Total regular spots: ${location.total_regular_spots}")
-                        Text("Total invalid spots: ${location.total_invalid_spots}")
-                        Text("Total bus spots: ${location.total_bus_spots}")
                         Text("Available regular spots: ${location.available_regular_spots}")
+                        Text("Total invalid spots: ${location.total_invalid_spots}")
                         Text("Available invalid spots: ${location.available_invalid_spots}")
+                        Text("Total bus spots: ${location.total_bus_spots}")
                         Text("Available bus spots: ${location.available_bus_spots}")
                         Text("Created: ${location.created}")
                         Text("Modified: ${location.modified}")
                         Text("Hidden: ${location.hidden}")
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Button(onClick = {
+                            coroutineScope.launch {
+                                try {
+                                    repo.insert(location)
+                                    uploadStatus = "✅ Saved to MongoDB"
+                                } catch (e: Exception) {
+                                    uploadStatus = "❌ Insert failed: ${e.message}"
+                                }
+                            }
+                        }) {
+                            Text("Save to DB")
+                        }
+
+                        uploadStatus?.let {
+                            Spacer(Modifier.height(4.dp))
+                            Text(it)
+                        }
                     }
                 }
             }
@@ -2139,7 +2163,9 @@ fun GenerateFakeParkingLocationScreen() {
 @Composable
 fun GenerateFakeUserScreen() {
     var count by remember { mutableStateOf("5") }
-    var generatedUsers by remember { mutableStateOf<List<UserUpload>>(emptyList()) }
+    var generatedUsers by remember { mutableStateOf<List<User>>(emptyList()) }
+    val coroutineScope = rememberCoroutineScope()
+    val userRepo = remember { UserRepository() }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Generate Fake Users", style = MaterialTheme.typography.h6)
@@ -2169,15 +2195,37 @@ fun GenerateFakeUserScreen() {
 
         LazyColumn {
             items(generatedUsers) { user ->
+                var uploadStatus by remember { mutableStateOf<String?>(null) }
+
                 Card(Modifier.fillMaxWidth().padding(4.dp)) {
                     Column(Modifier.padding(8.dp)) {
                         Text("Username: ${user.username}")
                         Text("Email: ${user.email}")
                         Text("Phone: ${user.phone_number}")
-                        Text("Password: ${user.password}")
+                        Text("Password: ${user.password_hash}")
                         Text("User Type: ${user.user_type}")
                         Text("Credit Card: ${user.credit_card_number}")
                         Text("Created: ${user.created_at}")
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Button(onClick = {
+                            coroutineScope.launch {
+                                try {
+                                    userRepo.insert(user)
+                                    uploadStatus = "✅ Saved to MongoDB"
+                                } catch (e: Exception) {
+                                    uploadStatus = "❌ Insert failed: ${e.message}"
+                                }
+                            }
+                        }) {
+                            Text("Save to DB")
+                        }
+
+                        uploadStatus?.let {
+                            Spacer(Modifier.height(4.dp))
+                            Text(it)
+                        }
                     }
                 }
             }
@@ -2189,7 +2237,20 @@ fun GenerateFakeUserScreen() {
 fun VehicleAdminUI(
     onBack: () -> Unit
 ) {
+    val vehicleRepo = remember { VehicleRepository() }
+
     var selectedTab by remember { mutableStateOf("Generate") }
+    var selectedVehicleForEdit by remember { mutableStateOf<Vehicle?>(null) }
+    var vehicles by remember { mutableStateOf(emptyList<Vehicle>()) }
+
+    // Load visible vehicles initially and after updates
+    LaunchedEffect(Unit) {
+        vehicles = vehicleRepo.findAll().filter { it.hidden != true }
+    }
+
+    fun reloadVehicles() {
+        vehicles = vehicleRepo.findAll().filter { it.hidden != true }
+    }
 
     MaterialTheme {
         Column {
@@ -2211,13 +2272,45 @@ fun VehicleAdminUI(
                         .background(Color(0xFFF5F5F5))
                         .padding(10.dp)
                 ) {
+                    NavigationButton("Add vehicle") { selectedTab = it }
+                    NavigationButton("All vehicles") { selectedTab = it }
                     NavigationButton("Generate") { selectedTab = it }
                     Spacer(Modifier.weight(1f))
                     NavigationButton("About") { selectedTab = it }
                 }
+
                 Box(Modifier.fillMaxSize().padding(16.dp)) {
-                    when (selectedTab) {
-                       "Generate" -> GenerateFakeVehicleScreen()
+                    when {
+                        selectedVehicleForEdit != null -> EditVehicleScreen(
+                            vehicle = selectedVehicleForEdit!!,
+                            onSave = {
+                                vehicleRepo.update(it)
+                                selectedVehicleForEdit = null
+                                reloadVehicles()
+                            },
+                            onDelete = {
+                                vehicleRepo.deleteById(it.id.toHexString())
+                                selectedVehicleForEdit = null
+                                reloadVehicles()
+                            },
+                            onBack = { selectedVehicleForEdit = null }
+                        )
+
+                        selectedTab == "Add vehicle" -> AddVehicleScreen(
+                            onAdd = {
+                                vehicleRepo.insert(it)
+                                reloadVehicles()
+                                selectedTab = "All vehicles"
+                            },
+                            onBack = { selectedTab = "All vehicles" }
+                        )
+
+                        selectedTab == "All vehicles" -> VehicleScreen(
+                            vehicles = vehicles,
+                            onEdit = { selectedVehicleForEdit = it }
+                        )
+
+                        selectedTab == "Generate" -> GenerateFakeVehicleScreen()
 
                         else -> Text("Coming soon...")
                     }
@@ -2226,13 +2319,199 @@ fun VehicleAdminUI(
         }
     }
 }
+
+@Composable
+fun AddVehicleScreen(
+    onAdd: (Vehicle) -> Unit,
+    onBack: () -> Unit
+) {
+    val userRepo = remember { UserRepository() }
+    var users by remember { mutableStateOf<List<User>>(emptyList()) }
+    var selectedUser by remember { mutableStateOf<User?>(null) }
+
+    var registration by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        users = userRepo.findVisible()
+        selectedUser = users.firstOrNull()
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Add Vehicle", style = MaterialTheme.typography.h6)
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("Select User:")
+        DropdownSelector(
+            options = users,
+            selected = selectedUser,
+            onSelect = { selectedUser = it },
+            displayText = { "${it.name} ${it.surname}" }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        TextFieldWithLabel("Registration Number", registration) { registration = it }
+        TextFieldWithLabel("Vehicle Type (car, truck, motorcycle, bus)", type) { type = it }
+
+        error?.let { Text(it, color = Color.Red, modifier = Modifier.padding(vertical = 8.dp)) }
+
+        Spacer(Modifier.height(16.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val vehicle = Vehicle(
+                    registration_number = registration,
+                    vehicle_type = type,
+                    user = selectedUser?.id,
+                    created = LocalDateTime.now(),
+                    modified = LocalDateTime.now(),
+                    hidden = false
+                )
+                if (vehicle.isValid() && selectedUser != null) {
+                    error = null
+                    onAdd(vehicle)
+                } else {
+                    error = if (selectedUser == null) "User not selected" else "Invalid vehicle data"
+                }
+            }) {
+                Text("Save")
+            }
+
+            Button(onClick = onBack) {
+                Text("Cancel")
+            }
+        }
+    }
+}
+
+@Composable
+fun EditVehicleScreen(
+    vehicle: Vehicle,
+    onSave: (Vehicle) -> Unit,
+    onDelete: (Vehicle) -> Unit,
+    onBack: () -> Unit
+) {
+    var registration by remember { mutableStateOf(vehicle.registration_number ?: "") }
+    var type by remember { mutableStateOf(vehicle.vehicle_type ?: "") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Edit Vehicle", style = MaterialTheme.typography.h6)
+
+        Spacer(Modifier.height(8.dp))
+
+        TextFieldWithLabel("Registration Number", registration) { registration = it }
+        TextFieldWithLabel("Vehicle Type", type) { type = it }
+
+        error?.let { Text(it, color = Color.Red, modifier = Modifier.padding(vertical = 8.dp)) }
+
+        Spacer(Modifier.height(16.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val updated = vehicle.copy(
+                    registration_number = registration,
+                    vehicle_type = type,
+                    modified = LocalDateTime.now()
+                )
+                if (updated.isValid()) {
+                    error = null
+                    onSave(updated)
+                } else {
+                    error = "Invalid vehicle data"
+                }
+            }) {
+                Text("Save")
+            }
+
+            Button(onClick = { onDelete(vehicle) }, colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red)) {
+                Text("Delete", color = Color.White)
+            }
+
+            Button(onClick = onBack) {
+                Text("Cancel")
+            }
+        }
+    }
+}
+@Composable
+fun VehicleScreen(
+    vehicles: List<Vehicle>,
+    onEdit: (Vehicle) -> Unit
+) {
+    var filter by remember { mutableStateOf("") }
+
+    val filtered = vehicles.filter {
+        it.registration_number?.contains(filter, ignoreCase = true) == true ||
+                it.vehicle_type?.contains(filter, ignoreCase = true) == true
+    }
+
+    Column {
+        TextField(
+            value = filter,
+            onValueChange = { filter = it },
+            label = { Text("Search by registration or type") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+        )
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(filtered) { vehicle ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onEdit(vehicle) }
+                        .padding(4.dp),
+                    elevation = 4.dp
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("Reg: ${vehicle.registration_number}", fontWeight = FontWeight.Bold)
+                        Text("Type: ${vehicle.vehicle_type}", color = Color.Gray)
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 @Composable
 fun GenerateFakeVehicleScreen() {
+    val userRepo = remember { UserRepository() }
+    val vehicleRepo = remember { VehicleRepository() }
+
+    var users by remember { mutableStateOf<List<User>>(emptyList()) }
+    var selectedUser by remember { mutableStateOf<User?>(null) }
     var numberInput by remember { mutableStateOf("5") }
-    var generatedVehicles by remember { mutableStateOf<List<VehicleUpload>>(emptyList()) }
+    var generatedVehicles by remember { mutableStateOf<List<Vehicle>>(emptyList()) }
+
+    // Load users once
+    LaunchedEffect(Unit) {
+        users = userRepo.findVisible()
+        selectedUser = users.firstOrNull()
+    }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Generate Fake Vehicles", style = MaterialTheme.typography.h6)
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("Select user:")
+        DropdownSelector(
+            options = users,
+            selected = selectedUser,
+            onSelect = { selectedUser = it },
+            displayText = { "${it.name} ${it.surname}" }
+        )
 
         Spacer(Modifier.height(8.dp))
 
@@ -2248,11 +2527,16 @@ fun GenerateFakeVehicleScreen() {
 
         Button(onClick = {
             val count = numberInput.toIntOrNull() ?: 0
-            if (count > 0) {
-                generatedVehicles = List(count) { FakeDataGenerator.generateFakeVehicle() }
+            if (selectedUser != null && count > 0) {
+                val now = LocalDateTime.now()
+                val vehicles = List(count) {
+                    generateFakeVehicleForUser(selectedUser!!.id.toHexString(), now)
+                }
+                vehicles.forEach { vehicleRepo.insert(it) }
+                generatedVehicles = vehicles
             }
         }) {
-            Text("Generate")
+            Text("Generate and Upload")
         }
 
         Spacer(Modifier.height(16.dp))
@@ -2264,8 +2548,7 @@ fun GenerateFakeVehicleScreen() {
                         Text("Registration: ${vehicle.registration_number}")
                         Text("Type: ${vehicle.vehicle_type}")
                         Text("Created: ${vehicle.created}")
-                        Text("Modified: ${vehicle.modified}")
-                        Text("User: ${vehicle.user}")
+                        Text("User ID: ${vehicle.user}")
                     }
                 }
             }
@@ -2274,11 +2557,50 @@ fun GenerateFakeVehicleScreen() {
 }
 @Composable
 fun GenerateFakeReviewScreen() {
-    var numberInput by remember { mutableStateOf("5") }
-    var generatedReviews by remember { mutableStateOf<List<ReviewUpload>>(emptyList()) }
+    val userRepo = remember { UserRepository() }
+    val locationRepo = remember { ParkingLocationRepository() }
+    val reviewsRepo = remember { ReviewsRepository() }
+
+    var users by remember { mutableStateOf<List<User>>(emptyList()) }
+    var locations by remember { mutableStateOf<List<ParkingLocation>>(emptyList()) }
+
+    var selectedUser by remember { mutableStateOf<User?>(null) }
+    var selectedLocation by remember { mutableStateOf<ParkingLocation?>(null) }
+    var numberInput by remember { mutableStateOf("3") }
+
+    var generatedReviews by remember { mutableStateOf<List<Review>>(emptyList()) }
+
+    // Load users and locations once
+    LaunchedEffect(Unit) {
+        users = userRepo.findVisible()
+        locations = locationRepo.findAll().filter { it.hidden != true }
+
+        selectedUser = users.firstOrNull()
+        selectedLocation = locations.firstOrNull()
+    }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Generate Fake Reviews", style = MaterialTheme.typography.h6)
+        Spacer(Modifier.height(8.dp))
+
+        Text("Select user:")
+        DropdownSelector(
+            options = users,
+            selected = selectedUser,
+            onSelect = { selectedUser = it },
+            displayText = { it.username ?: "Unnamed User" }
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("Select parking location:")
+        DropdownSelector(
+            options = locations,
+            selected = selectedLocation,
+            onSelect = { selectedLocation = it },
+            displayText = { it.name ?: "Unnamed" }
+        )
+
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(
@@ -2291,13 +2613,29 @@ fun GenerateFakeReviewScreen() {
 
         Spacer(Modifier.height(8.dp))
 
-        Button(onClick = {
-            val count = numberInput.toIntOrNull() ?: 0
-            if (count > 0) {
-                generatedReviews = List(count) { FakeDataGenerator.generateFakeReview() }
+        Button(
+            enabled = selectedUser != null && selectedLocation != null && numberInput.toIntOrNull() != null,
+            onClick = {
+                val count = numberInput.toIntOrNull() ?: return@Button
+                val now = LocalDateTime.now()
+
+                selectedUser?.let { user ->
+                    selectedLocation?.let { location ->
+                        val reviews = List(count) {
+                            val review = generateFakeReview(
+                                userId = user.id.toHexString(),
+                                locationId = location.id.toHexString(),
+                                now = now
+                            )
+                            reviewsRepo.insert(review)
+                            review
+                        }
+                        generatedReviews = reviews
+                    }
+                }
             }
-        }) {
-            Text("Generate")
+        ) {
+            Text("Generate and Upload")
         }
 
         Spacer(Modifier.height(16.dp))
@@ -2308,15 +2646,15 @@ fun GenerateFakeReviewScreen() {
                     Column(Modifier.padding(8.dp)) {
                         Text("Rating: ${review.rating}")
                         Text("Text: ${review.review_text}")
-                        Text("Date: ${review.review_date}")
                         Text("User ID: ${review.user}")
-                        Text("Parking Location ID: ${review.parking_location}")
+                        Text("Location ID: ${review.parking_location}")
                     }
                 }
             }
         }
     }
 }
+
 
 
 
