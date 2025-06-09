@@ -1,7 +1,7 @@
 
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { UserContext } from "./userContext";
-import { findNearestParking } from './utils/geoUtils';  // <-- import funkcije
+import { findNearestParking } from './utils/geoUtils';
 
 import Login from "./components/Login";
 import Register from "./components/Register";
@@ -19,6 +19,7 @@ import AdminHomepage from './components/AdminHomepage';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
+import Reviews from './components/Reviews';
 
 function App() {
     const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
@@ -99,31 +100,38 @@ function App() {
                     <Routes>
                         {user?.user_type === 'admin' ? (
                             <>
-                                <Route path="/" element={
-                                    <Homepage
-                                        nearestParkingId={nearestParkingId}
-                                        parkingSpots={parkingSpots}
-                                        userLocation={userLocation}
-                                        setUserLocation={setUserLocation}
-                                    />
-                                } />
+                                <Route path="/" element={<AdminHomepage />} />
+                                <Route path="/admin" element={<AdminHomepage />} />
+                                <Route
+                                    path="/userhome"
+                                    element={
+                                        <Homepage
+                                            nearestParkingId={nearestParkingId}
+                                            parkingSpots={parkingSpots}
+                                            userLocation={userLocation}
+                                            setUserLocation={setUserLocation}
+                                        />
+                                    }
+                                />
                                 <Route path="/location/:id" element={<LocationDetails />} />
                                 <Route path="/login" element={<Login />} />
                                 <Route path="/logout" element={<Logout />} />
-                                <Route path="/payment" element={<Payment />} />
-                                <Route path="/admin" element={<AdminHomepage />} />
+                                {/* Ostale admin rute */}
                                 <Route path="*" element={<AdminHomepage />} />
                             </>
                         ) : (
                             <>
-                                <Route path="/" element={
-                                    <Homepage
-                                        nearestParkingId={nearestParkingId}
-                                        parkingSpots={parkingSpots}
-                                        userLocation={userLocation}
-                                        setUserLocation={setUserLocation}
-                                    />
-                                } />
+                                <Route
+                                    path="/"
+                                    element={
+                                        <Homepage
+                                            nearestParkingId={nearestParkingId}
+                                            parkingSpots={parkingSpots}
+                                            userLocation={userLocation}
+                                            setUserLocation={setUserLocation}
+                                        />
+                                    }
+                                />
                                 <Route path="/location/:id" element={<LocationDetails />} />
                                 <Route path="/login" element={<Login />} />
                                 <Route path="/register" element={<Register />} />
@@ -131,10 +139,13 @@ function App() {
                                 <Route path="/profile" element={<Profil />} />
                                 <Route path="/payment" element={<Payment />} />
                                 <Route path="/locations/*" element={<LocationsPage />} />
-                                {/* Ostale rute koje nisi admin mogu videti */}
                             </>
                         )}
+
+                        {/* Rutu za Reviews staviš OVDE, izvan uslova — biće dostupna i adminu i useru */}
+                        <Route path="/reviews" element={<Reviews />} />
                     </Routes>
+
 
 
                     {/* Notifikacija za isteka tokena */}

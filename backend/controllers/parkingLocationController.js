@@ -43,23 +43,37 @@ module.exports = {
     },
 
     show: function (req, res) {
-        var id = req.params.id;
-        Parking_locationModel.findOne({ _id: id }, function (err, parking_location) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting parking_location.',
-                    error: err
-                });
-            }
-            if (!parking_location) {
-                return res.status(404).json({
-                    message: 'No such parking_location'
-                });
-            }
-            convertDecimalCoordinates(parking_location);
-            return res.json(parking_location);
-        });
-    },
+    const id = req.params.id;
+
+    console.log('🔎 Pozvana funkcija show sa ID:', id);
+
+    // Provera validnosti MongoDB ObjectId formata (opciono, ali korisno)
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+        console.warn('⚠️ Nevalidan MongoDB ID:', id);
+        return res.status(400).json({ message: 'Nevalidan ID formata.' });
+    }
+
+    Parking_locationModel.findById(id, function (err, parking_location) {
+        if (err) {
+            console.error('❌ Greška pri dohvaćanju parking lokacije:', err);
+            return res.status(500).json({ message: 'Error when getting parking_location.', error: err });
+        }
+
+        if (!parking_location) {
+            console.warn('❓ Nema parking lokacije sa tim ID:', id);
+            return res.status(404).json({ message: 'No such parking_location' });
+        }
+
+        console.log('✅ Parking lokacija pronađena:', parking_location);
+
+        convertDecimalCoordinates(parking_location);
+
+        console.log('📦 Parking lokacija nakon konverzije koordinata:', parking_location);
+
+        return res.json(parking_location);
+    });
+},
+
     create: function (req, res) {
         try {
             console.log('create parkingLocation called');

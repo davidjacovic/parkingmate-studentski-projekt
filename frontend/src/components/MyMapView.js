@@ -69,7 +69,7 @@ function CustomRefreshControl({ onRefresh }) {
     const btn = document.querySelector('.leaflet-control-custom');
     if (btn) {
       btn.innerHTML = loading ? '⏳' : '🔄';
-      btn.title = loading ? 'Učitavanje...' : 'Osveži lokacije';
+      btn.title = loading ? 'Nalaganje...' : 'Osveži lokacije';
     }
   }, [loading]);
 
@@ -119,7 +119,7 @@ const MapView = ({ userLocation, parkingLocations, nearestId, onRefresh }) => {
               <div>
                 <strong>{loc.name}</strong><br />
                 {loc.address}<br />
-                <a href={`/location/${loc._id}`}>Detalji</a>
+                <a href={`/location/${loc._id}`}>Podrobnosti</a>
               </div>
             </Popup>
           </Marker>

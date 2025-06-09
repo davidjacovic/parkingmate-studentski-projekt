@@ -12,13 +12,13 @@ function LocationsPage() {
         <h1>Locations</h1>
         <nav style={{ display: 'flex', gap: '1rem' }}>
           <Link to="/locations/nearby" style={{ textDecoration: 'none', color: 'blue' }}>
-            Nearby Parkings
+            Parkirišča v bližini
           </Link>
           <Link to="/locations/coverage" style={{ textDecoration: 'none', color: 'blue' }}>
-            Coverage Analysis
+            Analiza pokritosti
           </Link>
           <Link to="/locations/occupancy" style={{ textDecoration: 'none', color: 'blue' }}>
-            Occupancy Status
+            Status zasedenosti
           </Link>
         </nav>
 

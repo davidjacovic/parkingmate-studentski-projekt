@@ -125,7 +125,13 @@ function Payment() {
                         if (!notifiedExpiredPlates.current.has(vehiclePlate)) {
                             notifiedExpiredPlates.current.add(vehiclePlate);
 
-                            // POŠALJI SERVERU NOTIFIKACIJU
+                            const expiredPayment = activePayments.find(p => p.vehiclePlate === vehiclePlate);
+                            const location = expiredPayment?.locationName || 'nepoznata lokacija';
+
+                            alert(`Vreme je isteklo za vozilo ${vehiclePlate}. Lokacija: ${location}.`);
+                            //socket.current.emit('notify-expired', { vehiclePlate });
+
+                            // Pošalji obaveštenje serveru
                             socket.current.emit('notify-expired', { vehiclePlate });
                         }
                     }
@@ -299,7 +305,13 @@ function Payment() {
             setPriceUnit(data.unit);
 
             const expiration = Date.now() + dur * 60 * 60 * 1000;
-            const newPayment = { vehiclePlate: vehiclePlate.trim(), expiresAt: expiration };
+            const newPayment = {
+                vehiclePlate: vehiclePlate.trim(),
+                expiresAt: expiration,
+                amount: data.price,
+                unit: data.unit,
+                locationName: selectedLocation.name, // dodato
+            };
             const updatedPayments = [...activePayments, newPayment];
             setActivePayments(updatedPayments);
             localStorage.setItem('activePayments', JSON.stringify(updatedPayments));
@@ -310,134 +322,187 @@ function Payment() {
             alert('Došlo je do greške prilikom plaćanja.');
         }
     };
-
     return (
-        <div style={{ maxWidth: 600, margin: 'auto' }}>
-            <h2>Pretraga Parking Lokacije</h2>
-            <input
-                type="text"
-                placeholder="Unesite naziv..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                autoComplete="off"
-                style={{ width: '100%', padding: '8px', fontSize: '1rem' }}
-            />
-            {suggestions.length > 0 && (
-                <ul
-                    style={{
-                        border: '1px solid #ccc',
-                        padding: 0,
-                        marginTop: 0,
-                        listStyle: 'none',
-                        maxHeight: 150,
-                        overflowY: 'auto',
-                    }}
-                >
-                    {suggestions.map((loc) => (
-                        <li
-                            key={loc._id}
-                            onClick={() => handleSelect(loc)}
-                            style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
-                        >
-                            {loc.name}
-                        </li>
-                    ))}
-                </ul>
-            )}
+    <div style={{ display: 'flex', gap: '2rem', maxWidth: 1000, margin: '2rem auto' }}>
+        {/* LEVA STRAN - tvoj obstoječi koda za plačilo in iskanje */}
+        <div style={{ flex: 1 }}>
+            <div className="location-card">
+                <h2 className="card-header">Iskanje parkirnih lokacij</h2>
 
-            {selectedLocation && tariffs.length > 0 && (
-                <>
-                    <h3>Tarife za {selectedLocation.name}:</h3>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr>
-                                <th>Tip</th>
-                                <th>Trajanje</th>
-                                <th>Tip vozila</th>
-                                <th>Cena</th>
-                                <th>Jedinica</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {tariffs.map((tariff) => (
-                                <tr key={tariff._id}>
-                                    <td>{tariff.tariff_type}</td>
-                                    <td>{tariff.duration}</td>
-                                    <td>{tariff.vehicle_type}</td>
-                                    <td>{parseFloat(tariff.price.$numberDecimal).toFixed(2)}</td>
-                                    <td>{tariff.price_unit}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </>
-            )}
-
-            <div style={{ marginTop: 20 }}>
-                <label>Kreditna kartica</label>
-                <br />
                 <input
                     type="text"
-                    value={creditCard}
-                    onChange={(e) => setCreditCard(e.target.value)}
-                    placeholder="Unesite broj kartice"
-                    style={{ width: '100%', padding: '8px' }}
+                    placeholder="Vnesite ime..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    autoComplete="off"
+                    style={{ width: '100%', padding: '8px', fontSize: '1rem', marginBottom: '1rem' }}
                 />
-            </div>
 
-            <div style={{ marginTop: 10 }}>
-                <label>Registarska tablica</label>
-                <br />
-                <input
-                    type="text"
-                    value={vehiclePlate}
-                    onChange={(e) => setVehiclePlate(e.target.value)}
-                    placeholder="Unesite registarsku tablicu"
-                    style={{ width: '100%', padding: '8px' }}
-                />
-            </div>
-
-            <div style={{ marginTop: 10 }}>
-                <label>Trajanje (sati)</label>
-                <br />
-                <input
-                    type="number"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    placeholder="Unesite trajanje u satima"
-                    style={{ width: '100%', padding: '8px' }}
-                    min="1"
-                />
-            </div>
-
-            <button
-                onClick={handlePay}
-                style={{ marginTop: 15, padding: '10px 20px', fontSize: '1rem', cursor: 'pointer' }}
-            >
-                Plati
-            </button>
-
-            {price !== null && (
-                <p>
-                    Cena: {price} {priceUnit}
-                </p>
-            )}
-
-            {activePayments.length > 0 && (
-                <>
-                    <h3 style={{ marginTop: 30 }}>Registarske tablice sa aktivnom uplatom:</h3>
-                    <ul>
-                        {activePayments.map(({ vehiclePlate }, index) => (
-                            <li key={vehiclePlate ? vehiclePlate : `unknown-${index}`}>
-                                Vozilo: <strong>{vehiclePlate || 'Nepoznato vozilo'}</strong> — {countdowns[vehiclePlate] || 'Učitavanje...'}
+                {suggestions.length > 0 && (
+                    <ul
+                        style={{
+                            border: '1px solid #ccc',
+                            padding: 0,
+                            marginTop: 0,
+                            listStyle: 'none',
+                            maxHeight: 150,
+                            overflowY: 'auto',
+                            borderRadius: '4px',
+                            backgroundColor: '#fff',
+                        }}
+                    >
+                        {suggestions.map((loc) => (
+                            <li
+                                key={loc._id}
+                                onClick={() => handleSelect(loc)}
+                                style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
+                            >
+                                {loc.name}
                             </li>
                         ))}
                     </ul>
-                </>
-            )}
+                )}
 
+                {selectedLocation && tariffs.length > 0 && (
+                    <>
+                        <h3>Tarife za {selectedLocation.name}:</h3>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ color: '#284b63' }}>
+                                    <th>Tip</th>
+                                    <th>Trajanje</th>
+                                    <th>Tip vozila</th>
+                                    <th>Cena</th>
+                                    <th>Enota</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {tariffs.map((tariff) => (
+                                    <tr key={tariff._id}>
+                                        <td>{tariff.tariff_type}</td>
+                                        <td>{tariff.duration}</td>
+                                        <td>{tariff.vehicle_type}</td>
+                                        <td>{parseFloat(tariff.price.$numberDecimal).toFixed(2)}</td>
+                                        <td>{tariff.price_unit}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </>
+                )}
+
+                <div style={{ marginTop: 20 }}>
+                    <label style={{ color: '#284b63', fontWeight: '600' }}>Kreditna kartica</label>
+                    <br />
+                    <input
+                        type="text"
+                        value={creditCard}
+                        onChange={(e) => setCreditCard(e.target.value)}
+                        placeholder="Vnesite številko kartice"
+                        style={{ width: '100%', padding: '8px' }}
+                    />
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                    <label style={{ color: '#284b63', fontWeight: '600' }}>Registrska tablica</label>
+                    <br />
+                    <input
+                        type="text"
+                        value={vehiclePlate}
+                        onChange={(e) => setVehiclePlate(e.target.value)}
+                        placeholder="Vnesite registrsko tablico"
+                        style={{ width: '100%', padding: '8px' }}
+                    />
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                    <label style={{ color: '#284b63', fontWeight: '600' }}>Trajanje (v urah)</label>
+                    <br />
+                    <input
+                        type="number"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                        placeholder="Vnesite trajanje v urah"
+                        style={{ width: '100%', padding: '8px' }}
+                        min="1"
+                    />
+                </div>
+
+                <button
+                    onClick={handlePay}
+                    style={{
+                        marginTop: 15,
+                        padding: '10px 20px',
+                        fontSize: '1rem',
+                        cursor: 'pointer',
+                        backgroundColor: '#3c6e71',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        transition: 'background-color 0.3s ease',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#284b63')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#3c6e71')}
+                >
+                    Plačaj
+                </button>
+
+                {price !== null && (
+                    <p style={{ color: '#284b63', fontWeight: '600' }}>
+                        Cena: {price} {priceUnit}
+                    </p>
+                )}
+            </div>
         </div>
-    );
+
+        {/* DESNA STRAN - seznam aktivnih plačil z odbrojevanjem */}
+        <div
+            style={{
+                flex: 1,
+                borderLeft: '2px solid #e5e7eb',
+                paddingLeft: '1rem',
+                maxHeight: '80vh',
+                overflowY: 'auto',
+            }}
+        >
+            <h3 style={{ fontWeight: 'bold', marginBottom: '1rem', color: '#284b63' }}>
+                Registrske tablice z aktivnim plačilom:
+            </h3>
+
+            {activePayments.length === 0 ? (
+                <p>Ni aktivnih plačil.</p>
+            ) : (
+                activePayments.map(({ vehiclePlate, expiresAt, amount, locationName }, idx) => {
+                    let decimalAmount = 0;
+                    if (typeof amount === 'object' && amount !== null && '$numberDecimal' in amount) {
+                        decimalAmount = parseFloat(amount.$numberDecimal);
+                    } else if (typeof amount === 'number') {
+                        decimalAmount = amount;
+                    } else if (typeof amount === 'string') {
+                        decimalAmount = parseFloat(amount);
+                    }
+
+                    return (
+                        <div key={`${vehiclePlate}-${idx}`} className="location-card" style={{ marginBottom: '1rem' }}>
+                            <div>
+                                <strong>Tablica:</strong> {vehiclePlate || 'Neznano'}
+                            </div>
+                            <div>
+                                <strong>Preostali čas:</strong> {countdowns[vehiclePlate] || 'Isteklo'}
+                            </div>
+                            <div>
+                                <strong>Znesek:</strong> {decimalAmount.toFixed(2)}
+                            </div>
+                        </div>
+                    );
+                })
+            )}
+        </div>
+    </div>
+);
+
+
+
 }
 
 export default Payment;

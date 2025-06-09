@@ -93,7 +93,7 @@ function CustomRefreshControl({ onRefresh }) {
     const btn = document.querySelector('.leaflet-control-custom');
     if (btn) {
       btn.innerHTML = loading ? '⏳' : '🔄';
-      btn.title = loading ? 'Učitavanje...' : 'Osveži parking podatke';
+      btn.title = loading ? 'Nalaganje...' : 'Osveži parking podatke';
     }
   }, [loading]);
 
@@ -125,7 +125,7 @@ function ParkingOccupancyMap() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => setUserLocation([pos.coords.latitude, pos.coords.longitude]),
-        err => console.warn('Greška pri geolokaciji:', err)
+        err => console.warn('Napaka pri geolokaciji:', err)
       );
     }
   }, []);
@@ -156,14 +156,14 @@ function ParkingOccupancyMap() {
                 <Popup>
                   <strong>{loc.name}</strong><br />
                   {loc.address}<br />
-                  Popunjenost: {loc.occupancy}%
+                  Zasedenost: {loc.occupancy}%
                 </Popup>
               </Marker>
             );
           })}
         </MapContainer>
       ) : (
-        <p>Učitavanje vaše lokacije...</p>
+        <p>Nalaganje vaše lokacije...</p>
       )}
     </div>
   );

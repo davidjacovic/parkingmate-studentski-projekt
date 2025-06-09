@@ -28,71 +28,75 @@ function Login() {
 
             if (!res.ok) {
                 const errRes = await res.json();
-                setError(errRes.message || 'Login failed');
+                setError(errRes.message || 'Prijava ni uspela');
                 setLoading(false);
                 return;
             }
 
             const data = await res.json();
 
-
             if (data && data.user && data.user._id) {
-    localStorage.setItem('user', JSON.stringify(data.user));
-    localStorage.setItem('token', data.token);
+                localStorage.setItem('user', JSON.stringify(data.user));
+                localStorage.setItem('token', data.token);
 
-    // Izvuci i sačuvaj vreme isteka tokena
-    const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
-    const expiresAt = tokenPayload.exp * 1000; // milisekunde
-    localStorage.setItem('tokenExpiresAt', expiresAt);
+                // Pridobi in shrani čas poteka tokena
+                const tokenPayload = JSON.parse(atob(data.token.split('.')[1]));
+                const expiresAt = tokenPayload.exp * 1000; // milisekunde
+                localStorage.setItem('tokenExpiresAt', expiresAt);
 
-    setUserContext(data.user);
+                setUserContext(data.user);
 
-    // 👉 Redirekcija na osnovu tipa korisnika
-    if (data.user.user_type === 'admin') {
-        navigate('/admin');  // napravi rutu za admina
-    } else {
-        navigate('/');
-    }
-}
-
+                // 👉 Preusmeritev glede na tip uporabnika
+                if (data.user.user_type === 'admin') {
+                    navigate('/admin');  // ustvari pot za admina
+                } else {
+                    navigate('/');
+                }
+            }
 
         } catch (err) {
-            setError('Login failed: ' + err.message);
+            setError('Prijava ni uspela: ' + err.message);
         } finally {
             setLoading(false);
         }
     }
 
     return (
-        <div>
+        <div className="login-container">
+            <h2>Prijava</h2>
             <form onSubmit={handleLogin}>
-                <div>
-                    <label>Username:</label>
+                <div className="mb-3">
+                    <label htmlFor="loginUsername">Uporabniško ime:</label>
                     <input
                         type="text"
+                        id="loginUsername"
                         value={username}
-                        onChange={(e) => setUsername(e.target.value)}
+                        onChange={e => setUsername(e.target.value)}
                         required
                     />
                 </div>
-                <div>
-                    <label>Password:</label>
+
+                <div className="mb-3">
+                    <label htmlFor="loginPassword">Geslo:</label>
                     <input
                         type="password"
+                        id="loginPassword"
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={e => setPassword(e.target.value)}
                         required
                     />
                 </div>
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-                <button type="submit" disabled={loading}>
-                    {loading ? 'Logging in...' : 'Login'}
+
+                {error && <div className="alert alert-danger">{error}</div>}
+
+                <button type="submit" className="btn-primary" disabled={loading}>
+                    {loading ? 'Prijavljam se...' : 'Prijava'}
                 </button>
             </form>
 
-            <div className="text-center mt-3">
-                <span>Don't have an account? </span>
-                <a href="/register">Register here</a>
+            <div className="register-link">
+                <span>Še nimate računa? </span>
+                <a href="/register">Registrirajte se tukaj</a>
             </div>
         </div>
     );
