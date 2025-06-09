@@ -1,4 +1,4 @@
-package org.example.viewmodel
+package org.example.db.viewmodels
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -316,29 +316,34 @@ fun ucitajParkingLokacijeJson(): List<JsonObject> {
 
     return koncnaLista
 }
-
 fun parseScrapedJsonObjects(
     jsonObjects: List<JsonObject>
 ): List<Pair<ParkingLocation, List<Tariff>>> {
     return jsonObjects.mapNotNull { obj ->
         try {
-            val location = ParkingLocation(
+            val locationField = obj["location"]
+            val coordinates = if (locationField is JsonObject) {
+                listOf(
+                    locationField["coordinates"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: 0.0,
+                    locationField["coordinates"]?.jsonArray?.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: 0.0
+                )
+            } else {
+                println("No valid location for ${obj["lokacija"]?.jsonPrimitive?.content}")
+                listOf(0.0, 0.0)
+            }
+
+
+            val parkingLocation = ParkingLocation(
                 name = obj["lokacija"]?.jsonPrimitive?.content ?: return@mapNotNull null,
                 address = obj["lokacija"]?.jsonPrimitive?.content ?: "Unknown",
                 description = obj["opis"]?.jsonPrimitive?.content,
-                location = LocationCoordinates(
-                    coordinates = listOf(
-                        obj["location"]?.jsonObject?.get("coordinates")?.jsonArray?.getOrNull(0)?.jsonPrimitive?.doubleOrNull ?: 0.0,
-                        obj["location"]?.jsonObject?.get("coordinates")?.jsonArray?.getOrNull(1)?.jsonPrimitive?.doubleOrNull ?: 0.0
-                    )
-                ),
+                location = LocationCoordinates(coordinates = coordinates),
                 total_regular_spots = obj["dnevni"]?.jsonObject?.get("naVoljo")?.jsonPrimitive?.intOrNull ?: 0,
                 available_regular_spots = obj["dnevni"]?.jsonObject?.get("prosta")?.jsonPrimitive?.intOrNull ?: 0,
                 total_invalid_spots = obj["stMestInv"]?.jsonPrimitive?.intOrNull ?: 0,
                 available_invalid_spots = 0,
                 total_bus_spots = obj["stMestBus"]?.jsonPrimitive?.intOrNull ?: 0,
                 available_bus_spots = 0,
-                subscriber = null,
                 hidden = false,
                 created = LocalDateTime.now(),
                 modified = LocalDateTime.now()
@@ -360,7 +365,7 @@ fun parseScrapedJsonObjects(
                 )
             } ?: emptyList()
 
-            location to tariffs
+            parkingLocation to tariffs
         } catch (e: Exception) {
             println("Skipping invalid entry: ${e.message}")
             null
@@ -380,7 +385,7 @@ fun main() {
 //// sad imaš listu ParkingLocation objekata spremnu za UI
 
     //DEO ZA PROVERU DA LI SKENER RADI
-    val outputFile = File("C:/Users/CHP/Desktop/git/parkingmate-studentski-projekt/skrape/finalSkraper/parking.json")
+    val outputFile = File("C:\\Users\\Windows11\\Desktop\\Projekat\\parkingmate-studentski-projekt\\skrape\\finalSkraper\\parking.json")
     outputFile.writeText(Json { prettyPrint = true }.encodeToString(JsonArray(jsonObjekti)))
 
     println("Podatki uspešno zapisani.")
