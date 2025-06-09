@@ -1,5 +1,5 @@
 package org.example
-import User
+import org.example.User
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import java.time.LocalDateTime

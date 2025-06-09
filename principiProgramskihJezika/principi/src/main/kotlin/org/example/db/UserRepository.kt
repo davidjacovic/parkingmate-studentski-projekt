@@ -1,7 +1,7 @@
 package org.example.db
 
 import org.bson.types.ObjectId
-import User
+import org.example.User
 import org.litote.kmongo.eq
 import org.litote.kmongo.getCollection
 import org.litote.kmongo.findOne

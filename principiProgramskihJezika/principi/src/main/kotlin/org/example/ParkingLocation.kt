@@ -22,7 +22,6 @@ data class ParkingLocation(
     val modified: LocalDateTime? = null,
     val description: String? = null,
     var hidden: Boolean? = null,
-    val subscriber: ObjectId? = null
 ) {
     fun isValid(): Boolean {
         return isNameAndAddressValid() &&

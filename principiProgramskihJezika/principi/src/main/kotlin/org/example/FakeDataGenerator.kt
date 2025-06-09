@@ -6,6 +6,9 @@ import org.example.LocationCoordinates
 import org.example.ParkingLocation
 import kotlin.random.Random
 import java.time.format.DateTimeFormatter
+import org.bson.types.ObjectId
+import org.example.User
+
 
 
 object FakeDataGenerator {
@@ -17,18 +20,26 @@ object FakeDataGenerator {
         val longitude = Random.nextDouble(13.0, 17.0)
         val latitude = Random.nextDouble(45.5, 47.0)
 
+        val totalRegular = (10..100).random()
+        val totalInvalid = (0..10).random()
+        val totalBus = (0..5).random()
+
+        val availableRegular = (0..totalRegular).random()
+        val availableInvalid = (0..totalInvalid).random()
+        val availableBus = (0..totalBus).random()
+
         return ParkingLocation(
             name = faker.company.name(),
             address = faker.address.fullAddress(),
             location = LocationCoordinates(
                 coordinates = listOf(longitude, latitude)
             ),
-            total_regular_spots = (10..100).random(),
-            total_invalid_spots = (0..10).random(),
-            total_bus_spots = (0..5).random(),
-            available_regular_spots = (0..50).random(),
-            available_invalid_spots = (0..5).random(),
-            available_bus_spots = (0..3).random(),
+            total_regular_spots = totalRegular,
+            total_invalid_spots = totalInvalid,
+            total_bus_spots = totalBus,
+            available_regular_spots = availableRegular,
+            available_invalid_spots = availableInvalid,
+            available_bus_spots = availableBus,
             created = LocalDateTime.now(),
             modified = LocalDateTime.now(),
             description = faker.lorem.words(),
@@ -36,29 +47,39 @@ object FakeDataGenerator {
         )
     }
 
-    fun generateFakeUser(): UserUpload {
-        val plainPassword = faker.random.randomString(5)
-        return UserUpload(
-            username = faker.name.firstName().lowercase() + Random.nextInt(100, 999),
-            atribut = faker.job.title(),
-            email = faker.internet.safeEmail(),
-            password = plainPassword,
+
+    fun generateFakeUser(): User {
+        val firstName = faker.name.firstName()
+        val lastName = faker.name.lastName()
+        val username = (firstName + lastName).lowercase().take(10) + Random.nextInt(10, 99)
+        val email = "${firstName.lowercase()}.${lastName.lowercase()}@example.com"
+        val plainPassword = "A${Random.nextInt(1000, 9999)}a@" // Satisfies strong password regex
+        val creditCardNumber = List(16) { ('0'..'9').random() }.joinToString("")
+        val phoneNumber = (30000000..39999999).random().toString()
+        val now = LocalDateTime.now()
+
+        return User(
+            name = firstName,
+            surname = lastName,
+            username = username,
+            email = email,
             password_hash = plainPassword,
-            phone_number = "386" + (30..70).random().toString() + (1000000..9999999).random().toString(),
-            credit_card_number = faker.finance.creditCard("visa"),
-            created_at = LocalDateTime.now().format(formatter),
-            updated_at = LocalDateTime.now().format(formatter),
+            phone_number = phoneNumber,
+            credit_card_number = creditCardNumber,
             user_type = if ((0..1).random() == 0) "user" else "admin",
-            hidden = false
+            hidden = false,
+            created_at = now,
+            updated_at = now,
+            vehicles = emptyList()
         )
     }
 
-    fun generateFakeVehicle(): VehicleUpload {
-        val vehicleTypes = listOf("car", "truck", "motorcycle", "bus", "van")
+
+    fun generateFakeVehicleForUser(userId: String, now: LocalDateTime): Vehicle {
+        val types = listOf("car", "truck", "motorcycle", "bus")
         val letters = ('A'..'Z').toList()
         val numbers = (1000..9999).random()
-
-        val registration = buildString {
+        val reg = buildString {
             append(letters.random())
             append(letters.random())
             append(numbers)
@@ -66,35 +87,29 @@ object FakeDataGenerator {
             append(letters.random())
         }
 
-
-
-        return VehicleUpload(
-            registration_number = registration,
-            vehicle_type = vehicleTypes.random(),
+        return Vehicle(
+            registration_number = reg,
+            vehicle_type = types.random(),
             created = now,
             modified = now,
-            user = "placeholderUserId", // ← Use dummy value for now
-            hidden = false,
-            isValid = true
+            user = ObjectId(userId),
+            hidden = false
         )
     }
-    fun generateFakeReview(): ReviewUpload {
-        val faker = Faker()
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
-        val now = LocalDateTime.now().format(formatter)
-        val testUserId = "000000000000000000000001"
-        val testParkingLocationId = "000000000000000000000002"
 
-        return ReviewUpload(
+    fun generateFakeReview(userId: String, locationId: String, now: LocalDateTime = LocalDateTime.now()): Review {
+        val faker = Faker()
+
+        return Review(
             rating = (1..5).random(),
             review_text = faker.lorem.words(),
             review_date = now,
             created = now,
             modified = now,
             hidden = false,
-            user = testUserId,
-            parking_location = testParkingLocationId
+            user = ObjectId(userId),
+            parking_location = ObjectId(locationId)
         )
     }
-
 }
+
