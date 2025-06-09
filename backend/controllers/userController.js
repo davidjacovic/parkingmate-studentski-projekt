@@ -265,7 +265,7 @@ module.exports = {
             res.status(500).json({ message: 'Greška pri ažuriranju profila.' });
         }
     },
- deleteUser: async function(req, res) {
+    deleteUser: async function (req, res) {
         try {
             const token = req.headers.authorization?.split(' ')[1];
             if (!token) {
@@ -325,30 +325,30 @@ module.exports = {
             res.json({ token: newToken });
         });
     },
-    getUsersPerDay:async function(req, res) {
-  try {
-    // Grupisanje po danu na osnovu created_at
-    const usersPerDay = await UserModel.aggregate([
-      {
-        $match: { user_type: 'user' } // ako želiš samo obične korisnike
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$created_at" }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { _id: 1 } // sortiraj po datumu rastuće
-      }
-    ]);
+    getUsersPerDay: async function (req, res) {
+        try {
+            // Grupisanje po danu na osnovu created_at
+            const usersPerDay = await UserModel.aggregate([
+                {
+                    $match: { user_type: 'user' } // ako želiš samo obične korisnike
+                },
+                {
+                    $group: {
+                        _id: {
+                            $dateToString: { format: "%Y-%m-%d", date: "$created_at" }
+                        },
+                        count: { $sum: 1 }
+                    }
+                },
+                {
+                    $sort: { _id: 1 } // sortiraj po datumu rastuće
+                }
+            ]);
 
-    res.json(usersPerDay); // [{ _id: '2025-06-01', count: 5 }, ...]
-  } catch (err) {
-    console.error('Error in getUsersPerDay:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-}
+            res.json(usersPerDay); // [{ _id: '2025-06-01', count: 5 }, ...]
+        } catch (err) {
+            console.error('Error in getUsersPerDay:', err);
+            res.status(500).json({ message: 'Server error' });
+        }
+    }
 };

@@ -117,13 +117,11 @@ function AdminHomepage() {
     }
     return (
         <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-            <h1>Dobrodošli, Admin!</h1>
-            <p>Ovo je admin panel za upravljanje korisnicima.</p>
 
             {/* Grafikon korisnika po danu */}
             <div style={{ marginBottom: '40px' }}>
-                <h2>Registracije korisnika po danu</h2>
-                {loadingUsersPerDay && <p>Učitavanje podataka...</p>}
+                <h2>Registracije uporabnikov po dnevih</h2>
+                {loadingUsersPerDay && <p>Nalagam podatke...</p>}
                 {errorUsersPerDay && <p style={{ color: 'red' }}>{errorUsersPerDay}</p>}
                 {!loadingUsersPerDay && usersPerDay.length > 0 && (
                     <ResponsiveContainer width="100%" height={300}>
@@ -149,9 +147,9 @@ function AdminHomepage() {
                 <div style={{ display: 'flex', gap: '40px' }}>
                     {/* Lista korisnika */}
                     <div style={{ flex: 1 }}>
-                        <h2>Lista korisnika</h2>
+                        <h2>Lista uporabnika</h2>
                         {users.length === 0 ? (
-                            <p>Nema registrovanih korisnika.</p>
+                            <p>Ni registrovanih uporabnika.</p>
                         ) : (
                             <ul
                                 style={{
@@ -214,15 +212,16 @@ function AdminHomepage() {
                         {selectedUser ? (
                             <>
                                 <h2>
-                                    Istorija plaćanja za <strong>{selectedUser.username}</strong>
+                                    Zgodovina plačil za <strong>{selectedUser.username}</strong>
                                 </h2>
 
-                                {loadingPayments && <p>Učitavanje istorije plaćanja...</p>}
+                                {loadingPayments && <p>Nalagam zgodovino plačil...</p>}
                                 {errorPayments && <p style={{ color: 'red' }}>{errorPayments}</p>}
 
                                 {!loadingPayments && !errorPayments && paymentHistory.length === 0 && (
-                                    <p>Nema podataka o plaćanjima za ovog korisnika.</p>
+                                    <p>Ni podatkov o plačilih za tega uporabnika.</p>
                                 )}
+
 
                                 {!loadingPayments && paymentHistory.length > 0 && (
                                     <>
@@ -232,14 +231,14 @@ function AdminHomepage() {
                                             <thead>
                                                 <tr style={{ backgroundColor: '#eee' }}>
                                                     <th style={{ border: '1px solid #ccc', padding: '8px' }}>Datum</th>
-                                                    <th style={{ border: '1px solid #ccc', padding: '8px' }}>Iznos</th>
+                                                    <th style={{ border: '1px solid #ccc', padding: '8px' }}>Znesek</th>
                                                     <th style={{ border: '1px solid #ccc', padding: '8px' }}>
                                                         Parking lokacija
                                                     </th>
                                                     <th style={{ border: '1px solid #ccc', padding: '8px' }}>
                                                         Registarska tablica
                                                     </th>
-                                                    <th style={{ border: '1px solid #ccc', padding: '8px' }}>Metod</th>
+                                                    <th style={{ border: '1px solid #ccc', padding: '8px' }}>Metod plačanja</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -264,7 +263,7 @@ function AdminHomepage() {
                                                                     return `${location.name} ${location.address ? `- ${location.address}` : ''
                                                                         }`;
                                                                 }
-                                                                return 'Učitavanje...';
+                                                                return 'Nalaganje...';
                                                             })()}
                                                         </td>
                                                         <td style={{ border: '1px solid #ccc', padding: '8px' }}>
@@ -278,7 +277,7 @@ function AdminHomepage() {
                                             </tbody>
                                         </table>
 
-                                        <h3 style={{ marginTop: '40px' }}>Grafikon plaćanja</h3>
+                                        <h3 style={{ marginTop: '40px' }}>Graf plačanja</h3>
                                         <ResponsiveContainer width="100%" height={300}>
                                             <LineChart
                                                 data={paymentHistory.map(payment => ({
@@ -305,7 +304,7 @@ function AdminHomepage() {
                                 )}
                             </>
                         ) : (
-                            <p>Izaberite korisnika da vidite istoriju plaćanja.</p>
+                            <p>Izberite uporabnika, da si ogledate zgodovino plačil.</p>
                         )}
                     </div>
                 </div>

@@ -118,29 +118,29 @@ module.exports = {
       res.status(500).json({ message: 'Server error', error: err.message });
     }
   },
-getPaymentsForUserByAdmin: async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Niste autentifikovani' });
-    }
+  getPaymentsForUserByAdmin: async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Niste autentifikovani' });
+      }
 
-    const loggedUser = await User.findById(req.user.userId);
-    if (!loggedUser || loggedUser.user_type !== 'admin') {
-      return res.status(403).json({ message: 'Nema pristup' });
-    }
+      const loggedUser = await User.findById(req.user.userId);
+      if (!loggedUser || loggedUser.user_type !== 'admin') {
+        return res.status(403).json({ message: 'Nema pristup' });
+      }
 
-    const userId = req.params.userId;
-    if (!userId) {
-      return res.status(400).json({ message: 'UserId je obavezan' });
-    }
+      const userId = req.params.userId;
+      if (!userId) {
+        return res.status(400).json({ message: 'UserId je obavezan' });
+      }
 
-    const payments = await PaymentModel.find({ user: userId })
-      .sort({ date: -1 })
-    return res.json(payments);
-  } catch (error) {
-    return res.status(500).json({ message: 'Greška na serveru', error: error.message });
-  }
-},
+      const payments = await PaymentModel.find({ user: userId })
+        .sort({ date: -1 })
+      return res.json(payments);
+    } catch (error) {
+      return res.status(500).json({ message: 'Greška na serveru', error: error.message });
+    }
+  },
   createAndCalculatePayment: async (req, res) => {
     try {
       const userId = req.user && (req.user._id || req.user.userId);
@@ -582,57 +582,57 @@ getPaymentsForUserByAdmin: async (req, res) => {
   /**
    * createAndCalculatePayment
    */
-// Dobavljanje top parking lokacija po broju uplata
-getTopParkingLocations: async (req, res) => {
-  try {
-    // Opcionalno možeš primiti query parametre za filtriranje po vremenu, npr:
-    // ?from=2025-01-01&to=2025-06-01
-    const { from, to } = req.query;
+  // Dobavljanje top parking lokacija po broju uplata
+  getTopParkingLocations: async (req, res) => {
+    try {
+      // Opcionalno možeš primiti query parametre za filtriranje po vremenu, npr:
+      // ?from=2025-01-01&to=2025-06-01
+      const { from, to } = req.query;
 
-    const matchStage = { payment_status: 'completed' };
+      const matchStage = { payment_status: 'completed' };
 
-    if (from || to) {
-      matchStage.date = {};
-      if (from) matchStage.date.$gte = new Date(from);
-      if (to) matchStage.date.$lte = new Date(to);
+      if (from || to) {
+        matchStage.date = {};
+        if (from) matchStage.date.$gte = new Date(from);
+        if (to) matchStage.date.$lte = new Date(to);
+      }
+
+      const topLocations = await PaymentModel.aggregate([
+        { $match: matchStage },
+        {
+          $group: {
+            _id: '$parking_location',
+            usageCount: { $sum: 1 }
+          }
+        },
+        {
+          $lookup: {
+            from: 'parking_locations', // ime kolekcije u Mongo
+            localField: '_id',
+            foreignField: '_id',
+            as: 'locationDetails'
+          }
+        },
+        { $unwind: '$locationDetails' },
+        {
+          $project: {
+            _id: 0,
+            locationId: '$_id',
+            name: '$locationDetails.name',
+            address: '$locationDetails.address',
+            usageCount: 1
+          }
+        },
+        { $sort: { usageCount: -1 } },
+        { $limit: 10 } // npr top 10
+      ]);
+
+      res.json(topLocations);
+
+    } catch (error) {
+      console.error('Error fetching top parking locations:', error);
+      res.status(500).json({ message: 'Greška prilikom dohvatanja podataka' });
     }
-
-    const topLocations = await PaymentModel.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$parking_location',
-          usageCount: { $sum: 1 }
-        }
-      },
-      {
-        $lookup: {
-          from: 'parking_locations', // ime kolekcije u Mongo
-          localField: '_id',
-          foreignField: '_id',
-          as: 'locationDetails'
-        }
-      },
-      { $unwind: '$locationDetails' },
-      {
-        $project: {
-          _id: 0,
-          locationId: '$_id',
-          name: '$locationDetails.name',
-          address: '$locationDetails.address',
-          usageCount: 1
-        }
-      },
-      { $sort: { usageCount: -1 } },
-      { $limit: 10 } // npr top 10
-    ]);
-
-    res.json(topLocations);
-
-  } catch (error) {
-    console.error('Error fetching top parking locations:', error);
-    res.status(500).json({ message: 'Greška prilikom dohvatanja podataka' });
   }
-}
 
 };

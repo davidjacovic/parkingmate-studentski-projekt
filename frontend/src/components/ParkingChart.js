@@ -51,7 +51,7 @@ const ParkingAvailabilityChart = ({ locationId }) => {
     <div>
       <div style={{ marginBottom: '1rem' }}>
         <label>
-          From:{" "}
+          Od:{" "}
           <input
             type="date"
             value={fromDate}
@@ -60,7 +60,7 @@ const ParkingAvailabilityChart = ({ locationId }) => {
         </label>
         {" "}
         <label>
-          To:{" "}
+          Do:{" "}
           <input
             type="date"
             value={toDate}
@@ -76,21 +76,21 @@ const ParkingAvailabilityChart = ({ locationId }) => {
             type="checkbox"
             checked={filters.regular}
             onChange={() => toggleFilter('regular')}
-          /> Regular
+          /> Redna parking mesta
         </label>{' '}
         <label>
           <input
             type="checkbox"
             checked={filters.invalid}
             onChange={() => toggleFilter('invalid')}
-          /> Invalid
+          /> Mesta za invalide
         </label>{' '}
         <label>
           <input
             type="checkbox"
             checked={filters.bus}
             onChange={() => toggleFilter('bus')}
-          /> Bus
+          /> Mesta za avtobuse
         </label>
       </div>
 
@@ -102,9 +102,9 @@ const ParkingAvailabilityChart = ({ locationId }) => {
             <YAxis allowDecimals={false} />
             <Tooltip />
             <Legend />
-            {filters.regular && <Line type="monotone" dataKey="regular" stroke="#8884d8" name="Regular" />}
-            {filters.invalid && <Line type="monotone" dataKey="invalid" stroke="#82ca9d" name="Invalid" />}
-            {filters.bus && <Line type="monotone" dataKey="bus" stroke="#ffc658" name="Bus" />}
+            {filters.regular && <Line type="monotone" dataKey="regular" stroke="#8884d8" name="Redna" />}
+            {filters.invalid && <Line type="monotone" dataKey="invalid" stroke="#82ca9d" name="Invalidska" />}
+            {filters.bus && <Line type="monotone" dataKey="bus" stroke="#ffc658" name="Avtobusna" />}
           </LineChart>
         </ResponsiveContainer>
       </div>
