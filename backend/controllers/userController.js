@@ -1,5 +1,7 @@
 var UserModel = require('../models/userModel.js');
 const VehicleModel = require('../models/vehicleModel');
+const PaymentModel = require('../models/paymentModel');
+const ParkingLocationModel = require('../models/parkingLocationModel');
 
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET;
@@ -43,43 +45,53 @@ const uploadAvatar = multer({
  */
 module.exports = {
     uploadAvatar: async function (req, res) {
-    try {
-        console.log('--- Avatar upload request received ---');
+        try {
+            console.log('--- Avatar upload request received ---');
 
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) {
-            console.log('No token provided');
-            return res.status(401).json({ message: 'Unauthorized' });
+            const token = req.headers.authorization?.split(' ')[1];
+            if (!token) {
+                console.log('No token provided');
+                return res.status(401).json({ message: 'Unauthorized' });
+            }
+
+            const decoded = jwt.verify(token, SECRET);
+            console.log('Token decoded:', decoded);
+
+            if (!req.file) {
+                console.log('No file uploaded in request');
+                return res.status(400).json({ message: 'No file uploaded' });
+            }
+
+            console.log('File info:', req.file);
+
+            const avatarPath = `/uploads/avatars/${req.file.filename}`;
+            console.log('Avatar path set to:', avatarPath);
+
+            const updatedUser = await UserModel.findByIdAndUpdate(
+                decoded.userId,
+                { avatar: avatarPath, updated_at: new Date() },
+                { new: true }
+            ).lean();
+
+            console.log('User updated with new avatar:', updatedUser.avatar);
+
+            res.json({ avatar: updatedUser.avatar });
+        } catch (err) {
+            console.error('Error uploading avatar:', err);
+            res.status(500).json({ message: 'Upload avatara nije uspeo.' });
         }
+    },
+    listUsers: async function (req, res) {
+        try {
+            // Pretpostavimo da je ovo admin-only endpoint, pa možeš dodati validaciju tokena admina
 
-        const decoded = jwt.verify(token, SECRET);
-        console.log('Token decoded:', decoded);
-
-        if (!req.file) {
-            console.log('No file uploaded in request');
-            return res.status(400).json({ message: 'No file uploaded' });
+            const users = await UserModel.find({ user_type: 'user' }).lean();
+            res.json(users);
+        } catch (err) {
+            console.error('Error fetching users:', err);
+            res.status(500).json({ message: 'Greška pri dohvatanju korisnika' });
         }
-
-        console.log('File info:', req.file);
-
-        const avatarPath = `/uploads/avatars/${req.file.filename}`;
-        console.log('Avatar path set to:', avatarPath);
-
-        const updatedUser = await UserModel.findByIdAndUpdate(
-            decoded.userId,
-            { avatar: avatarPath, updated_at: new Date() },
-            { new: true }
-        ).lean();
-
-        console.log('User updated with new avatar:', updatedUser.avatar);
-
-        res.json({ avatar: updatedUser.avatar });
-    } catch (err) {
-        console.error('Error uploading avatar:', err);
-        res.status(500).json({ message: 'Upload avatara nije uspeo.' });
-    }
-},
-
+    },
 
     create: async function (req, res) {
         try {
@@ -109,15 +121,15 @@ module.exports = {
             }
 
 
-const userData = {
-    username: username.trim(),
-    email: email.toLowerCase(),
-    password_hash: password,
-    created_at: new Date(),
-    updated_at: new Date(),
-    user_type: 'user',
-    hidden: false,
-};
+            const userData = {
+                username: username.trim(),
+                email: email.toLowerCase(),
+                password_hash: password,
+                created_at: new Date(),
+                updated_at: new Date(),
+                user_type: 'user',
+                hidden: false,
+            };
 
             if (credit_card_number) userData.credit_card_number = credit_card_number;
             if (phone_number) userData.phone_number = phone_number;
@@ -211,7 +223,7 @@ const userData = {
             const token = req.headers.authorization?.split(' ')[1];
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            const allowedFields = ['email', 'phone_number', 'credit_card_number', 'username','avatar'];
+            const allowedFields = ['email', 'phone_number', 'credit_card_number', 'username', 'avatar'];
             const updates = {};
 
             allowedFields.forEach((field) => {
@@ -236,8 +248,8 @@ const userData = {
                 return res.status(400).json({ message: 'Broj kartice mora imati tačno 16 cifara.' });
             }
             if (req.body.avatar) {
-    updates.avatar = req.body.avatar;
-}
+                updates.avatar = req.body.avatar;
+            }
 
             updates.updated_at = new Date();
 
@@ -253,31 +265,90 @@ const userData = {
             res.status(500).json({ message: 'Greška pri ažuriranju profila.' });
         }
     },
+    deleteUser: async function (req, res) {
+        try {
+            const token = req.headers.authorization?.split(' ')[1];
+            if (!token) {
+                return res.status(401).json({ message: 'Unauthorized' });
+            }
 
+            const decoded = jwt.verify(token, SECRET);
+
+            // Provera da li je admin
+            const user = await UserModel.findById(decoded.userId);
+            if (!user || user.user_type !== 'admin') {
+                return res.status(403).json({ message: 'Forbidden: Only admins can delete users.' });
+            }
+
+            const userIdToDelete = req.params.id;
+            if (!userIdToDelete) {
+                return res.status(400).json({ message: 'User ID is required' });
+            }
+
+            // Ne dozvoli adminu da obriše samog sebe (opciono)
+            if (userIdToDelete === user._id.toString()) {
+                return res.status(400).json({ message: 'Admin cannot delete themselves.' });
+            }
+
+            const deletedUser = await UserModel.findByIdAndDelete(userIdToDelete);
+            if (!deletedUser) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            res.json({ message: 'User deleted successfully.' });
+        } catch (err) {
+            console.error('Delete user error:', err);
+            res.status(500).json({ message: 'Server error' });
+        }
+    },
     refreshToken: function (req, res) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    jwt.verify(token, SECRET, (err, decoded) => {
-        if (err) {
-            return res.status(403).json({ message: 'Invalid token' });
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        // Opcionalno: proveri da li korisnik i dalje postoji i nije deaktiviran
+        const token = authHeader.split(' ')[1];
 
-        const newToken = jwt.sign(
-            { userId: decoded.userId, username: decoded.username, email: decoded.email },
-            SECRET,
-            { expiresIn: '1h' }
-        );
+        jwt.verify(token, SECRET, (err, decoded) => {
+            if (err) {
+                return res.status(403).json({ message: 'Invalid token' });
+            }
 
-        res.json({ token: newToken });
-    });
-}
+            // Opcionalno: proveri da li korisnik i dalje postoji i nije deaktiviran
 
+            const newToken = jwt.sign(
+                { userId: decoded.userId, username: decoded.username, email: decoded.email },
+                SECRET,
+                { expiresIn: '1h' }
+            );
 
+            res.json({ token: newToken });
+        });
+    },
+    getUsersPerDay: async function (req, res) {
+        try {
+            // Grupisanje po danu na osnovu created_at
+            const usersPerDay = await UserModel.aggregate([
+                {
+                    $match: { user_type: 'user' } // ako želiš samo obične korisnike
+                },
+                {
+                    $group: {
+                        _id: {
+                            $dateToString: { format: "%Y-%m-%d", date: "$created_at" }
+                        },
+                        count: { $sum: 1 }
+                    }
+                },
+                {
+                    $sort: { _id: 1 } // sortiraj po datumu rastuće
+                }
+            ]);
+
+            res.json(usersPerDay); // [{ _id: '2025-06-01', count: 5 }, ...]
+        } catch (err) {
+            console.error('Error in getUsersPerDay:', err);
+            res.status(500).json({ message: 'Server error' });
+        }
+    }
 };

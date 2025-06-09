@@ -1,13 +1,781 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.header {
+  padding: 1rem 2rem 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+.header h2 {
+  margin: 0;
+}
+
+.header h2 a {
+  color: #284b63;
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.header h2 a:hover {
+  color: #3c6e71;
+  text-decoration: underline;
+}
+
+.header nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.header nav a,
+.header nav button {
+  color: #284b63;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-left: 0;
+  text-decoration: none;
+}
+
+.header nav a:hover,
+.header nav button:hover {
+  color: #3c6e71;
+  text-decoration: underline;
+}
+
+.container-centered {
+  max-width: 900px;
+  margin: 1rem auto;
+  padding: 0 1rem;
+}
+
+.flex-map-info {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1rem;
+  max-width: 100vw;
+  padding: 0 1rem;
+  box-sizing: border-box;
+}
+
+.map-wrapper {
+  flex: 1;
+  height: 450px;
+  border-radius: 6px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+.nearest-parking-info {
+  flex: 0 0 300px;
+  padding: 1rem;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.below-map-nav {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.below-map-nav a {
+  text-decoration: none;
+  color: #284b63;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.below-map-nav a:hover {
+  color: #3c6e71;
+  text-decoration: underline;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filters label {
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn-reset {
+  padding: 0.4rem 1rem;
+  border: 1px solid #284b63;
+  background: none;
+  color: #284b63;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.btn-reset:hover {
+  background-color: #284b63;
+  color: white;
+}
+
+.info-text {
+  margin: 0 0 0.5rem 0;
+}
+
+.error-text {
+  color: red;
+}
+
+.admin-add-btn {
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background-color: #284b63;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.admin-add-btn:hover {
+  background-color: #3c6e71;
+}
+
+.nearest-parking-info h2 {
+  color: #284b63;
+  margin-bottom: 0.5rem;
+}
+
+.filters input[type="checkbox"] {
+  margin-right: 0.4rem;
+}
+
+.filters label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 500;
+}
+/* Login component styling */
+.login-container {
+  background-color: #f9fafb;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin: 5rem auto 2rem auto; /* više prostora odozgo, horizontalno centrirano */
+  max-width: 400px;
+  width: 90%;
+  /* dodajemo i flex da centrira sadržaj unutar forme, ako treba */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+.login-container h2 {
+  color: #284b63;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  font-size: 1.8rem;
+}
+
+.login-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.login-container label {
+  font-weight: 600;
+  color: #3c6e71;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+
+.login-container input[type="text"],
+.login-container input[type="password"] {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.login-container input[type="text"]:focus,
+.login-container input[type="password"]:focus {
+  outline: none;
+  border-color: #284b63;
+  box-shadow: 0 0 5px rgba(40,75,99,0.4);
+}
+
+.login-container .btn-primary {
+  background-color: #284b63;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.login-container .btn-primary:disabled {
+  background-color: #a0a6ab;
+  cursor: not-allowed;
+}
+
+.login-container .btn-primary:hover:not(:disabled) {
+  background-color: #3c6e71;
+}
+
+.login-container .alert-danger {
+  background-color: #f8d7da;
+  color: #842029;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.login-container .register-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: #284b63;
+  font-weight: 600;
+}
+
+.login-container .register-link a {
+  color: #3c6e71;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+.login-container .register-link a:hover {
+  color: #284b63;
+  text-decoration: underline;
+}
+.register-container {
+  background-color: #f9fafb;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  margin: 5rem auto 2rem auto; /* razmak odozgo, centrirano levo-desno */
+  max-width: 400px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.register-container h2 {
+  color: #284b63;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  font-size: 1.8rem;
+}
+
+.register-container form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.register-container label {
+  font-weight: 600;
+  color: #3c6e71;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+
+.register-container input[type="text"],
+.register-container input[type="email"],
+.register-container input[type="password"] {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.register-container input[type="text"]:focus,
+.register-container input[type="email"]:focus,
+.register-container input[type="password"]:focus {
+  outline: none;
+  border-color: #284b63;
+  box-shadow: 0 0 5px rgba(40,75,99,0.4);
+}
+
+.register-container .btn-primary {
+  background-color: #284b63;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.register-container .btn-primary:disabled {
+  background-color: #a0a6ab;
+  cursor: not-allowed;
+}
+
+.register-container .btn-primary:hover:not(:disabled) {
+  background-color: #3c6e71;
+}
+
+.register-container .alert-danger {
+  background-color: #f8d7da;
+  color: #842029;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.register-container .text-center {
+  color: #284b63;
+  font-weight: 600;
+}
+
+.register-container .text-center a {
+  color: #3c6e71;
+  text-decoration: none;
+  font-weight: 700;
+  transition: color 0.3s ease;
+}
+
+.register-container .text-center a:hover {
+  color: #284b63;
+  text-decoration: underline;
+}
+.locations-table {
+  width: 100vw;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin-top: 1rem;
+  table-layout: fixed;
+  word-wrap: break-word;
+}
+
+.locations-table thead tr:first-child {
+  background-color: #f0f0f0;
+  color: #284b63;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.locations-table thead tr:last-child {
+  background-color: #e6eef3;
+  color: #3c6e71;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.locations-table th,
+.locations-table td {
+  border: 1px solid #ddd;
+  padding: 10px 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.locations-table th.sticky-col,
+.locations-table td.sticky-col {
+  position: sticky;
+  left: 0;
+  background-color: white;
+  text-align: left;
+  box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+  z-index: 2;
+  min-width: 200px;
+  max-width: 250px;
+  padding-left: 15px;
+}
+
+.locations-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.location-link {
+  color: #284b63;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 0.3rem;
+  transition: color 0.3s ease;
+}
+
+.location-link:hover {
+  color: #3c6e71;
+  text-decoration: underline;
+}
+
+.address {
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.2;
+  white-space: normal;
+  max-width: 250px;
+}
+
+/* Responsive: na manjim ekranima neka tabela može horizontalno da se skroluje */
+@media (max-width: 900px) {
+  .locations-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+/* Centriranje i dimenzije kartica */
+.location-card {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(40, 75, 99, 0.2);
+  background-color: #f9fafb;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card-header h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #284b63;
+  font-weight: 700;
+}
+
+.location-link {
+  color: #284b63;
+  text-decoration: none;
+  font-size: 1.3rem;
+}
+
+.location-link:hover {
+  color: #3c6e71;
+  text-decoration: underline;
+}
+
+.comment-toggle-btn,
+.delete-parking-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  color: #284b63;
+  transition: color 0.3s ease;
+}
+
+.comment-toggle-btn:hover,
+.delete-parking-btn:hover {
+  color: #3c6e71;
+}
+
+.comments-section {
+  margin-top: 1rem;
+  border-top: 1px solid #d0d7de;
+  padding-top: 1rem;
+}
+
+.comment-item {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e0e6eb;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-weight: 600;
+  color: #284b63;
+}
+
+.comment-rating {
+  background-color: #3c6e71;
+  color: white;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.delete-comment-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #b03a3a;
+  font-size: 1rem;
+  transition: color 0.3s ease;
+}
+
+.delete-comment-btn:hover {
+  color: #7a1a1a;
+}
+
+.comment-text {
+  margin: 0.25rem 0 0.25rem 0;
+  color: #3a3a3a;
+}
+
+.comment-date {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.loading-text,
+.error-text,
+.no-comments-text,
+.please-login-text {
+  color: #284b63;
+  font-style: italic;
+}
+
+.error-text {
+  color: #b03a3a;
+}
+
+.card {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: none;
+}
+
+h2, h3 {
+  color: #284b63;
+  font-weight: 700;
+}
+
+.table thead {
+  background-color: #e9ecef;
+  color: #284b63;
+}
+.location-card {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(40, 75, 99, 0.2);
+  background-color: #f9fafb;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.location-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.location-card table th,
+.location-card table td {
+  text-align: left;
+  vertical-align: middle;
+}
+
+@media (max-width: 767px) {
+  .row > div {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+
+/* Container glavnog sadržaja */
+.location-details-container {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 1.5rem 2rem;
+  background: #f9fafb;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(40, 75, 99, 0.15);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #284b63;
+}
+
+/* Naslov i osnovni paragrafi */
+.location-details-container h2 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.location-details-container p {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 0.8rem;
+}
+
+/* Sekcija sa osnovnim informacijama o lokaciji */
+.location-info p strong {
+  color: #1f3a5f;
+}
+
+/* Tarife lista */
+.tariffs-list {
+  margin-top: 1.5rem;
+  list-style: none;
+  padding-left: 0;
+}
+
+.tariffs-list li {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 4px rgba(40, 75, 99, 0.1);
+  color: #213b5c;
+}
+
+.tariffs-list li strong {
+  display: inline-block;
+  min-width: 120px;
+  color: #375a7f;
+}
+
+.tariffs-list li button {
+  margin-top: 0.5rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.tariffs-list li button:first-of-type {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.tariffs-list li button:first-of-type:hover {
+  background-color: #c0392b;
+}
+
+.tariffs-list li button:last-of-type {
+  background-color: #27ae60;
+  color: white;
+}
+
+.tariffs-list li button:last-of-type:hover {
+  background-color: #1e8449;
+}
+
+/* Forme za update i dodavanje */
+.location-details-form {
+  margin-top: 2rem;
+  background: white;
+  padding: 1.8rem 2rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(40, 75, 99, 0.1);
+  color: #213b5c;
+}
+
+.location-details-form h3 {
+  margin-bottom: 1rem;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: #284b63;
+}
+
+.location-details-form label {
+  display: block;
+  margin-bottom: 0.7rem;
+  font-weight: 600;
+}
+
+.location-details-form input[type="text"],
+.location-details-form input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.8px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  color: #213b5c;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.location-details-form input[type="text"]:focus,
+.location-details-form input[type="number"]:focus {
+  outline: none;
+  border-color: #3c6e71;
+}
+
+.location-details-form button {
+  margin-top: 1rem;
+  background-color: #3c6e71;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.25s ease;
+}
+
+.location-details-form button:hover {
+  background-color: #284b63;
+}
+
+/* Mapa */
+.map-wrapper {
+  margin-top: 2rem;
+  height: 400px;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(40, 75, 99, 0.2);
+}
+
+/* Status zauzetosti */
+.availability-chart-section {
+  margin-top: 2rem;
+}
+
+@media (max-width: 900px) {
+  .location-details-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  .location-details-form input[type="text"],
+  .location-details-form input[type="number"] {
+    font-size: 0.9rem;
+  }
+  .tariffs-list li {
+    padding: 0.8rem 1rem;
+  }
+  .location-details-form button {
+    width: 100%;
+    padding: 12px 0;
+  }
+}
+
+p{
+  font-size: 1.3rem;
 }

@@ -67,7 +67,7 @@ function CustomRefreshControl({ onRefresh }) {
     const btn = document.querySelector('.leaflet-control-custom');
     if (btn) {
       btn.innerHTML = loading ? '⏳' : '🔄';
-      btn.title = loading ? 'Učitavanje...' : 'Osveži lokacije';
+      btn.title = loading ? 'Nalaganje...' : 'Osveži lokacije';
     }
   }, [loading]);
 
@@ -81,7 +81,7 @@ function ProximitySearch() {
 
   const fetchNearby = async () => {
     if (!userLocation) {
-      setError('Geolokacija nije dostupna.');
+      setError('Geolokacija ni dostopna.');
       return;
     }
     setError('');
@@ -90,12 +90,12 @@ function ProximitySearch() {
 
     try {
       const res = await fetch(`http://localhost:3002/parkingLocations/nearby/search?lat=${lat}&lng=${lng}&radius=${radius}`);
-      if (!res.ok) throw new Error('Neuspešno učitavanje podataka');
+      if (!res.ok) throw new Error('Neuspešno nalaganje podatkov');
       const data = await res.json();
       setFiltered(data);
     } catch (err) {
-      console.error('Greška u geoprostorskoj pretrazi:', err);
-      setError('Greška pri učitavanju parking lokacija.');
+      console.error('Napaka v geoprostorskoj pretrazi:', err);
+      setError('Napaka pri nalaganju parking lokacija.');
     }
   };
 
@@ -135,14 +135,14 @@ function ProximitySearch() {
                 <div>
                   <strong>{loc.name}</strong><br />
                   {loc.address}<br />
-                  <a href={`/location/${loc._id}`}>Detalji</a>
+                  <a href={`/location/${loc._id}`}>Podrobnosti</a>
                 </div>
               </Popup>
             </Marker>
           ))}
         </MapContainer>
       ) : (
-        <p>Učitavanje vaše lokacije...</p>
+        <p>Nalaganje vaše lokacije...</p>
       )}
     </div>
   );

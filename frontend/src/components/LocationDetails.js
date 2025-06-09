@@ -301,7 +301,7 @@ function LocationDetails() {
       });
       if (!res.ok) {
         const errData = await res.json();
-        alert(`Greška pri dodavanju tarife: ${errData.message || 'Nepoznata greška'}`);
+        alert(`Napaka pri dodajanju tarife: ${errData.message || 'Napaka'}`);
       } else {
         const newTariff = await res.json();
         setTariffs((prev) => [...prev, newTariff]);
@@ -315,217 +315,312 @@ function LocationDetails() {
         alert('Nova tarifa je uspešno dodata!');
       }
     } catch {
-      alert('Greška pri slanju zahteva za dodavanje nove tarife.');
+      alert('Napaka pri posiljanju zahteve za dodajanje nove tarife.');
     }
   };
 
 
   if (error) return <p style={{ color: 'red' }}>{error}</p>;
   if (!location) return <p>Učitavanje...</p>;
-
   return (
-    <div style={{ maxWidth: '600px', margin: '2rem auto' }}>
-      <h2>{location.name}</h2>
-      <p>
-        <strong>Adresa:</strong> {location.address}
-      </p>
-      <p>
-        <strong>Opis:</strong> {location.description || 'Nema opisa za ovu lokaciju.'}
-      </p>
-      <p>
-        <strong>Regularna mesta:</strong> {location.available_regular_spots}/{location.total_regular_spots}
-        <br />
-        <strong>Invalidska mesta:</strong> {location.available_invalid_spots}/{location.total_invalid_spots}
-        <br />
-        <strong>Električna mesta:</strong> {location.available_electric_spots}/{location.total_electric_spots}
-        <br />
-        <strong>Autobuska mesta:</strong> {location.available_bus_spots}/{location.total_bus_spots}
-      </p>
+    <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 1rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+      {/* Leva kolona: tekstualni detalji i tarife */}
+      <div style={{ flex: '1 1 600px', minWidth: '320px' }}>
+        <h2>{location.name}</h2>
+        <p><strong>Opis:</strong> {location.description || 'Ni opisa za to lokacijo.'}</p>
+        <p>
+          <strong>Običajna mesta:</strong> {location.available_regular_spots}/{location.total_regular_spots}<br />
+          <strong>Invalidska mesta:</strong> {location.available_invalid_spots}/{location.total_invalid_spots}<br />
+          <strong>Električna mesta:</strong> {location.available_electric_spots}/{location.total_electric_spots}<br />
+          <strong>Avtobusna mesta:</strong> {location.available_bus_spots}/{location.total_bus_spots}
+        </p>
 
-      <div style={{ marginTop: '2rem' }}>
-        <h3>Tarife</h3>
-        {tariffsError ? (
-          <p style={{ color: 'red' }}>{tariffsError}</p>
-        ) : tariffs.length === 0 ? (
-          <p>Nema dostupnih tarifa za ovu lokaciju.</p>
-        ) : (
-          <ul>
-            {tariffs.map((tariff) => (
-              <li key={tariff._id} style={{ marginBottom: '1rem' }}>
-                <strong>Tip vozila:</strong> {tariff.tariff_type}
-                <br />
-                <strong>Trajanje:</strong> {tariff.duration}
-                <br />
-                <strong>Tip tarife:</strong> {tariff.vehicle_type}
-                <br />
-                <strong>Cena:</strong>{' '}
-                {tariff.price ? parseFloat(tariff.price.$numberDecimal || tariff.price).toFixed(2) : '-'} {tariff.price_unit}
-                <br />
-                {user?.user_type === 'admin' && (
-                  <>
-                    <button
-                      onClick={() => handleDeleteTariff(tariff._id)}
-                      style={{ marginTop: '5px', marginRight: '10px', backgroundColor: 'red', color: 'white', border: 'none', padding: '5px 10px' }}
-                    >
-                      Obriši tarifu
-                    </button>
-                    <button
-                      onClick={() => handleTariffSelect(tariff)}
-                      style={{ marginTop: '5px', backgroundColor: 'green', color: 'white', border: 'none', padding: '5px 10px' }}
-                    >
-                      Izmeni tarifu
-                    </button>
 
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
+        <div style={{ marginTop: '2rem' }}>
+          <h3>Tarife</h3>
+          {tariffsError ? (
+            <p style={{ color: 'red' }}>{tariffsError}</p>
+          ) : tariffs.length === 0 ? (
+            <p>Ni tarifa za to lokacijo.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th style={{ borderBottom: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>Vrsta vozila</th>
+                  <th style={{ borderBottom: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>Trajanje</th>
+                  <th style={{ borderBottom: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>Vrsta tarife</th>
+                  <th style={{ borderBottom: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>Cena</th>
+                  {user?.user_type === 'admin' && <th style={{ borderBottom: '1px solid #ccc', padding: '8px' }}>Akcije</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {tariffs.map((tariff) => (
+                  <tr key={tariff._id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '8px' }}>{tariff.tariff_type}</td>
+                    <td style={{ padding: '8px' }}>{tariff.duration}</td>
+                    <td style={{ padding: '8px' }}>{tariff.vehicle_type}</td>
+                    <td style={{ padding: '8px' }}>
+                      {tariff.price ? parseFloat(tariff.price.$numberDecimal || tariff.price).toFixed(2) : '-'} {tariff.price_unit}
+                    </td>
+                    {user?.user_type === 'admin' && (
+                      <td style={{ padding: '8px' }}>
+                        <button
+                          onClick={() => handleDeleteTariff(tariff._id)}
+                          style={{ marginRight: '8px', backgroundColor: 'red', color: 'white', border: 'none', padding: '4px 8px', cursor: 'pointer' }}
+                        >
+                          Izbriši
+                        </button>
+                        <button
+                          onClick={() => handleTariffSelect(tariff)}
+                          style={{ backgroundColor: 'green', color: 'white', border: 'none', padding: '4px 8px', cursor: 'pointer' }}
+                        >
+                          Uredi
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {user?.user_type === 'admin' && (
+          <>
+            {/* Forma za update parking lokacije */}
+            {/* Obrazec za posodobitev lokacije parkirišča */}
+            <form onSubmit={handleUpdate} style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
+              <h3>Posodobi podrobnosti lokacije</h3>
+              <label>
+                Ime:
+                <input type="text" name="name" value={formData.name} onChange={handleChange} required />
+              </label>
+              <br />
+              <label>
+                Naslov:
+                <input type="text" name="address" value={formData.address} onChange={handleChange} required />
+              </label>
+              <br />
+              <label>
+                Opis:
+                <textarea name="description" value={formData.description} onChange={handleChange} />
+              </label>
+              <br />
+              <label>
+                Skupno rednih mest:
+                <input type="number" name="total_regular_spots" value={formData.total_regular_spots} onChange={handleChange} min={0} />
+              </label>
+              <br />
+              <label>
+                Skupno invalidskih mest:
+                <input type="number" name="total_invalid_spots" value={formData.total_invalid_spots} onChange={handleChange} min={0} />
+              </label>
+              <br />
+              <label>
+                Skupno avtobusnih mest:
+                <input type="number" name="total_bus_spots" value={formData.total_bus_spots} onChange={handleChange} min={0} />
+              </label>
+              <br />
+              <label>
+                Prosta redna mesta:
+                <input type="number" name="available_regular_spots" value={formData.available_regular_spots} onChange={handleChange} min={0} />
+              </label>
+              <br />
+              <label>
+                Prosta invalidska mesta:
+                <input type="number" name="available_invalid_spots" value={formData.available_invalid_spots} onChange={handleChange} min={0} />
+              </label>
+              <br />
+              <label>
+                Prosta avtobusna mesta:
+                <input type="number" name="available_bus_spots" value={formData.available_bus_spots} onChange={handleChange} min={0} />
+              </label>
+              <br />
+              <label>
+                Koordinate (lat, lng):
+                <input
+                  type="number"
+                  step="0.000001"
+                  value={formData.location.coordinates[1]}
+                  onChange={(e) => handleCoordinateChange(1, e.target.value)}
+                  required
+                />
+                ,
+                <input
+                  type="number"
+                  step="0.000001"
+                  value={formData.location.coordinates[0]}
+                  onChange={(e) => handleCoordinateChange(0, e.target.value)}
+                  required
+                />
+              </label>
+              <br />
+              <button type="submit" style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
+                Posodobi lokacijo
+              </button>
+            </form>
+
+
+            {/* Obrazec za posodobitev tarife */}
+            <form onSubmit={handleTariffUpdate} style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
+              <h3>Uredi tarifo</h3>
+              <label>
+                Vrsta vozila:
+                <input
+                  type="text"
+                  name="vehicle_type"
+                  value={tariffFormData.vehicle_type}
+                  onChange={handleTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Trajanje:
+                <input
+                  type="text"
+                  name="duration"
+                  value={tariffFormData.duration}
+                  onChange={handleTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Vrsta tarife:
+                <input
+                  type="text"
+                  name="tariff_type"
+                  value={tariffFormData.tariff_type}
+                  onChange={handleTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Cena:
+                <input
+                  type="number"
+                  step="0.01"
+                  name="price"
+                  value={tariffFormData.price}
+                  onChange={handleTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Enota cene:
+                <input
+                  type="text"
+                  name="price_unit"
+                  value={tariffFormData.price_unit}
+                  onChange={handleTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <button type="submit" style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
+                Posodobi tarifo
+              </button>
+            </form>
+
+            {/* Obrazec za dodajanje nove tarife */}
+            <form onSubmit={handleNewTariffSubmit} style={{ marginTop: '2rem', border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' }}>
+              <h3>Dodaj novo tarifo</h3>
+              <label>
+                Vrsta vozila:
+                <input
+                  type="text"
+                  name="vehicle_type"
+                  value={newTariffFormData.vehicle_type}
+                  onChange={handleNewTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Trajanje:
+                <input
+                  type="text"
+                  name="duration"
+                  value={newTariffFormData.duration}
+                  onChange={handleNewTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Vrsta tarife:
+                <input
+                  type="text"
+                  name="tariff_type"
+                  value={newTariffFormData.tariff_type}
+                  onChange={handleNewTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Cena:
+                <input
+                  type="number"
+                  step="0.01"
+                  name="price"
+                  value={newTariffFormData.price}
+                  onChange={handleNewTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <label>
+                Enota cene:
+                <input
+                  type="text"
+                  name="price_unit"
+                  value={newTariffFormData.price_unit}
+                  onChange={handleNewTariffChange}
+                  required
+                />
+              </label>
+              <br />
+              <button type="submit" style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>
+                Dodaj tarifo
+              </button>
+            </form>
+
+          </>
         )}
+
       </div>
 
-      {user?.user_type === 'admin' && (
-        <>
-          <form onSubmit={handleUpdate} style={{ marginTop: '2rem' }}>
-            <h3>Ažuriraj parking lokaciju</h3>
-            {[
-              ['Ime', 'name'],
-              ['Adresa', 'address'],
-              ['Opis', 'description'],
-              ['Ukupno regularnih mesta', 'total_regular_spots'],
-              ['Ukupno invalidskih mesta', 'total_invalid_spots'],
-              ['Ukupno autobuska mesta', 'total_bus_spots'],
-              ['Slobodna regularna mesta', 'available_regular_spots'],
-              ['Slobodna invalidska mesta', 'available_invalid_spots'],
-              ['Slobodna autobuska mesta', 'available_bus_spots'],
-            ].map(([label, key]) => (
-              <div key={key}>
-                <label>
-                  {label}:
-                  <input
-                    type={typeof formData[key] === 'number' ? 'number' : 'text'}
-                    name={key}
-                    value={formData[key]}
-                    onChange={handleChange}
-                    min="0"
-                  />
-                </label>
-                <br />
-              </div>
-            ))}
-            <label>
-              Longitude:
-              <input
-                type="number"
-                step="0.000001"
-                value={formData.location.coordinates[0]}
-                onChange={(e) => handleCoordinateChange(0, e.target.value)}
-              />
-            </label>
-            <br />
-            <label>
-              Latitude:
-              <input
-                type="number"
-                step="0.000001"
-                value={formData.location.coordinates[1]}
-                onChange={(e) => handleCoordinateChange(1, e.target.value)}
-              />
-            </label>
-            <br />
-            <button type="submit">Sačuvaj izmene</button>
-          </form>
+      {/* Desna kolona: mapa i graf */}
+      <div style={{ flex: '1 1 400px', minWidth: '300px' }}>
+        {userLocation && (
+          <div style={{ height: '400px', width: '100%', marginBottom: '2rem' }}>
+            <MapContainer
+              center={[location.location.coordinates[1], location.location.coordinates[0]]}
+              zoom={15}
+              style={{ height: '100%', width: '100%', borderRadius: '8px', boxShadow: '0 0 10px rgba(0,0,0,0.1)' }}
+            >
+              <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <Marker position={[location.location.coordinates[1], location.location.coordinates[0]]}>
+                <Popup>{location.name}</Popup>
+              </Marker>
+              <Marker position={userLocation} icon={userIcon}>
+                <Popup>Vaša lokacija</Popup>
+              </Marker>
+              <Routing from={userLocation} to={[location.location.coordinates[1], location.location.coordinates[0]]} />
+            </MapContainer>
+          </div>
+        )}
 
-          <form onSubmit={handleTariffUpdate} style={{ marginTop: '2rem', borderTop: '1px solid #ccc', paddingTop: '1rem' }}>
-            <h3>Ažuriraj tarifu</h3>
-            {!tariffFormData._id && <p>Izaberite tarifu klikom na "Izmeni tarifu" iznad.</p>}
-            {tariffFormData._id && (
-              <>
-                <label>
-                  Tip vozila:
-                  <input type="text" name="vehicle_type" value={tariffFormData.vehicle_type} onChange={handleTariffChange} required />
-                </label>
-                <br />
-                <label>
-                  Trajanje:
-                  <input type="text" name="duration" value={tariffFormData.duration} onChange={handleTariffChange} required />
-                </label>
-                <br />
-                <label>
-                  Tip tarife:
-                  <input type="text" name="tariff_type" value={tariffFormData.tariff_type} onChange={handleTariffChange} required />
-                </label>
-                <br />
-                <label>
-                  Cena:
-                  <input type="number" step="0.01" name="price" value={tariffFormData.price} onChange={handleTariffChange} required />
-                </label>
-                <br />
-                <label>
-                  Jedinica cene:
-                  <input type="text" name="price_unit" value={tariffFormData.price_unit} onChange={handleTariffChange} required />
-                </label>
-                <br />
-                <button type="submit">Sačuvaj izmenu tarife</button>
-              </>
-            )}
-          </form>
-          <form onSubmit={handleNewTariffSubmit} style={{ marginTop: '2rem', borderTop: '1px solid #ccc', paddingTop: '1rem' }}>
-            <h3>Dodaj novu tarifu</h3>
-            <label>
-              Tip vozila:
-              <input type="text" name="vehicle_type" value={newTariffFormData.vehicle_type} onChange={handleNewTariffChange} required />
-            </label>
-            <br />
-            <label>
-              Trajanje:
-              <input type="text" name="duration" value={newTariffFormData.duration} onChange={handleNewTariffChange} required />
-            </label>
-            <br />
-            <label>
-              Tip tarife:
-              <input type="text" name="tariff_type" value={newTariffFormData.tariff_type} onChange={handleNewTariffChange} required />
-            </label>
-            <br />
-            <label>
-              Cena:
-              <input type="number" step="0.01" name="price" value={newTariffFormData.price} onChange={handleNewTariffChange} required />
-            </label>
-            <br />
-            <label>
-              Jedinica cene:
-              <input type="text" name="price_unit" value={newTariffFormData.price_unit} onChange={handleNewTariffChange} required />
-            </label>
-            <br />
-            <button type="submit">Dodaj novu tarifu</button>
-          </form>
-
-        </>
-      )}
-
-      {userLocation && (
-        <div style={{ height: '400px', width: '100%', marginTop: '2rem' }}>
-          <MapContainer
-            center={[location.location.coordinates[1], location.location.coordinates[0]]}
-            zoom={15}
-            style={{ height: '100%', width: '100%' }}
-          >
-            <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <Marker position={[location.location.coordinates[1], location.location.coordinates[0]]}>
-              <Popup>{location.name}</Popup>
-            </Marker>
-            <Marker position={userLocation} icon={userIcon}>
-              <Popup>Vaša lokacija</Popup>
-            </Marker>
-            <Routing from={userLocation} to={[location.location.coordinates[1], location.location.coordinates[0]]} />
-          </MapContainer>
-        </div>
-      )}
-
-      <h3>Status zauzetosti</h3>
-      <ParkingAvailabilityChart locationId={id} />
+        <h3>Status zasedenosti</h3>
+        <ParkingAvailabilityChart locationId={id} />
+      </div>
     </div>
   );
+
 }
 
 export default LocationDetails;

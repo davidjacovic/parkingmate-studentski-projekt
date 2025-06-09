@@ -14,55 +14,38 @@ function Header() {
     }
 
     return (
-        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
-            <h2 style={{ margin: 0 }}>
-                <Link to="/" style={{ textDecoration: 'none', color: '#333' }}>
+        <header className="header">
+            <h2>
+                <Link
+                    to={user?.user_type === 'admin' ? '/userhome' : '/'}
+                >
                     ParkingMate
                 </Link>
             </h2>
-            <nav style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+            <nav>
                 {user ? (
                     <>
                         {user.user_type === 'admin' && (
                             <>
-                                <Link to="/" style={{ textDecoration: 'none', color: '#007bff' }}>
-                                    Admin Home
-                                </Link>
-                                <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
-                                    Pay Parking
-                                </Link>
+                                <Link to="/">Administrator Domov</Link>
                             </>
                         )}
                         {user.user_type === 'user' && (
                             <>
-                                <Link to="/profile" style={{ textDecoration: 'none', color: '#007bff' }}>
-                                    Profile
-                                </Link>
-                                <Link to="/payment" style={{ textDecoration: 'none', color: '#007bff' }}>
-                                    Pay Parking
-                                </Link>
+                                <Link to="/profile">Profil uporabnika</Link>
+                                <Link to="/payment">Plačaj parking</Link>
                             </>
                         )}
-                        <button
-                            onClick={handleLogout}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                padding: 0,
-                                margin: 0,
-                                textDecoration: 'none',
-                                color: '#007bff',
-                                cursor: 'pointer',
-                                font: 'inherit',
-                            }}
-                        >
-                            Logout
-                        </button>
+                        {/* Dugme dostupno i adminu i useru */}
+                        <Link to="/reviews">Mnenja</Link>
+
+                        <button onClick={handleLogout}>Odjava</button>
                     </>
                 ) : (
                     <>
-                        <Link to="/login">Login</Link>
-                        <Link to="/register">Register</Link>
+                        <Link to="/login">Prijava</Link>
+                        <Link to="/register">Registracija</Link>
                     </>
                 )}
             </nav>
