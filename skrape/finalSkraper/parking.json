@@ -1,0 +1,1337 @@
+[
+    {
+        "lokacija": "Bežigrad",
+        "opis": "Parkirišče se nahaja ob Dunajski cesti v neposredni bližini Gospodarskega razstavišča. Uvoz na parkirišče je urejen z Dunajske ceste, izvoz pa na Linhartovo cesto.\nNa parkirišču je 64 parkirnih mest, od tega sta dve parkirni mesti namenjeni gibalno oviranim osebam oz. invalidom.",
+        "latitude": 46.062506073254,
+        "longitude": 14.508283138275,
+        "stMestBus": 0,
+        "stMestInv": 2,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "0,80€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "25",
+            "naVoljo": "64"
+        },
+        "abonenti": {
+            "naVoljo": "0",
+            "oddana": "0",
+            "prosta": "0",
+            "cakalnaVrsta": "0"
+        }
+    },
+    {
+        "lokacija": "Dolenjska cesta (Strelišče)",
+        "opis": "Parkirišče je locirano ob Dolenjski cesti v neposredni bližini Strelišča. Uvoz in izvoz sta urejena na Dolenjsko cesto.\nNa parkirišču je 67 parkirnih mest, od tega je eno parkirno mesto namenjeno gibalno oviranim osebam oz invalidom..\nNa parkirišču lahko stanovalci s stalnim prebivališčem na naslovih Dolenjska cesta 13, 15, 17, 19, 21, 23, 23a, 23b, 23c, in 23d najamejo parkirno mesto. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.039293116647,
+        "longitude": 14.517512619495,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "22:00 - 06:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "47",
+            "naVoljo": "67"
+        },
+        "abonenti": {
+            "naVoljo": "25",
+            "oddana": "25",
+            "prosta": "0",
+            "cakalnaVrsta": "5"
+        }
+    },
+    {
+        "lokacija": "Gosarjeva ulica",
+        "opis": "Parkirišče Gosarjeva ulica je locirano ob Gosarjevi ulici v neposredni bližini Ekonomske fakultete in Fakultete za družbene vede.\nNa parkirišču je 190 parkirnih mest, od tega sta dve parkirni mesti namenjeni gibalno oviranim osebam oz. invalidom ter dve parkirni mesti polnjenju električnih avtomobilov.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 145 parkirnih mest. Za najem parkirnega mesta je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.074510807524,
+        "longitude": 14.518057107925,
+        "stMestBus": 0,
+        "stMestInv": 2,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,80€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Skoraj polno",
+            "prosta": "24",
+            "naVoljo": "190"
+        },
+        "abonenti": {
+            "naVoljo": "138",
+            "oddana": "138",
+            "prosta": "0",
+            "cakalnaVrsta": "186"
+        }
+    },
+    {
+        "lokacija": "Gospodarsko razstavišče",
+        "opis": "Parkirišče se nahaja za Gospodarskim razstaviščem z uvozom z Linhartove ceste prek Valjhunove ulice ter z uvozom neposredno z Vilharjeve ceste.\nNa parkirišču je 400 parkirnih mest.\nNa parkirišču je možno najeti parkirno mesto. Za najem je potrebno izpolniti Vlogo za najem parkirnega mesta in jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.06185654101,
+        "longitude": 14.510096311569,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "do 1 ure",
+                "cena": "1,00€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "od 1 do 3 ur",
+                "cena": "2,00€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "od 3 do 5 ur",
+                "cena": "2,50€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "od 5 do 8 ur",
+                "cena": "3,00€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "nad 8 ur",
+                "cena": "3,50€"
+            },
+            {
+                "tarifa": "V času sejma na GR (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "1,20€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "1,50€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "342",
+            "naVoljo": "400"
+        },
+        "abonenti": {
+            "naVoljo": "150",
+            "oddana": "150",
+            "prosta": "0",
+            "cakalnaVrsta": "157"
+        }
+    },
+    {
+        "lokacija": "Komanova ulica",
+        "opis": "Parkirišče Komanova leži v neposredni bližini trgovine Tuš na Komanovi ulici.\nParkirišče ima skupaj 59 parkirnih mest. Parkirišče je v celoti namenjen abonentom, ki živijo na območju:\nZa najem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si ali poslati po pošti na naslov JP LPT d.o.o., Kopitarjeva 2, 1000 Ljubljana.\nVloge, zaradi trenutnih razmer, povezanih s COVID-19 osebno ne morete oddati. Vse prejete vloge bomo obravnavali in v primeru večjega števila vlog bo vzpostavljena čakalna vrsta.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.\nCenik in delovni čas vam je na voljo tukaj.\nParkirišče je opremljeno z zapornico, vstop na parkirišče pa bo možen z daljinskim upravljalnikom.",
+        "latitude": 46.088341579,
+        "longitude": 14.513068199158,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "dnevni": {
+            "stanje": "Zasedeno",
+            "prosta": "/",
+            "naVoljo": "55"
+        },
+        "abonenti": {
+            "naVoljo": "55",
+            "oddana": "55",
+            "prosta": "0",
+            "cakalnaVrsta": "85"
+        }
+    },
+    {
+        "lokacija": "PH Kongresni trg",
+        "opis": "Parkirna hiša Kongresni trg se nahaja v središču mesta med Filharmonijo in Slovensko cesto. Uvoz in izvoz v parkirno hišo je urejen s Slovenske ceste.\nV parkirni hiši je 716 parkirnih mest, od tega je 14 parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom ter šest parkirnih mest polnjenju električnih avtomobilov.\nV parkirni hiši je mogoče najeti parkirno mesto, vendar največ 400 parkirnih mest. Do najema parkirnega mesta so upravičeni stanovalci in pravne osebe s prebivališčem oz službenim delovanjem na naslovih, ki so navedeni na Seznamu ulic. Seznam ulic najdete tukaj. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si. Vlogi za najem parkirnega mesta mora biti priložena Izjava o resničnosti podatkov.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 14,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 24:00",
+                "enotaMere": "do 3 ure",
+                "cena": "1,70€/h;"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 24:00",
+                "enotaMere": "nad 3 ure",
+                "cena": "2,50€/h;"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "24:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Zasedeno",
+            "prosta": "0",
+            "naVoljo": "720"
+        },
+        "abonenti": {
+            "naVoljo": "400",
+            "oddana": "400",
+            "prosta": "0",
+            "cakalnaVrsta": "103"
+        }
+    },
+    {
+        "lokacija": "Kozolec",
+        "opis": "Parkirna hiša Kozolec se nahaja v središču mesta med Slovensko cesto in Kersnikovo ulico z uvozom iz Dvorakove ulice.\nV parkirni hiši Kozolec je mogoče parkirati v I. in II. kleti, parkirišča v III. kleti so namenjena parkiranju njihovim lastnikom. V I. in II. kleti je skupaj 432 parkirnih mest, od tega je 22 parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom, 6 parkirnih mest je namenjeno polnjenju električnih avtomobilov ter 8 parkirnih mest za motorna vozila.\nV parkirni hiši je mogoče najeti parkirno mesto, vendar največ 200 parkirnih mest. Do najem so upravičeni stanovalci in pravne osebe, kateri imajo prijavljeno bivališče ali opravljanje dejavnosti znotraj območja Slovenske ceste (do križišča z Gosposvetsko cesto), Vošnjakove ulice, Dvoržakove ulice, Kersnikove ulice, Tivolske ceste (od križišča Slovenske cest) in Gosposvetske ceste (od križišča Celovška cesta do križišča Slovenska cesta). Zemljevid območja najdete tukaj.\nZa najem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "1,50€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "132",
+            "naVoljo": "394"
+        },
+        "abonenti": {
+            "naVoljo": "220",
+            "oddana": "220",
+            "prosta": "0",
+            "cakalnaVrsta": "117"
+        }
+    },
+    {
+        "lokacija": "Kranjčeva ulica",
+        "opis": "Parkirišče Kranjčeva ulica leži v neposredni bližini poslovne stavbe POP TV in ima uvoz ter izvoz v Kranjčevo ulico.\nNa parkirišču je 112 parkirnih mest, od tega je eno parkirno mesto namenjeno gibalno oviranim osebam oz. invalidom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 59 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.070223569226,
+        "longitude": 14.522091150284,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "99",
+            "naVoljo": "117"
+        },
+        "abonenti": {
+            "naVoljo": "65",
+            "oddana": "65",
+            "prosta": "0",
+            "cakalnaVrsta": "118"
+        }
+    },
+    {
+        "lokacija": "Linhartova",
+        "opis": "Parkirišče se nahaja ob Linhartovi cesti v neposredni bližini Gospodarskega razstavišča in kompleksa Plava laguna.\nNa parkirišču je 121 parkirnih mest.\nV času, ko so na Gospodarskem razstavišču organizirane sejemske prireditve, veljajo na parkirišču spremenjene tarife, po ceniku spodaj.\nObratovalni čas parkirišča je od ponedeljka do nedelje.",
+        "latitude": 46.062907178261,
+        "longitude": 14.509214693022,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "do 1 ure",
+                "cena": "1,00€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "od 1 do 3 ur",
+                "cena": "2,00€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "od 3 do 5 ur",
+                "cena": "2,50€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "od 5 do 8 ur",
+                "cena": "3,00€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "nad 8 ur",
+                "cena": "3,50€"
+            },
+            {
+                "tarifa": "V casu sejma na GR (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "1,20€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "1,50€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "110",
+            "naVoljo": "50"
+        },
+        "abonenti": {
+            "naVoljo": "50",
+            "oddana": "50",
+            "prosta": "0",
+            "cakalnaVrsta": "32"
+        }
+    },
+    {
+        "lokacija": "Metelkova ulica",
+        "opis": "Parkirišče, ki je urejeno v makadamski izvedbi, se nahaja ob Metelkovi ulici v neposredni bližini Zdravstvenega doma Ljubljana.\nNa parkirišču je 89 parkirnih mest, od tega so štiri parkirna mesta namenjena gibalno oviran osebam oz. invalidom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 30 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.\nPrednost pri najemu parkirnega mesta na parkirišču (na fotografiji označeno polje z zeleno barvo) imajo stanovalci in zaposleni na območju, ki je na fotografiji obrobljeno z rdečo barvo.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "ura",
+                "cena": "1,20€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "22:00 - 06:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "23",
+            "naVoljo": "89"
+        },
+        "abonenti": {
+            "naVoljo": "26",
+            "oddana": "24",
+            "prosta": "2",
+            "cakalnaVrsta": "214"
+        }
+    },
+    {
+        "lokacija": "Mirje",
+        "opis": "Parkirišče se nahaja ob Tržaški cesti nasproti nekdanje tobačne tovarne. Uvoz in izvoz s parkirišča je na Lepi pot.\nNa parkirišču je 111 parkirnih mest, od tega sta dve parkirni mesti namenjeni gibalno oviranim osebam oz. invalidom ter dve parkirni mesti polnjenju električnih vozil.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 59 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 2,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "0,80€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "65",
+            "naVoljo": "107"
+        },
+        "abonenti": {
+            "naVoljo": "55",
+            "oddana": "55",
+            "prosta": "0",
+            "cakalnaVrsta": "238"
+        }
+    },
+    {
+        "lokacija": "P+R Barje",
+        "opis": "Sistem P+R (angleško izraz : park and ride, slovenski izraz: parkiraj in se pelji z avtobusom) je kombinacija zasebnega in javnega prevoza. P+R sistem omogoča, da se uporabnik do pomembnejših točk na obrobju mesta oziroma do glavnih mestnih vpadnic pripelje z osebnim vozilom, pot v mesto pa nadaljuje z javnim prevozom.\nParkirišče P+R Barje se nahaja ob Barjanski cesti na južnem obrobju Ljubljane. Na parkirišču parkirate in se v center Ljubljane odpeljete z mestnim avtobusom številka 9.\nParkirišče je opremljeno z Urbanomati in video nadzornim sistemom.\nNa parkirišču P+R je skupaj 347 parkirnih mest za osebna vozila, od tega je 13 parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom in osem parkirnih mesta polnjenju električnih vozil.",
+        "latitude": 46.0269359,
+        "longitude": 14.49994577701,
+        "stMestBus": 0,
+        "stMestInv": 17,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "00:00 - 24:00",
+                "enotaMere": "24 ur od nakupa",
+                "cena": "1,30€"
+            },
+            {
+                "tarifa": "Dolgotrajno (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "00:00-24:00",
+                "enotaMere": "dan",
+                "cena": "5,00€"
+            },
+            {
+                "tarifa": "Dolgotrajno (pon-ned)",
+                "tip": "Bivalno vozilo",
+                "cas": "00:00-24:00",
+                "enotaMere": "dan",
+                "cena": "10,00€"
+            },
+            {
+                "tarifa": "Dolgotrajno (pon-ned)",
+                "tip": "Avtobus",
+                "cas": "7:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "3,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Odprto",
+            "prosta": null,
+            "naVoljo": null
+        },
+        "abonenti": {
+            "naVoljo": "",
+            "oddana": null,
+            "prosta": null,
+            "cakalnaVrsta": null
+        }
+    },
+    {
+        "lokacija": "P+R Dolgi Most",
+        "opis": "Sistem P+R (angleško izraz : park and ride, slovenski izraz: parkiraj in se pelji z avtobusom) je kombinacija zasebnega in javnega prevoza. P+R sistem omogoča, da se uporabnik do pomembnejših točk na obrobju mesta oziroma do glavnih mestnih vpadnic pripelje z osebnim vozilom, pot v mesto pa nadaljuje z javnim prevozom.\nParkirišče P+R Dolgi most se nahaja ob Tržaški cesti na jugozahodnem obrobju mesta Ljubljane od koder se v središče Ljubljane odpeljete z mestnim avtobusom številka 1, 1B in 6.\nParkirišče je opremljeno z Urbanomati in video nadzornim sistemom.\nNa parkirišču P+R je skupaj 357 parkirnih mest za osebna vozila, od tega je 11 parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom, šest parkirnih mest je namenjenih polnjenju električnih vozil, 11 parkirnih mest pa parkiranju osebnih vozil staršev z otroki.\nPoleg tega je na parkirišču P+R 10 parkirnih mest za parkiranje bivalnih vozil in 11 parkirnih mest za parkiranje avtobusov.",
+        "latitude": 46.0365828,
+        "longitude": 14.4632888,
+        "stMestBus": 11,
+        "stMestInv": 0,
+        "dnevni": {
+            "stanje": "Odprto",
+            "prosta": null,
+            "naVoljo": null
+        },
+        "abonenti": {
+            "naVoljo": "",
+            "oddana": null,
+            "prosta": null,
+            "cakalnaVrsta": null
+        }
+    },
+    {
+        "lokacija": "P+R Studenec",
+        "opis": "Sistem P+R (angleško izraz : park and ride, slovenski izraz: parkiraj in se pelji z avtobusom) je kombinacija zasebnega in javnega prevoza. P+R sistem omogoča, da se uporabnik do pomembnejših točk na obrobju mesta oziroma do glavnih mestnih vpadnic pripelje z osebnim vozilom, pot v mesto pa nadaljuje z javnim prevozom.\nParkirišče P+R Studenec se nahaja v parkirni hiši pod trgovskim centrom Hofer v bližini križišča Zaloške in Chengdujske ceste, od koder se v središče Ljubljane odpeljete z mestnim avtobusom številka 11, 11B, (postajališče na Zaloški cesti) ali z mestnim avtobusom številka 20, 20Z in 22 (postajališče na cesti Nove Fužine). Vhod v parkirno hišo P+R je s Chengdujske ceste.\nParkirišče je opremljeno z video nadzornim sistemom. V neposredni bližini trgovskega centra Hofer je tudi Urbanomat.\nNa parkirišču P+R je skupaj 187 parkirnih mest za osebna vozila, od tega je devet parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 60 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 9,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "00:00 - 24:00",
+                "enotaMere": "24 ur od nakupa",
+                "cena": "1,30€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Odprto",
+            "prosta": null,
+            "naVoljo": null
+        },
+        "abonenti": {
+            "naVoljo": "",
+            "oddana": null,
+            "prosta": null,
+            "cakalnaVrsta": null
+        }
+    },
+    {
+        "lokacija": "PH Kolezija",
+        "opis": "Parkirna hiša Kolezija se nahaja v kleti kopališča Kolezija ob Gunduličevi ulici.\nV parkirni hiši Kolezija je skupaj 85 parkirnih mest, od tega je šest parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom.\nV parkirni hiši je mogoče najeti parkirno mesto, vendar največ 50 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nZa uporabnike kopališča je cena parkiranja 0,40 evra na uro. Ob izhodu iz kopališča uporabnik parkirni listek potrdi na recepciji kopališča.\nCenik in delovni čas vam je na voljo tukaj.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 6,
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "62",
+            "naVoljo": "80"
+        },
+        "abonenti": {
+            "naVoljo": "50",
+            "oddana": "47",
+            "prosta": "3",
+            "cakalnaVrsta": "139"
+        }
+    },
+    {
+        "lokacija": "Pokopališče Polje",
+        "opis": "Parkirišče Polje se nahaja ob Zadobrovški cesti v Ljubljani.\nNa parkirišču je 48 parkirnih mest, od tega so 4 parkirna mesta namenjeno gibalno oviranim osebam oz. invalidom.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "33",
+            "naVoljo": "39"
+        },
+        "abonenti": {
+            "naVoljo": "20",
+            "oddana": "8",
+            "prosta": "12",
+            "cakalnaVrsta": "0"
+        }
+    },
+    {
+        "lokacija": "Povšetova ulica",
+        "opis": "Parkirišče Povšetova ulica je locirano ob Povšetovi ulici v neposredni bližini parka Kodeljevo z uvozom in izvozom v Povšetovo ulico.\nNa parkirišču je 89 parkirnih mest, od tega je pet parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom ter dve parkirni mesti polnjenju električnih avtomobilov.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 50 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.0511346,
+        "longitude": 14.5291011,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "65",
+            "naVoljo": "81"
+        },
+        "abonenti": {
+            "naVoljo": "50",
+            "oddana": "48",
+            "prosta": "2",
+            "cakalnaVrsta": "259"
+        }
+    },
+    {
+        "lokacija": "Sanatorij Emona",
+        "opis": "Parkirišče se nahaja na Kolodvorski ulici v neposredni bližini City hotela in stavbe RTV Slovenija. Uvoz na parkirišče je urejen iz Kolodvorske ulice, izvoz pa v Komenskega ulico.\nNa parkirišču je 25 parkirnih mest, od tega je eno parkirno mesto namenjeno gibalno oviranim osebam oz. invalidom.",
+        "latitude": 46.0537459,
+        "longitude": 14.5089205,
+        "stMestBus": 0,
+        "stMestInv": 1,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "ura",
+                "cena": "1,20€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "22:00 - 06:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Zasedeno",
+            "prosta": "0",
+            "naVoljo": "25"
+        },
+        "abonenti": {
+            "naVoljo": "0",
+            "oddana": "0",
+            "prosta": "0",
+            "cakalnaVrsta": "0"
+        }
+    },
+    {
+        "lokacija": "Slovenčeva ulica",
+        "opis": "Parkirišče, ki je v makadamski izvedbi, je locirano ob Slovenčevi cesti v neposredni bližini železniške postaje in stanovanjske soseske z uvozom in izvozom na Slovenčevo cesto. Parkirišče je namenjeno zgolj parkiranju osebnih vozil stanovalcev soseske.\nNa parkirišču je 130 parkirnih mest, od tega sta dve parkirni mesti namenjeni gibalno oviranim osebam oz. invalidom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 120 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.\nCenik in delovni čas vam je na voljo tukaj.",
+        "latitude": 46.0886367,
+        "longitude": 14.5073473,
+        "stMestBus": 0,
+        "stMestInv": 2,
+        "dnevni": {
+            "stanje": "Zasedeno",
+            "prosta": "0",
+            "naVoljo": "128"
+        },
+        "abonenti": {
+            "naVoljo": "118",
+            "oddana": "118",
+            "prosta": "0",
+            "cakalnaVrsta": "112"
+        }
+    },
+    {
+        "lokacija": "Tivoli I.",
+        "opis": "Parkirišče, ki je namenjeno parkiranju osebnih vozil in avtobusov, se nahaja v osrednjem parku Tivoli. Uvoz in izvoz s parkirišča je urejen nasproti Pivovarne Union s Celovške ceste levo.\nNa parkirišču je 343 parkirnih mest, od tega so tri parkirna mesta namenjeni invalidom, dve parkirni mesti polnjenju električnih vozil, sedem parkirnih mest pa je namenjenih za parkiranje avtobusov.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 63 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.0565273,
+        "longitude": 14.5004928,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "ura",
+                "cena": "0,80€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Avtobus",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "ura",
+                "cena": "5,00€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "22:00 - 06:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Skoraj polno",
+            "prosta": "35",
+            "naVoljo": "351"
+        },
+        "abonenti": {
+            "naVoljo": "63",
+            "oddana": "62",
+            "prosta": "1",
+            "cakalnaVrsta": "506"
+        }
+    },
+    {
+        "lokacija": "Tivoli II.",
+        "opis": "Parkirišče, ki je namenjeno parkiranju osebnih vozil in avtobusov, se nahaja v osrednjem parku Tivoli. Uvoz in izvoz s parkirišča je urejen nasproti Pivovarne Union s Celovške ceste desno.\nNa parkirišču je 154 parkirnih mest, od tega je eno parkirno mesto namenjeno invalidom, pet parkirnih mest pa je namenjenih za parkiranje avtobusov.\nParkirišče je opremljeno z video nadzornim sistemom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 51 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.059853923586,
+        "longitude": 14.497146606445,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "ura",
+                "cena": "0,80€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Avtobus",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "ura",
+                "cena": "5,00€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "22:00 - 06:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "135",
+            "naVoljo": "159"
+        },
+        "abonenti": {
+            "naVoljo": "40",
+            "oddana": "40",
+            "prosta": "0",
+            "cakalnaVrsta": "313"
+        }
+    },
+    {
+        "lokacija": "Trg mladinskih delovnih brigad",
+        "opis": "Parkirišče se nahaja na Trgu mladinskih delovnih brigad v neposredni bližini nekdanjega Kina Vič. Uvoz na parkirišče in izvoz s parkirišča je urejen z Groharjeve ceste.\nNa parkirišču je 24 parkirnih mest, od tega sta dve parkirni mesti namenjeni polnjenju električnih vozil.",
+        "latitude": 46.0471536,
+        "longitude": 14.4959492,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "0,80€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Skoraj polno",
+            "prosta": "2",
+            "naVoljo": "26"
+        },
+        "abonenti": {
+            "naVoljo": "0",
+            "oddana": "0",
+            "prosta": "0",
+            "cakalnaVrsta": "0"
+        }
+    },
+    {
+        "lokacija": "Trg prekomorskih brigad",
+        "opis": "Parkirišče se nahaja med Celovško cesto in Derčevo ulico, iz katere je urejen uvoz na parkirišče ter izvoz s parkirišča.\nNa parkirišču je 67 parkirnih mest, od tega sta dve parkirni mesti namenjeni gibalno oviranim osebam oz invalidom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 10 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.0685737,
+        "longitude": 14.489327,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "29",
+            "naVoljo": "61"
+        },
+        "abonenti": {
+            "naVoljo": "10",
+            "oddana": "10",
+            "prosta": "0",
+            "cakalnaVrsta": "75"
+        }
+    },
+    {
+        "lokacija": "Štembalova ulica",
+        "opis": "Parkirišče Štembalova ulica se nahaja v neposredni bližini stanovanjske soseske BS3 in je namenjeno parkiranju osebnih vozil stanovalcev soseske.\nNa parkirišču je 157 parkirnih mest, od tega sta dve parkirni mesti namenjeni gibalno oviran osebam oz invalidom.\nNa parkirišču je možno najeti parkirno mesto. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.\nCenik in delovni čas vam je na voljo tukaj.",
+        "latitude": 46.0791229,
+        "longitude": 14.5153693,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "dnevni": {
+            "stanje": "Zasedeno",
+            "prosta": "/",
+            "naVoljo": "155"
+        },
+        "abonenti": {
+            "naVoljo": "153",
+            "oddana": "153",
+            "prosta": "0",
+            "cakalnaVrsta": "99"
+        }
+    },
+    {
+        "lokacija": "Žale I.",
+        "opis": "Parkirišče Žale I. se nahaja ob glavnem vhodu na pokopališče ob Tomačevski cesti, s katere je tudi urejen dovoz in izvoz.\nNa parkirišču je 128 parkirnih mest, od tega sta dve parkirni mesti namenjeni gibalno oviranim osebam oz. invalidom. Dve parkirni mesti sta namenjeni kratkotrajnemu parkiranju taksi vozil.",
+        "latitude": 46.0686235,
+        "longitude": 14.528837,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "71",
+            "naVoljo": "125"
+        },
+        "abonenti": {
+            "naVoljo": "0",
+            "oddana": "0",
+            "prosta": "0",
+            "cakalnaVrsta": "37"
+        }
+    },
+    {
+        "lokacija": "Žale II.",
+        "opis": "Parkirišče Žale II. se nahaja ob Šmartinskem parku, uvoz in izvoz je urejen s Pokopališke ceste, neposredno ob krožišču.\nNa parkirišču je 87 parkirnih mest, od tega je sedem parkirnih mest namenjenih invalidom.",
+        "latitude": 46.06822,
+        "longitude": 14.5330841,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "58",
+            "naVoljo": "80"
+        },
+        "abonenti": {
+            "naVoljo": "0",
+            "oddana": "0",
+            "prosta": "0",
+            "cakalnaVrsta": "43"
+        }
+    },
+    {
+        "lokacija": "Žale III.",
+        "opis": "Parkirišče Žale III., ki je namenjeno parkiranju osebnih vozil, se nahaja ob Zavodu za rehabilitacijo invalidov v Ljubljani. Uvoz na parkirišče je urejen iz Kranjčeve ulice.\nNa parkirišču je 91 parkirnih mest, od tega so štiri parkirna mesta namenjena gibalno oviranim osebam oz invalidom.\nParkirišče je opremljeno z video nadzornim sistemom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 57 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.0679672,
+        "longitude": 14.5260283,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "52",
+            "naVoljo": "83"
+        },
+        "abonenti": {
+            "naVoljo": "65",
+            "oddana": "65",
+            "prosta": "0",
+            "cakalnaVrsta": "119"
+        }
+    },
+    {
+        "lokacija": "Žale IV.",
+        "opis": "Parkirišče Žale IV. se nahaja ob Tomačevski cesti, s katere je urejen uvoz in izvoz.\nNa parkirišču je 82 parkirnih mest, od tega so štiri parkirna mesta namenjena gibalno oviranim osebam oz. invalidom.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 75 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.069503,
+        "longitude": 14.5270498,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "77",
+            "naVoljo": "78"
+        },
+        "abonenti": {
+            "naVoljo": "75",
+            "oddana": "69",
+            "prosta": "6",
+            "cakalnaVrsta": "98"
+        }
+    },
+    {
+        "lokacija": "Žale V.",
+        "opis": "Parkirišče Žale V. se nahaja ob Tomačevski cesti, s katere je urejen uvoz in izvoz.\nNa parkirišču je 288 parkirnih mest, od katerih jih je 14 namenjenih parkiranju invalidnih oseb.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 90 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": 46.0748004,
+        "longitude": 14.5312624,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-pet)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "277",
+            "naVoljo": "100"
+        },
+        "abonenti": {
+            "naVoljo": "75",
+            "oddana": "75",
+            "prosta": "0",
+            "cakalnaVrsta": "3"
+        }
+    },
+    {
+        "lokacija": "P+R Ježica",
+        "opis": "Sistem P+R (angleško izraz : park and ride, slovenski izraz: parkiraj in se pelji z avtobusom) je kombinacija zasebnega in javnega prevoza. P+R sistem omogoča, da se uporabnik do pomembnejših točk na obrobju mesta oziroma do glavnih mestnih vpadnic pripelje z osebnim vozilom, pot v mesto pa nadaljuje z javnim prevozom.\nParkirišče P+R Ježica se nahaja na severnem obrobju mesta Ljubljane, od koder se v središče Ljubljane odpeljete z mestnim avtobusom številka 11.\nParkirišče je opremljeno z Urbanomati in video nadzornim sistemom.\nNa parkirišču P+R je skupaj 117 parkirnih mest za osebna vozila, od tega sta dve parkirni mesti namenjeni gibalno oviranim osebam oz invalidom. Parkirišče je urejeno tudi za tovorna vozila (56 parkirnih mest).",
+        "latitude": 46.098201,
+        "longitude": 14.5161341,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "00:00 - 24:00",
+                "enotaMere": "24 ur od nakupa",
+                "cena": "1,30€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Odprto",
+            "prosta": null,
+            "naVoljo": null
+        },
+        "abonenti": {
+            "naVoljo": "",
+            "oddana": null,
+            "prosta": null,
+            "cakalnaVrsta": null
+        }
+    },
+    {
+        "lokacija": "P+R Stanežiče",
+        "opis": "Sistem P+R (angleško izraz : park and ride, slovenski izraz: parkiraj in se pelji z avtobusom) je kombinacija zasebnega in javnega prevoza. P+R sistem omogoča, da se uporabnik do pomembnejših točk na obrobju mesta oziroma do glavnih mestnih vpadnic pripelje z osebnim vozilom, pot v mesto pa nadaljuje z javnim prevozom.\nParkirišče P+R Stanežiče se nahaja ob Celovški cesti na severnem obrobju Ljubljane. Na parkirišču parkirate in se v center Ljubljane odpeljete z mestnim avtobusom številka 1 in 15.\nParkirišče je opremljeno s šestnajstimi shrambami za električna kolesa in šestimi polnilnicami za električna kolesa, Urbanomatom in video nadzornim sistemom.\nNa parkirišču je skupaj 415 parkirnih mest, od tega je 340 parkirnih mest namenjenih parkiranju osebnih vozil po sistemu P+R in dolgotrajnemu parkiranju, 15 parkirnih mest je namenjenih bivalnim vozilom, 20 parkirnih mest je namenjenih invalidnim osebam, 2 parkirni mesti sta namenjeni vozilom taxi, 24 parkirnih mest je namenjenih brezplačnemu parkiranju do 30 minut, 6 parkirnih mest za vozila na električni pogon in 8 parkirnih mest je namenjenih parkiranju motornih koles.\nObratovalni čas parkirišča za dolgotrajno parkiranje je od ponedeljka do nedelje.",
+        "latitude": 46.1073287,
+        "longitude": 14.4477901,
+        "stMestBus": 4,
+        "stMestInv": 20,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "P+R",
+                "cas": "00:00 -24:00",
+                "enotaMere": "dan",
+                "cena": "1,30€"
+            },
+            {
+                "tarifa": "Dolgotrajno (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "00:00-24:00",
+                "enotaMere": "dan",
+                "cena": "5,00€"
+            },
+            {
+                "tarifa": "Dolgotrajno (pon-ned)",
+                "tip": "Bivalno vozilo",
+                "cas": "00:00-24:00",
+                "enotaMere": "dan",
+                "cena": "10,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Odprto",
+            "prosta": null,
+            "naVoljo": null
+        },
+        "abonenti": {
+            "naVoljo": "",
+            "oddana": null,
+            "prosta": null,
+            "cakalnaVrsta": null
+        }
+    },
+    {
+        "lokacija": "ŠRC Stožice",
+        "opis": "Parkirni prostori za parkiranje osebnih vozil in avtobusov se nahajajo v parkirni hiši športnorekreacijskega centra v Stožicah (v nadaljevanju ŠRC Stožice). Uvoz na parkirišče je urejen iz rondoja na Štajerski cesti (Vhod 1) in s Ceste Janeza Porente (Vhod 5).\nNa parkirišču je skupaj 509 parkirnih mest za osebna vozila, od tega je 60 parkirnih mest namenjenih gibalno oviranim osebam oz. invalidom. Poleg tega je na parkirišču 45 parkirnih mest namenjenih za parkiranje avtobusov.\nNa parkirišču je mogoče najeti parkirno mesto, vendar največ 200 parkirnih mest. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.\nDel parkirišča v ŠRC Stožice deluje po sistemu P+R (angleško izraz : park and ride, slovenski izraz: parkiraj in se pelji z avtobusom) kar pomeni, da je kombinacija zasebnega in javnega prevoza. P+R sistem omogoča, da se uporabnik do pomembnejših točk na obrobju mesta oziroma do glavnih mestnih vpadnic pripelje z osebnim vozilom, pot v mesto pa nadaljuje z javnim prevozom.\nOb vhodu 1 je postajališče mestnega avtobusa podaljšane linije Sostro‒Center Stožice številka 13.",
+        "latitude": 46.0805045,
+        "longitude": 14.5236834,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "/",
+            "naVoljo": "509"
+        },
+        "abonenti": {
+            "naVoljo": "255",
+            "oddana": "255",
+            "prosta": "0",
+            "cakalnaVrsta": "53"
+        }
+    },
+    {
+        "lokacija": "Tacen",
+        "opis": "Parkirišče Tacen je locirano ob Kajakaški cesti in je odlično izhodišče za obiskovalce Šmarne gore. Uvoz in izvoz s parkirišča je urejen na Kajakaško cesto.\nNa parkirišču je 69 parkirnih mest, od tega je eno parkirno mesto namenjeno gibalno oviranim osebam oz. invalidom.",
+        "latitude": 46.118257312723,
+        "longitude": 14.461505413055,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "prvi dve uri",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "06:00 - 22:00",
+                "enotaMere": "vsaka naslednja ura",
+                "cena": "0,70€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "22:00 - 06:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "/",
+            "naVoljo": "/"
+        },
+        "abonenti": {
+            "naVoljo": "/",
+            "oddana": "/",
+            "prosta": "/",
+            "cakalnaVrsta": "/"
+        }
+    },
+    {
+        "lokacija": "Bratislavska",
+        "opis": "Parkirišče je namenjeno parkiranju avtobusov. Uvoz in izvoz je urejen iz Šmartinske ceste in Bratislavske ceste. Na parkirišču je 8 parkirnih mest za parkiranje avtobusov. Parkirišče je opremljeno s parkomatom.\nCenik in delovni čas parkirišča je na voljo tukaj.\nParkirnino je možno plačati na parkomatu z gotovino, kartico Urbana ali sistemom Valu. Navodila za plačilo parkirnine na parkomatu najdete tukaj.",
+        "latitude": 46.069573178593,
+        "longitude": 14.550510176125,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "/",
+            "naVoljo": "/"
+        },
+        "abonenti": {
+            "naVoljo": "/",
+            "oddana": "/",
+            "prosta": "/",
+            "cakalnaVrsta": "/"
+        }
+    },
+    {
+        "lokacija": "BS4",
+        "opis": "Parkirišče se nahaja ob Dunajski cesti neposredno ob severni obvoznici, natančneje na Dunajski cesti 190.\nParkirišče je opremljeno z dvema avtomatskima vhodno izhodnima sistemoma, parkirnina pa se poravna na avtomatski blagajni in parkomatu.\nParkirišče ima skupaj 51 parkirnih mest od katerih so štiri namenjena invalidom, pet za parkiranje vozil po sistemu souporabe in eno parkirno mesto za dostavo.\nParkirnino za osem parkirnih mest se plačuje na parkomatu, kateri stoji ob vhodu na parkirišče.\nNa parkirišču je možno najeti parkirno mesto. Za najem je potrebno izpolniti Vlogo za najem parkirnega mesta in jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.\nCena za mesečni najem parkirnega mesta je 36,00 EUR.",
+        "latitude": 46.087027360295,
+        "longitude": 14.514159491371,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "0,80€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Prosto",
+            "prosta": "62",
+            "naVoljo": "51"
+        },
+        "abonenti": {
+            "naVoljo": "51",
+            "oddana": "51",
+            "prosta": "0",
+            "cakalnaVrsta": "26"
+        }
+    },
+    {
+        "lokacija": "PH Rog",
+        "opis": "Parkirna hiša se nahaja pod prenovljenim Centrom Rog. Uvoz v garažo je urejen iz Rozmanove ulice.\nKapaciteta parkirne hiše je 86 parkirnih mest od katerih je 5 parkirnih mest namenjenih gibalno oviranim ljudem, 5 za motorna kolesa, eno parkirno mesto pa je namenjeno dostavi.\nV parkirni hiši bo 35 parkirnih mest namenjenih mesečnemu najemu pod pogoji za stanovalce, fizičnim in pravnim osebam. Za njem je potrebno izpolniti Vlogo za najem parkirnega mesta ter jo poslati na elektronski naslov info@lpt.si.\nRazpoložljivost parkirnih mest za najem oziroma pregled števila čakajočih vlog za najem parkirnega mesta najdete na tukaj.",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "07:00 - 19:00",
+                "enotaMere": "ura",
+                "cena": "1,50€"
+            },
+            {
+                "tarifa": "Nočna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "19:00 - 07:00",
+                "enotaMere": "noč",
+                "cena": "2,00€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Skoraj polno",
+            "prosta": "3",
+            "naVoljo": "80"
+        },
+        "abonenti": {
+            "naVoljo": "35",
+            "oddana": "35",
+            "prosta": "0",
+            "cakalnaVrsta": "46"
+        }
+    },
+    {
+        "lokacija": "P+R Letališka",
+        "opis": "",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "tarife": [
+            {
+                "tarifa": "Dnevna tarifa (pon-ned)",
+                "tip": "Osebno vozilo",
+                "cas": "00:00 - 24:00",
+                "enotaMere": "24 ur od nakupa",
+                "cena": "1,30€"
+            }
+        ],
+        "dnevni": {
+            "stanje": "Odprto",
+            "prosta": null,
+            "naVoljo": null
+        },
+        "abonenti": {
+            "naVoljo": "",
+            "oddana": null,
+            "prosta": null,
+            "cakalnaVrsta": null
+        }
+    },
+    {
+        "lokacija": "Parkirišče PH Ilirija",
+        "opis": "",
+        "latitude": null,
+        "longitude": null,
+        "stMestBus": 0,
+        "stMestInv": 0,
+        "dnevni": {
+            "stanje": "Odprto",
+            "prosta": null,
+            "naVoljo": null
+        },
+        "abonenti": {
+            "naVoljo": "",
+            "oddana": null,
+            "prosta": null,
+            "cakalnaVrsta": null
+        }
+    }
+]

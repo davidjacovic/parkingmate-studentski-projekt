@@ -1,0 +1,32 @@
+IDENTIFIKACIJA OSNOVNIH ENTITET V MESTU
+1.	City
+2.	Building
+3.	Road
+4.	Park
+5.	River
+6.	Tree
+7.	Junction
+8.	Parking
+9.	Marker 
+
+NAČRTOVANJE KLJUČNIH RELACIJ MED ENTITETAMI
+1.	city  identifier { BLOCKS }
+Blok city predstavlja mesto, ki ga opisujemo. Vsebuje lahko bloke za opis cest, zgradb, parkov, rek, dreves, križišč in označevalcev. To je glavni in osnovni element jezika, saj predstavlja kontekst za vse druge infrastrukturne enote.
+2.	building identifier {COMMANDS}
+Blok building predstavlja zgradbo. Vsebuje lahko ukaze za izris, ki izrišejo obrobo zapolnjenega lika. Obroba mora biti zaprta (začetna in končna točka morata sovpadati), saj se le tako lahko pravilno prikaže zapolnjen objekt.
+3.	road identifier {COMMANDS}
+Blok road predstavlja cesto. Lahko vsebuje ukaze za izris črt, ki definirajo potek ceste skozi mesto. Uporablja se za prikaz prometnih povezav med različnimi območji.
+
+4.	park identifier {COMMANDS}
+Blok park predstavlja parkovno površino ali zelenico. Vsebuje ukaze za izris zapolnjenega območja, pogosto s poudarkom na naravnih ali rekreativnih elementih. Obroba mora biti zaprta, podobno kot pri zgradbah.
+5.	river identifier {COMMANDS}
+Blok river opisuje potek reke. Ukazi znotraj bloka omogočajo risanje linij ali oblike, ki prikazujejo tok vodne površine. Lahko vključuje tudi širino ali krivulje reke za bolj realistično upodobitev.
+6.	tree {COMMANDS}
+Blok tree predstavlja posamezno drevo ali skupino dreves. Ukazi definirajo pozicijo dreves na karti, pogosto kot točke. Ta element poveča realizem in okoljsko vrednost predstavitve.
+7.	junction {COMMANDS}
+Blok junction predstavlja križišče cest. Uporablja se za definiranje točk, kjer se več cest sreča ali križa. Lahko vključuje dodatne vizualne oznake za orientacijo na zemljevidu.
+8.	marker identifier {COMMANDS}
+Blok marker se uporablja za postavljanje posebnih oznak na zemljevid, kot so turistične točke, znamenitosti, parkirišča ali druge pomembne lokacije. Markerji so pogosto prikazani kot ikone ali simboli.
+
+
+
