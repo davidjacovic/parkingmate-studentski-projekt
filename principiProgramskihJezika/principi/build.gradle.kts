@@ -43,6 +43,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("io.github.serpro69:kotlin-faker:1.14.0")
     implementation("org.slf4j:slf4j-simple:2.0.9")
+    implementation("at.favre.lib:bcrypt:0.9.0")
+
 
 
 

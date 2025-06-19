@@ -6,6 +6,8 @@ import org.litote.kmongo.eq
 import org.litote.kmongo.getCollection
 import org.litote.kmongo.findOne
 import org.litote.kmongo.ne
+import org.litote.kmongo.and
+
 
 class TariffRepository {
 
@@ -53,4 +55,17 @@ class TariffRepository {
     fun findByParkingLocation(locationId: String): List<Tariff> {
         return collection.find(Tariff::parking_location eq ObjectId(locationId)).toList()
     }
+    fun findMatching(tariff: Tariff): Tariff? {
+        return collection.findOne(
+            and(
+                Tariff::tariff_type eq tariff.tariff_type,
+                Tariff::duration eq tariff.duration,
+                Tariff::vehicle_type eq tariff.vehicle_type,
+                Tariff::price eq tariff.price,
+                Tariff::price_unit eq tariff.price_unit,
+                Tariff::parking_location eq tariff.parking_location
+            )
+        )
+    }
+
 }

@@ -35,6 +35,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.coroutines.launch
 import org.example.FakeDataGenerator.generateFakeVehicleForUser
 import org.example.FakeDataGenerator.generateFakeReview
+import at.favre.lib.crypto.bcrypt.BCrypt
+
 
 
 @Composable
@@ -372,7 +374,7 @@ fun AddUserScreen(
                     surname = surname,
                     username = username,
                     email = email,
-                    password_hash = password,
+                    password_hash = BCrypt.withDefaults().hashToString(12, password.toCharArray()),
                     phone_number = phoneNumber,
                     credit_card_number = creditCard,
                     user_type = userType,
@@ -530,8 +532,7 @@ fun UserCard(user: User, onClick: () -> Unit) {
         ) {
             Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFF00796B))
             Spacer(Modifier.height(10.dp))
-            Text(user.name ?: "", fontSize = 16.sp)
-            Text(user.surname ?: "", fontSize = 20.sp, color = Color.Black)
+            Text(user.username ?: "", fontSize = 16.sp)
         }
     }
 }
@@ -557,13 +558,19 @@ fun EditUserScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
 
+    val hashedPassword = if (password != user.password_hash) {
+        BCrypt.withDefaults().hashToString(12, password.toCharArray())
+    } else {
+        password
+    }
+
     fun validateAndSave() {
         val updatedUser = user.copy(
             name = name,
             surname = surname,
             username = username,
             email = email,
-            password_hash = password,
+            password_hash = hashedPassword,
             phone_number = phone,
             credit_card_number = creditCard,
             user_type = userType,
@@ -576,9 +583,9 @@ fun EditUserScreen(
             !updatedUser.isEmailValid() -> errorMessage = "Invalid email format"
             !updatedUser.isPasswordValid() -> errorMessage = "You need stronger password"
             !updatedUser.isPhoneNumberValid() -> errorMessage = "Invalid phone number"
-            !updatedUser.isCreditCardValid() -> errorMessage = "Invalid credit card number"
+            //!updatedUser.isCreditCardValid() -> errorMessage = "Invalid credit card number"
             !updatedUser.isUserTypeValid() -> errorMessage = "User type must be 'admin' or 'user'"
-            vehicles.isEmpty() -> errorMessage = "You must add at least one vehicle"
+            //vehicles.isEmpty() -> errorMessage = "You must add at least one vehicle"
             else -> {
                 errorMessage = null
                 onSave(updatedUser)
@@ -786,6 +793,7 @@ fun ParkingLocationAdminUI(
     var selectedLocationForEdit by remember { mutableStateOf<ParkingLocation?>(null) }
     var selectedLocationForTariff by remember { mutableStateOf<ParkingLocation?>(null) }
 
+
     MaterialTheme {
         Column {
             TopAppBar(
@@ -916,10 +924,10 @@ fun AddParkingLocationScreen(
             hidden = false
         )
 
-        if (!location.isValid()) {
-            errorMessage = "Parking location data is invalid."
-            return
-        }
+      //  if (!location.isValid()) {
+        //    errorMessage = "Parking location data is invalid."
+          //  return
+        //}
 
         val updatedTariffs = tariffs.map { it.copy(parking_location = location.id) }
 
@@ -1318,10 +1326,6 @@ fun AddTariffScreen(
             hidden = false
         )
 
-        if (!newTariff.isValid()) {
-            errorMessage = "Invalid tariff data"
-            return
-        }
 
         onSave(newTariff)
     }
@@ -1430,7 +1434,7 @@ fun ReviewAdminUI(
                                     options = users,
                                     selected = selectedUser,
                                     onSelect = { selectedUser = it },
-                                    displayText = { it.name ?: "Unknown" }
+                                    displayText = { it.username ?: "Unknown" }
                                 )
                                 Spacer(Modifier.height(16.dp))
 
@@ -1531,7 +1535,7 @@ fun ReviewAdminUI(
                                     options = users,
                                     selected = selectedUser,
                                     onSelect = { selectedUser = it },
-                                    displayText = { it.name ?: "Unknown" }
+                                    displayText = { it.username ?: "Unknown" }
                                 )
                                 Spacer(Modifier.height(16.dp))
 
@@ -1643,7 +1647,7 @@ fun PaymentAdminUI(
                                     options = users,
                                     selected = selectedUser,
                                     onSelect = { selectedUser = it },
-                                    displayText = { it.name ?: "Unknown" }
+                                    displayText = { it.username ?: "Unknown" }
                                 )
                                 Spacer(Modifier.height(16.dp))
 
@@ -1742,7 +1746,7 @@ fun PaymentAdminUI(
                                     options = users,
                                     selected = selectedUser,
                                     onSelect = { selectedUser = it },
-                                    displayText = { it.name ?: "Unknown" }
+                                    displayText = { it.username ?: "Unknown" }
                                 )
                                 Spacer(Modifier.height(16.dp))
                                 Text("Filter by Location", style = MaterialTheme.typography.subtitle1)
@@ -2348,7 +2352,7 @@ fun AddVehicleScreen(
             options = users,
             selected = selectedUser,
             onSelect = { selectedUser = it },
-            displayText = { "${it.name} ${it.surname}" }
+            displayText = { "${it.username}" }
         )
 
         Spacer(Modifier.height(8.dp))
@@ -2510,7 +2514,7 @@ fun GenerateFakeVehicleScreen() {
             options = users,
             selected = selectedUser,
             onSelect = { selectedUser = it },
-            displayText = { "${it.name} ${it.surname}" }
+            displayText = { "${it.username}" }
         )
 
         Spacer(Modifier.height(8.dp))

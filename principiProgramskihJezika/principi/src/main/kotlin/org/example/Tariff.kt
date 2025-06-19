@@ -23,15 +23,7 @@ data class Tariff(
     val parking_location: ObjectId? = null
 ) {
 
-    fun isValid(existingTariffs: List<Tariff> = emptyList()): Boolean {
-        return isTypeValid() &&
-                isDurationValid() &&
-                isVehicleTypeValid() &&
-                isPriceValid() &&
-                isPriceUnitValid() &&
-                isDatesValid() &&
-                !isOverlapping(existingTariffs)
-    }
+
 
     private fun isTypeValid(): Boolean {
         return !tariff_type.isNullOrBlank()
