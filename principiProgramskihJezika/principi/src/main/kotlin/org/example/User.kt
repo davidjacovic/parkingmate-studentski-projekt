@@ -58,7 +58,12 @@ data class User(
 
     fun isPasswordValid(): Boolean {
         if (password_hash.isNullOrBlank()) return false
+
+        // Skip validation if this is already a bcrypt-hashed password
+        if (password_hash.startsWith("\$2a\$") || password_hash.startsWith("\$2b\$")) return true
+
         return PASSWORD_REGEX.matcher(password_hash).matches()
     }
+
 }
 
