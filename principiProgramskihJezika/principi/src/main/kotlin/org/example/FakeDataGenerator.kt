@@ -8,6 +8,8 @@ import kotlin.random.Random
 import java.time.format.DateTimeFormatter
 import org.bson.types.ObjectId
 import org.example.User
+import at.favre.lib.crypto.bcrypt.BCrypt
+
 
 
 
@@ -57,13 +59,15 @@ object FakeDataGenerator {
         val creditCardNumber = List(16) { ('0'..'9').random() }.joinToString("")
         val phoneNumber = (30000000..39999999).random().toString()
         val now = LocalDateTime.now()
+        val hashedPassword = BCrypt.withDefaults().hashToString(12, plainPassword.toCharArray())
+
 
         return User(
             name = firstName,
             surname = lastName,
             username = username,
             email = email,
-            password_hash = plainPassword,
+            password_hash = hashedPassword,
             phone_number = phoneNumber,
             credit_card_number = creditCardNumber,
             user_type = if ((0..1).random() == 0) "user" else "admin",
