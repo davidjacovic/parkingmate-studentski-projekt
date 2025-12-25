@@ -56,7 +56,7 @@ configure(subprojects) {
 
 subprojects {
   version = "$projectVersion"
-  ext.appName = 'Parkingmate'
+  ext.appName = 'ParkingMate'
   repositories {
     mavenCentral()
 //    maven { url 'https://s01.oss.sonatype.org' }
@@ -69,4 +69,4 @@ subprojects {
   }
 }
 
-eclipse.project.name = 'Parkingmate' + '-parent'
+eclipse.project.name = 'ParkingMate' + '-parent'
