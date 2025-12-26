@@ -186,6 +186,21 @@ public class MapScreen extends BaseScreen {
         if (Gdx.input.isKeyPressed(Input.Keys.MINUS)) {
             camera.zoom += 0.02f;
         }
+        
+        // Keyboard pan controls: Arrow keys to move the map
+        float panSpeed = 3f * camera.zoom; // Pan speed scales with zoom level
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
+            camera.translate(-panSpeed, 0, 0);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) {
+            camera.translate(panSpeed, 0, 0);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.DOWN)) {
+            camera.translate(0, -panSpeed, 0);
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
+            camera.translate(0, panSpeed, 0);
+        }
     }
 
     private void clampCameraPosition() {
@@ -257,8 +272,10 @@ public class MapScreen extends BaseScreen {
 
         @Override
         public boolean pan(float x, float y, float deltaX, float deltaY) {
-            // Pan will be handled in Subtask 2.1.4
-            return false;
+            // Pan the camera by translating it opposite to the drag direction
+            // deltaX and deltaY are in screen coordinates, need to convert to world coordinates
+            camera.translate(-deltaX * camera.zoom, deltaY * camera.zoom);
+            return true;
         }
 
         @Override
