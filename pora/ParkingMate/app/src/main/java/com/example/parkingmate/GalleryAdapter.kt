@@ -1,5 +1,6 @@
 package com.example.parkingmate
 
+import android.content.Intent
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -23,7 +24,15 @@ class GalleryAdapter(private val images: List<File>) :
     override fun onBindViewHolder(holder: GalleryViewHolder, position: Int) {
         val file = images[position]
         holder.binding.imageView.setImageURI(Uri.fromFile(file))
+
+        holder.binding.root.setOnClickListener {
+            val context = holder.itemView.context
+            val intent = Intent(context, PhotoDetailActivity::class.java)
+            intent.putExtra("imagePath", file.absolutePath)
+            context.startActivity(intent)
+        }
     }
+
 
     override fun getItemCount() = images.size
 }
