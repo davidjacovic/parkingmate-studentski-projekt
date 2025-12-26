@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
         // Dugme za fotografisanje
         binding.btnCapture.setOnClickListener {
             val photoFile = File(
-                externalMediaDirs.firstOrNull() ?: filesDir,
+                getOutputDirectory(),
                 "parking_${System.currentTimeMillis()}.jpg"
             )
 
@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
                             "Photo saved: ${photoFile.absolutePath}",
                             Toast.LENGTH_SHORT
                         ).show()
-                        // 1.1.4: kasnije možeš prikazati preview
+                        Log.d("CameraX", "Photo saved at: ${photoFile.absolutePath}")
                     }
 
                     override fun onError(exception: ImageCaptureException) {
@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity() {
                             "Photo capture failed: ${exception.message}",
                             Toast.LENGTH_SHORT
                         ).show()
+                        Log.e("CameraX", "Photo capture failed", exception)
                     }
                 }
             )
@@ -71,6 +72,13 @@ class MainActivity : AppCompatActivity() {
                 REQUEST_CODE_PERMISSIONS
             )
         }
+    }
+
+    private fun getOutputDirectory(): File {
+        val mediaDir = externalMediaDirs.firstOrNull()?.let {
+            File(it, "ParkingMatePhotos").apply { mkdirs() }
+        }
+        return if (mediaDir != null && mediaDir.exists()) mediaDir else filesDir
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
@@ -102,8 +110,6 @@ class MainActivity : AppCompatActivity() {
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
             }
-
-            // Ako testiraš na laptopu bez back kamere, promeni na DEFAULT_FRONT_CAMERA
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             imageCapture = ImageCapture.Builder().build()
