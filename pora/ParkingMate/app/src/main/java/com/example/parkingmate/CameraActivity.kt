@@ -17,16 +17,21 @@ import androidx.core.content.ContextCompat
 import com.example.parkingmate.databinding.ActivityCameraBinding
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-import com.google.android.gms.location.Priority
 
 class CameraActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCameraBinding
     private var imageCapture: ImageCapture? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private var locationAvailable = false
+    private var lastLat: Double? = null
+    private var lastLon: Double? = null
+    private var lastTimestamp: Long? = null
 
     private val REQUEST_CODE_PERMISSIONS = 100
     private val REQUIRED_PERMISSIONS = arrayOf(
@@ -43,28 +48,84 @@ class CameraActivity : AppCompatActivity() {
 
         binding.btnCapture.setOnClickListener { takePhoto() }
 
-        if (allPermissionsGranted()) startCamera()
-        else ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+        if (allPermissionsGranted()) {
+            startCamera()
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                REQUIRED_PERMISSIONS,
+                REQUEST_CODE_PERMISSIONS
+            )
+        }
     }
 
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
         cameraProviderFuture.addListener({
+
             val cameraProvider = cameraProviderFuture.get()
+
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
             }
+
             imageCapture = ImageCapture.Builder().build()
+
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture)
+                cameraProvider.bindToLifecycle(
+                    this,
+                    CameraSelector.DEFAULT_BACK_CAMERA,
+                    preview,
+                    imageCapture
+                )
+                updateLocationAndTime()
+
             } catch (e: Exception) {
                 Log.e("CameraX", "Camera start failed", e)
             }
+
         }, ContextCompat.getMainExecutor(this))
     }
 
+    private fun updateLocationAndTime() {
+        getCurrentLocation { success, lat, lon, timestamp ->
+
+            if (success && lat != null && lon != null && timestamp != null) {
+
+                locationAvailable = true
+                lastLat = lat
+                lastLon = lon
+                lastTimestamp = timestamp
+
+                val formattedTime = SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm:ss",
+                    Locale.getDefault()
+                ).format(Date(timestamp))
+
+                binding.tvData.text =
+                    "Lat: $lat\nLon: $lon\nVreme: $formattedTime"
+
+            } else {
+
+                locationAvailable = false
+                binding.tvData.text =
+                    "Lokacija nije dostupna\nUključite GPS ili sačekajte signal"
+            }
+        }
+    }
+
     private fun takePhoto() {
+
+        if (!locationAvailable) {
+            Toast.makeText(
+                this,
+                "Nije moguće slikati bez dostupne lokacije",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
 
         imageCapture ?: return
 
@@ -73,7 +134,8 @@ class CameraActivity : AppCompatActivity() {
             "parking_${System.currentTimeMillis()}.jpg"
         )
 
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        val outputOptions =
+            ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
         imageCapture?.takePicture(
             outputOptions,
@@ -82,24 +144,26 @@ class CameraActivity : AppCompatActivity() {
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
 
-                    getCurrentLocation { lat, lon, timestamp ->
+                    val formattedTime = SimpleDateFormat(
+                        "yyyy-MM-dd HH:mm:ss",
+                        Locale.getDefault()
+                    ).format(Date(lastTimestamp!!))
 
-                        val formattedTime = SimpleDateFormat(
-                            "yyyy-MM-dd HH:mm:ss",
-                            Locale.getDefault()
-                        ).format(Date(timestamp))
+                    binding.tvData.text =
+                        "Lat: $lastLat\nLon: $lastLon\nVreme: $formattedTime"
 
-                        binding.tvData.text =
-                            "Lat: $lat\nLon: $lon\nVreme: $formattedTime"
+                    saveMetadata(
+                        photoFile,
+                        lastLat!!,
+                        lastLon!!,
+                        formattedTime
+                    )
 
-                        saveMetadata(photoFile, lat, lon, formattedTime)
-
-                        Toast.makeText(
-                            this@CameraActivity,
-                            "Slikano i sačuvani podaci",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    Toast.makeText(
+                        this@CameraActivity,
+                        "Slikano i sačuvani podaci",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
 
                 override fun onError(exception: ImageCaptureException) {
@@ -113,16 +177,17 @@ class CameraActivity : AppCompatActivity() {
         )
     }
 
-
     @SuppressLint("MissingPermission")
-    private fun getCurrentLocation(onLocation: (Double, Double, Long) -> Unit) {
+    private fun getCurrentLocation(
+        onResult: (Boolean, Double?, Double?, Long?) -> Unit
+    ) {
 
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            Toast.makeText(this, "Lokacija nije dozvoljena", Toast.LENGTH_SHORT).show()
+            onResult(false, null, null, null)
             return
         }
 
@@ -130,24 +195,35 @@ class CameraActivity : AppCompatActivity() {
             Priority.PRIORITY_HIGH_ACCURACY,
             null
         ).addOnSuccessListener { location ->
+
             if (location != null) {
                 val timestamp = System.currentTimeMillis()
-                onLocation(location.latitude, location.longitude, timestamp)
+                onResult(true, location.latitude, location.longitude, timestamp)
             } else {
-                Toast.makeText(this, "Lokacija nije dostupna", Toast.LENGTH_SHORT).show()
+                onResult(false, null, null, null)
             }
         }
     }
 
-    private fun saveMetadata(imageFile: File, lat: Double, lon: Double, time: String) {
-        val jsonFile = File(imageFile.parent, imageFile.nameWithoutExtension + ".json")
+    private fun saveMetadata(
+        imageFile: File,
+        lat: Double,
+        lon: Double,
+        time: String
+    ) {
+        val jsonFile = File(
+            imageFile.parent,
+            imageFile.nameWithoutExtension + ".json"
+        )
+
         val content = """
         {
           "lat": $lat,
           "lon": $lon,
           "time": "$time"
         }
-    """.trimIndent()
+        """.trimIndent()
+
         jsonFile.writeText(content)
     }
 
@@ -157,16 +233,34 @@ class CameraActivity : AppCompatActivity() {
         } ?: filesDir
     }
 
-    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-    }
+    private fun allPermissionsGranted() =
+        REQUIRED_PERMISSIONS.all {
+            ContextCompat.checkSelfPermission(
+                this,
+                it
+            ) == PackageManager.PERMISSION_GRANTED
+        }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
+
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) startCamera()
-            else {
-                Toast.makeText(this, "Permisije odbijene", Toast.LENGTH_SHORT).show()
+            if (allPermissionsGranted()) {
+                startCamera()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Permisije odbijene",
+                    Toast.LENGTH_SHORT
+                ).show()
                 finish()
             }
         }
