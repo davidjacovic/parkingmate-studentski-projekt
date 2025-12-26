@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Dugme za fotografisanjee
+        // Dugme za fotografisanje
         binding.btnCapture.setOnClickListener {
             val photoFile = File(
                 externalMediaDirs.firstOrNull() ?: filesDir,
