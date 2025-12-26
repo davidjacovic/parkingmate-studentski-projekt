@@ -92,9 +92,11 @@ class CameraActivity : AppCompatActivity() {
                         binding.tvData.text =
                             "Lat: $lat\nLon: $lon\nVreme: $formattedTime"
 
+                        saveMetadata(photoFile, lat, lon, formattedTime)
+
                         Toast.makeText(
                             this@CameraActivity,
-                            "Slikano sa vremenom i lokacijom",
+                            "Slikano i sačuvani podaci",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -137,6 +139,17 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveMetadata(imageFile: File, lat: Double, lon: Double, time: String) {
+        val jsonFile = File(imageFile.parent, imageFile.nameWithoutExtension + ".json")
+        val content = """
+        {
+          "lat": $lat,
+          "lon": $lon,
+          "time": "$time"
+        }
+    """.trimIndent()
+        jsonFile.writeText(content)
+    }
 
     private fun getOutputDirectory(): File {
         return externalMediaDirs.firstOrNull()?.let {
