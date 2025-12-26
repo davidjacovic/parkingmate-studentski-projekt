@@ -13,7 +13,9 @@ public class MapConstants {
     public static final Geolocation CENTER_GEOLOCATION = new Geolocation(46.0569, 14.5058);
     
     // Default zoom limits
-    public static final float MIN_ZOOM = 0.5f;
-    public static final float MAX_ZOOM = 3.0f;
+    // MIN_ZOOM: how much you can zoom in (smaller = more zoomed in)
+    // MAX_ZOOM: how much you can zoom out (larger = more zoomed out, see more area)
+    public static final float MIN_ZOOM = 0.3f;  // Can zoom in more
+    public static final float MAX_ZOOM = 5.0f;  // Can zoom out more to see larger area
 }
 
