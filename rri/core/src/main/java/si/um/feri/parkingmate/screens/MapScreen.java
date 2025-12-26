@@ -7,6 +7,7 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -19,6 +20,7 @@ import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import si.um.feri.parkingmate.ParkingMate;
 import si.um.feri.parkingmate.map.*;
 import si.um.feri.parkingmate.model.Marker;
@@ -47,6 +49,12 @@ public class MapScreen extends BaseScreen {
 
     // Marker size configuration (in pixels)
     private float markerSize = 64f; // Default size, can be adjusted
+    
+    // Selected marker for info panel
+    private Marker selectedMarker = null;
+    
+    // Font for info panel text
+    private BitmapFont font;
 
     public MapScreen(ParkingMate game) {
         this.game = game;
@@ -142,11 +150,31 @@ public class MapScreen extends BaseScreen {
         // Initialize sprite batch for marker textures
         spriteBatch = new SpriteBatch();
 
+        // Load font for info panel
+        loadFont();
+
         // Try to load marker textures (optional - will fallback to shapes if not found)
         loadMarkerTextures();
 
         // Initialize test markers (will be replaced with API data in EPIC 3)
         initializeTestMarkers();
+    }
+    
+    /**
+     * Loads font for info panel text rendering.
+     */
+    private void loadFont() {
+        try {
+            font = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"), false);
+            font.setColor(Color.WHITE);
+            // Scale down the font size (0.75 = 75% of original size, adjust as needed)
+            font.getData().setScale(0.75f);
+        } catch (Exception e) {
+            Gdx.app.error("MapScreen", "Failed to load font: fonts/arial-32.fnt", e);
+            // Use default font as fallback
+            font = new BitmapFont();
+            font.getData().setScale(0.75f);
+        }
     }
 
     /**
@@ -292,6 +320,143 @@ public class MapScreen extends BaseScreen {
 
             // Draw markers on top of the map
             drawMarkers();
+            
+            // Draw info panel if marker is selected
+            drawInfoPanel();
+        }
+    }
+    
+    /**
+     * Handles click on marker.
+     * Converts screen coordinates to world coordinates and checks if click is on a marker.
+     */
+    private void handleMarkerClick(float screenX, float screenY) {
+        if (beginTile == null || markers == null) {
+            return;
+        }
+        
+        // Convert screen coordinates to world coordinates
+        Vector3 worldPos = new Vector3(screenX, screenY, 0);
+        camera.unproject(worldPos);
+        
+        // Check each marker to see if click is within marker bounds
+        float clickRadius = markerSize / 2f + 5f; // Add some tolerance
+        
+        for (Marker marker : markers) {
+            Vector2 markerPixelPos = MapRasterTiles.getPixelPosition(
+                    marker.getPosition().lat,
+                    marker.getPosition().lng,
+                    beginTile.x,
+                    beginTile.y
+            );
+            
+            // Calculate distance from click to marker
+            float distance = Vector2.dst(
+                    worldPos.x, worldPos.y,
+                    markerPixelPos.x, markerPixelPos.y
+            );
+            
+            if (distance <= clickRadius) {
+                // Marker clicked!
+                selectedMarker = marker;
+                Gdx.app.debug("MapScreen", "Marker clicked: " + marker.getName());
+                return;
+            }
+        }
+        
+        // Click was not on any marker - deselect
+        selectedMarker = null;
+    }
+    
+    /**
+     * Draws info panel with marker information.
+     */
+    private void drawInfoPanel() {
+        if (selectedMarker == null) {
+            return;
+        }
+        
+        // Draw info panel using ShapeRenderer
+        if (shapeRenderer == null) {
+            return;
+        }
+        
+        float panelWidth = 300f;
+        float panelHeight = 150f;
+        float padding = 10f;
+        float screenWidth = Gdx.graphics.getWidth();
+        
+        // Position panel at bottom center
+        float panelX = (screenWidth - panelWidth) / 2f;
+        float panelY = padding;
+        
+        // Use orthographic camera for UI rendering (screen coordinates)
+        // Create a temporary camera for UI
+        com.badlogic.gdx.graphics.OrthographicCamera uiCamera = new com.badlogic.gdx.graphics.OrthographicCamera();
+        uiCamera.setToOrtho(false, screenWidth, Gdx.graphics.getHeight());
+        uiCamera.update();
+        
+        shapeRenderer.setProjectionMatrix(uiCamera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        
+        // Draw panel background (semi-transparent)
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.9f);
+        shapeRenderer.rect(panelX, panelY, panelWidth, panelHeight);
+        
+        // Draw border
+        shapeRenderer.setColor(0.5f, 0.5f, 0.5f, 1f);
+        shapeRenderer.rect(panelX, panelY, panelWidth, 2f); // Top border
+        shapeRenderer.rect(panelX, panelY + panelHeight - 2f, panelWidth, 2f); // Bottom border
+        shapeRenderer.rect(panelX, panelY, 2f, panelHeight); // Left border
+        shapeRenderer.rect(panelX + panelWidth - 2f, panelY, 2f, panelHeight); // Right border
+        
+        shapeRenderer.end();
+        
+        // Draw text with font
+        if (font != null && spriteBatch != null) {
+            spriteBatch.setProjectionMatrix(uiCamera.combined);
+            spriteBatch.begin();
+            
+            float textX = panelX + padding;
+            float textY = panelY + panelHeight - padding - 20f; // Start from top
+            
+            // Draw marker name
+            font.setColor(Color.WHITE);
+            font.draw(spriteBatch, selectedMarker.getName() != null ? selectedMarker.getName() : "Unknown", 
+                     textX, textY);
+            
+            textY -= 20f; // Smaller spacing for smaller font
+            
+            // Draw marker type
+            font.setColor(Color.LIGHT_GRAY);
+            font.draw(spriteBatch, "Type: " + selectedMarker.getType().name().replace("_", " "), 
+                     textX, textY);
+            
+            textY -= 20f; // Smaller spacing for smaller font
+            
+            // Draw occupancy info
+            if (selectedMarker.getTotalSpots() > 0) {
+                font.setColor(getColorForState(selectedMarker.getState()));
+                String spotsInfo = String.format("Spots: %d/%d (%.0f%%)", 
+                    selectedMarker.getAvailableSpots(), 
+                    selectedMarker.getTotalSpots(),
+                    selectedMarker.getOccupancyPercentage());
+                font.draw(spriteBatch, spotsInfo, textX, textY);
+            } else {
+                font.setColor(Color.GRAY);
+                font.draw(spriteBatch, "Spots: Unknown", textX, textY);
+            }
+            
+            textY -= 20f; // Smaller spacing for smaller font
+            
+            // Draw price if available
+            if (selectedMarker.getPricePerHour() > 0) {
+                font.setColor(Color.LIGHT_GRAY);
+                font.draw(spriteBatch, String.format("Price: %.2f €/h", selectedMarker.getPricePerHour()), 
+                         textX, textY);
+            }
+            
+            spriteBatch.end();
         }
     }
 
@@ -516,6 +681,9 @@ public class MapScreen extends BaseScreen {
         if (markerUnknownTexture != null) {
             markerUnknownTexture.dispose();
         }
+        if (font != null) {
+            font.dispose();
+        }
     }
 
     /**
@@ -530,6 +698,10 @@ public class MapScreen extends BaseScreen {
 
         @Override
         public boolean tap(float x, float y, int count, int button) {
+            // Handle marker click
+            if (count == 1) { // Single tap
+                handleMarkerClick(x, y);
+            }
             return false;
         }
 
