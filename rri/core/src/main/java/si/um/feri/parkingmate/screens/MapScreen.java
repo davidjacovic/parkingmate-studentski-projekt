@@ -1,15 +1,21 @@
 package si.um.feri.parkingmate.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.maps.MapLayers;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import si.um.feri.parkingmate.ParkingMate;
 import si.um.feri.parkingmate.map.*;
 
@@ -22,6 +28,7 @@ public class MapScreen extends BaseScreen {
     private TiledMapRenderer tiledMapRenderer;
     private Texture[] mapTiles;
     private ZoomXY beginTile; // top left tile
+    private GestureDetector gestureDetector;
 
     public MapScreen(ParkingMate game) {
         this.game = game;
@@ -106,6 +113,9 @@ public class MapScreen extends BaseScreen {
 
         // Setup camera
         setupCamera();
+        
+        // Setup input handlers for zoom and pan
+        setupInputHandlers();
     }
 
     private void setupCamera() {
@@ -117,15 +127,92 @@ public class MapScreen extends BaseScreen {
         camera.update();
     }
 
+    private void setupInputHandlers() {
+        // Create gesture detector for zoom and pan
+        gestureDetector = new GestureDetector(new MapGestureListener());
+        
+        // Create input adapter for scroll wheel
+        InputAdapter scrollInputAdapter = new InputAdapter() {
+            @Override
+            public boolean scrolled(float amountX, float amountY) {
+                // amountY > 0 means scroll up (zoom in), < 0 means scroll down (zoom out)
+                float zoomSpeed = 0.1f;
+                camera.zoom += amountY * zoomSpeed;
+                camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
+                return true;
+            }
+        };
+        
+        // Use InputMultiplexer to handle gestures, scroll, and keyboard input
+        InputMultiplexer inputMultiplexer = new InputMultiplexer();
+        inputMultiplexer.addProcessor(scrollInputAdapter);
+        inputMultiplexer.addProcessor(gestureDetector);
+        Gdx.input.setInputProcessor(inputMultiplexer);
+    }
+
     @Override
     public void render(float delta) {
+        handleKeyboardInput();
+        
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if (tiledMapRenderer != null && tiledMap != null) {
+            // Clamp zoom to valid range
+            camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
+            
+            // Clamp camera position to map bounds
+            clampCameraPosition();
+            
             camera.update();
             tiledMapRenderer.setView(camera);
             tiledMapRenderer.render();
+        }
+    }
+
+    private void handleKeyboardInput() {
+        // Keyboard zoom controls: Q for zoom in, A for zoom out
+        if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
+            camera.zoom -= 0.02f;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            camera.zoom += 0.02f;
+        }
+        
+        // Alternative: + and - keys
+        if (Gdx.input.isKeyPressed(Input.Keys.PLUS) || Gdx.input.isKeyPressed(Input.Keys.EQUALS)) {
+            camera.zoom -= 0.02f;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.MINUS)) {
+            camera.zoom += 0.02f;
+        }
+    }
+
+    private void clampCameraPosition() {
+        float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
+        float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
+
+        // Only clamp if viewport is smaller than map (don't clamp when zoomed out too much)
+        if (effectiveViewportWidth < MapConstants.MAP_WIDTH) {
+            camera.position.x = MathUtils.clamp(
+                    camera.position.x,
+                    effectiveViewportWidth / 2f,
+                    MapConstants.MAP_WIDTH - effectiveViewportWidth / 2f
+            );
+        } else {
+            // When zoomed out, center the camera
+            camera.position.x = MapConstants.MAP_WIDTH / 2f;
+        }
+
+        if (effectiveViewportHeight < MapConstants.MAP_HEIGHT) {
+            camera.position.y = MathUtils.clamp(
+                    camera.position.y,
+                    effectiveViewportHeight / 2f,
+                    MapConstants.MAP_HEIGHT - effectiveViewportHeight / 2f
+            );
+        } else {
+            // When zoomed out, center the camera
+            camera.position.y = MapConstants.MAP_HEIGHT / 2f;
         }
     }
 
@@ -140,6 +227,62 @@ public class MapScreen extends BaseScreen {
                     texture.dispose();
                 }
             }
+        }
+    }
+
+    /**
+     * Gesture listener for map interactions (zoom and pan).
+     */
+    private class MapGestureListener implements GestureDetector.GestureListener {
+
+        @Override
+        public boolean touchDown(float x, float y, int pointer, int button) {
+            return false;
+        }
+
+        @Override
+        public boolean tap(float x, float y, int count, int button) {
+            return false;
+        }
+
+        @Override
+        public boolean longPress(float x, float y) {
+            return false;
+        }
+
+        @Override
+        public boolean fling(float velocityX, float velocityY, int button) {
+            return false;
+        }
+
+        @Override
+        public boolean pan(float x, float y, float deltaX, float deltaY) {
+            // Pan will be handled in Subtask 2.1.4
+            return false;
+        }
+
+        @Override
+        public boolean panStop(float x, float y, int pointer, int button) {
+            return false;
+        }
+
+        @Override
+        public boolean zoom(float initialDistance, float distance) {
+            // Zoom in/out based on gesture distance
+            float ratio = initialDistance / distance;
+            camera.zoom *= ratio;
+            camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
+            return true;
+        }
+
+        @Override
+        public boolean pinch(Vector2 initialPointer1, Vector2 initialPointer2, Vector2 pointer1, Vector2 pointer2) {
+            return false;
+        }
+
+        @Override
+        public void pinchStop() {
+            // Not used
         }
     }
 }
