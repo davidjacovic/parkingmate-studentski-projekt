@@ -107,15 +107,21 @@ public class MapRasterTiles {
      * @throws IOException if tile cannot be fetched
      */
     public static ByteArrayOutputStream fetchTile(URL url) throws IOException {
-        ByteArrayOutputStream bis = new ByteArrayOutputStream();
-        InputStream is = url.openStream();
-        byte[] bytebuff = new byte[4096];
-        int n;
+        try {
+            ByteArrayOutputStream bis = new ByteArrayOutputStream();
+            InputStream is = url.openStream();
+            byte[] bytebuff = new byte[4096];
+            int n;
 
-        while ((n = is.read(bytebuff)) > 0) {
-            bis.write(bytebuff, 0, n);
+            while ((n = is.read(bytebuff)) > 0) {
+                bis.write(bytebuff, 0, n);
+            }
+            is.close();
+            return bis;
+        } catch (java.net.HttpRetryException | java.io.FileNotFoundException e) {
+            throw new IOException("Failed to fetch tile from: " + url + ". Error: " + e.getMessage() + 
+                    ". Make sure your API key is set correctly in Keys.GEOAPIFY", e);
         }
-        return bis;
     }
 
     /**

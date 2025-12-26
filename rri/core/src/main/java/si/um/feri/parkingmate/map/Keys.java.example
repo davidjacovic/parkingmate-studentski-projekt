@@ -1,0 +1,23 @@
+package si.um.feri.parkingmate.map;
+
+/**
+ * API keys for map services.
+ *
+ * To get a free Geoapify API key:
+ * 1. Go to https://www.geoapify.com/
+ * 2. Sign up for a free account
+ * 3. Navigate to API Keys section
+ * 4. Copy your API key and paste it below
+ *
+ * Free tier includes 3000 requests per day.
+ * 
+ * INSTRUCTIONS:
+ * 1. Copy this file to Keys.java
+ * 2. Add your API key in the GEOAPIFY field below
+ * 3. DO NOT commit Keys.java to version control
+ */
+public class Keys {
+    public static String MAPBOX = "";
+    public static String GEOAPIFY = ""; // Add your Geoapify API key here
+}
+
