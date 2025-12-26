@@ -24,4 +24,17 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginBottom="16dp"/>
 
+    <TextView
+        android:id="@+id/tvData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Lat: --\nLon: --\nVreme: --"
+        android:textColor="@android:color/white"
+        android:background="#66000000"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_margin="16dp"/>
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>
