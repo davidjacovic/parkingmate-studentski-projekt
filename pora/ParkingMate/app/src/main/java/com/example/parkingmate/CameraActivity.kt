@@ -3,8 +3,6 @@ package com.example.parkingmate
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -17,17 +15,18 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.parkingmate.databinding.ActivityCameraBinding
-import com.google.android.gms.location.*
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import java.io.File
-import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.*
+import com.google.android.gms.location.Priority
 
 class CameraActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityCameraBinding
     private var imageCapture: ImageCapture? = null
-
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var logFile: File
 
     private val REQUEST_CODE_PERMISSIONS = 100
     private val REQUIRED_PERMISSIONS = arrayOf(
@@ -41,52 +40,34 @@ class CameraActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        logFile = File(filesDir, "parking_data.txt")
 
-        checkGpsEnabled()
+        binding.btnCapture.setOnClickListener { takePhoto() }
 
-        binding.btnCapture.setOnClickListener {
-            takePhoto()
-        }
-
-        if (allPermissionsGranted()) {
-            startCamera()
-        } else {
-            ActivityCompat.requestPermissions(
-                this,
-                REQUIRED_PERMISSIONS,
-                REQUEST_CODE_PERMISSIONS
-            )
-        }
+        if (allPermissionsGranted()) startCamera()
+        else ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
     }
+
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
-
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
             }
-
             imageCapture = ImageCapture.Builder().build()
-
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this,
-                    CameraSelector.DEFAULT_BACK_CAMERA,
-                    preview,
-                    imageCapture
-                )
+                cameraProvider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageCapture)
             } catch (e: Exception) {
                 Log.e("CameraX", "Camera start failed", e)
             }
-
         }, ContextCompat.getMainExecutor(this))
     }
 
     private fun takePhoto() {
+
+        imageCapture ?: return
+
         val photoFile = File(
             getOutputDirectory(),
             "parking_${System.currentTimeMillis()}.jpg"
@@ -100,25 +81,22 @@ class CameraActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    getLocation { lat, lon ->
-                        val timestamp = System.currentTimeMillis()
 
-                        val line = "${photoFile.name}, $lat, $lon, $timestamp\n"
-                        FileOutputStream(logFile, true).bufferedWriter().use {
-                            it.append(line)
-                        }
+                    getCurrentLocation { lat, lon, timestamp ->
+
+                        val formattedTime = SimpleDateFormat(
+                            "yyyy-MM-dd HH:mm:ss",
+                            Locale.getDefault()
+                        ).format(Date(timestamp))
 
                         binding.tvData.text =
-                            "Lat: $lat\nLon: $lon\nVreme: $timestamp"
+                            "Lat: $lat\nLon: $lon\nVreme: $formattedTime"
 
                         Toast.makeText(
                             this@CameraActivity,
-                            "Slika + lokacija sačuvani",
+                            "Slikano sa vremenom i lokacijom",
                             Toast.LENGTH_SHORT
                         ).show()
-
-                        Log.d("PARKING_DATA", "Upisano: $line")
-                        Log.d("PARKING_DATA", "Fajl: ${logFile.absolutePath}")
                     }
                 }
 
@@ -132,68 +110,52 @@ class CameraActivity : AppCompatActivity() {
             }
         )
     }
+
+
     @SuppressLint("MissingPermission")
-    private fun getLocation(onLocation: (lat: Double, lon: Double) -> Unit) {
-        val locationManager = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+    private fun getCurrentLocation(onLocation: (Double, Double, Long) -> Unit) {
 
-        val providers = locationManager.getProviders(true)
-        var bestLocation: Location? = null
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            Toast.makeText(this, "Lokacija nije dozvoljena", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        for (provider in providers) {
-            val l = locationManager.getLastKnownLocation(provider) ?: continue
-            if (bestLocation == null || l.accuracy < bestLocation.accuracy) {
-                bestLocation = l
+        fusedLocationClient.getCurrentLocation(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            null
+        ).addOnSuccessListener { location ->
+            if (location != null) {
+                val timestamp = System.currentTimeMillis()
+                onLocation(location.latitude, location.longitude, timestamp)
+            } else {
+                Toast.makeText(this, "Lokacija nije dostupna", Toast.LENGTH_SHORT).show()
             }
         }
-
-        if (bestLocation != null) {
-            onLocation(bestLocation.latitude, bestLocation.longitude)
-        } else {
-            Toast.makeText(this, "Lokacija nije dostupna", Toast.LENGTH_SHORT).show()
-            onLocation(0.0, 0.0)
-        }
     }
 
-    private fun checkGpsEnabled() {
-        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            Toast.makeText(
-                this,
-                "UKLJUČI GPS (Location) za tačne podatke",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
 
     private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
+        return externalMediaDirs.firstOrNull()?.let {
             File(it, "ParkingMatePhotos").apply { mkdirs() }
-
-        }
-        return mediaDir ?: filesDir
-        Log.d("FILE", "Data written to: ${logFile.absolutePath}")
-
+        } ?: filesDir
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera()
-            } else {
+            if (allPermissionsGranted()) startCamera()
+            else {
                 Toast.makeText(this, "Permisije odbijene", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
     }
-
 }
