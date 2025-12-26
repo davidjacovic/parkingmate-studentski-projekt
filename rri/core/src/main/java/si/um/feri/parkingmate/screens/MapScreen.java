@@ -14,7 +14,7 @@ public class MapScreen extends BaseScreen {
 
     @Override
     public void show() {
-        // inicijalizacija mape ide kasnije
+        // inicijalizacija mape ide kasnije (Subtask 2.1.2)
     }
 
     @Override
