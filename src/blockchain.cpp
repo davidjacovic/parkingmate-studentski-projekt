@@ -20,3 +20,13 @@ Block::Block(uint32_t index,
 {
 
 }
+string Block::serialize() const {
+    std::ostringstream ss;
+    ss << index
+       << data
+       << timestamp
+       << previousHash
+       << difficulty
+       << nonce;
+    return ss.str();
+}
