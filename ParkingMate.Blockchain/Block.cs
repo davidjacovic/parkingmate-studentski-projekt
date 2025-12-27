@@ -7,10 +7,10 @@ namespace ParkingMate.Blockchain
 {
     public class Block
     {
-        public uint Index { get; }
+        public uint Index { get; set; }
         public string Data { get; }
         public long Timestamp { get; }
-        public string PreviousHash { get; }
+        public string PreviousHash { get; set; }
         public uint Difficulty { get; }
         public ulong Nonce { get; set; }
         public string Hash { get; set; }

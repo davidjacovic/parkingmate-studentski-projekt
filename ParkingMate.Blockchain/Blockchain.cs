@@ -35,5 +35,16 @@ namespace ParkingMate.Blockchain
         {
             return chain[^1];
         }
+        public void AddBlock(Block newBlock)
+        {
+            var latest = GetLatestBlock();
+
+            newBlock.Index = latest.Index + 1;
+            newBlock.PreviousHash = latest.Hash;
+            newBlock.Hash = newBlock.CalculateHash();
+
+            chain.Add(newBlock);
+        }
+
     }
 }
