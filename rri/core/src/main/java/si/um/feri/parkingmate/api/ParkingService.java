@@ -1,7 +1,6 @@
 package si.um.feri.parkingmate.api;
 
 import com.badlogic.gdx.Gdx;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -68,40 +67,15 @@ public class ParkingService {
                 queryParams.putAll(filters);
             }
             
-            // Make API call - adjust endpoint based on your API structure
-            // Common endpoints: /parking-lots, /parking, /locations, etc.
-            JSONObject response = apiClient.get("/parking-lots", queryParams);
+            // Make API call to parkingLocations endpoint
+            // Backend returns array directly (res.json(array)), not wrapped in object
+            org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations", queryParams);
             
-            // Parse response - adjust based on your API response structure
+            // Parse response - backend returns array directly
             List<JSONObject> locations = new ArrayList<>();
             
-            // Check if response is an array
-            if (response.has("data") && response.get("data") instanceof JSONArray) {
-                JSONArray dataArray = response.getJSONArray("data");
-                for (int i = 0; i < dataArray.length(); i++) {
-                    locations.add(dataArray.getJSONObject(i));
-                }
-            } 
-            // Check if response is directly an array
-            else if (response.has("parkingLots") && response.get("parkingLots") instanceof JSONArray) {
-                JSONArray parkingLots = response.getJSONArray("parkingLots");
-                for (int i = 0; i < parkingLots.length(); i++) {
-                    locations.add(parkingLots.getJSONObject(i));
-                }
-            }
-            // Check if response is a list/array at root level
-            else if (response.has("results") && response.get("results") instanceof JSONArray) {
-                JSONArray results = response.getJSONArray("results");
-                for (int i = 0; i < results.length(); i++) {
-                    locations.add(results.getJSONObject(i));
-                }
-            }
-            // If response is directly an array (some APIs return arrays directly)
-            else {
-                // Try to parse as array - if this fails, we'll handle it
-                Gdx.app.debug("ParkingService", "Response structure: " + response.toString());
-                // For now, return empty list and log the structure
-                // This will be adjusted based on actual API response
+            for (int i = 0; i < responseArray.length(); i++) {
+                locations.add(responseArray.getJSONObject(i));
             }
             
             Gdx.app.debug("ParkingService", "Fetched " + locations.size() + " parking locations");
@@ -125,13 +99,10 @@ public class ParkingService {
      */
     public JSONObject fetchParkingLocationById(String parkingId) throws ApiClient.ApiException {
         try {
-            JSONObject response = apiClient.get("/parking-lots/" + parkingId);
+            // Backend endpoint: GET /parkingLocations/:id
+            JSONObject response = apiClient.get("/parkingLocations/" + parkingId);
             
-            // Adjust based on your API response structure
-            if (response.has("data")) {
-                return response.getJSONObject("data");
-            }
-            
+            // Backend returns object directly
             return response;
             
         } catch (ApiClient.ApiException e) {
@@ -141,39 +112,136 @@ public class ParkingService {
     }
     
     /**
-     * Fetches parking locations within a geographic area.
+     * Fetches nearby parking locations using geospatial search.
+     * Backend endpoint: GET /parkingLocations/nearby/search?lat=X&lng=Y&radius=Z
      * 
-     * @param minLat Minimum latitude
-     * @param minLng Minimum longitude
-     * @param maxLat Maximum latitude
-     * @param maxLng Maximum longitude
+     * @param lat Latitude
+     * @param lng Longitude
+     * @param radius Radius in meters
      * @return List of parking locations as JSONObjects
      * @throws ApiException if request fails
      */
-    public List<JSONObject> fetchParkingLocationsInArea(
-            double minLat, double minLng, double maxLat, double maxLng) throws ApiClient.ApiException {
-        
-        Map<String, String> filters = new HashMap<>();
-        filters.put("minLat", String.valueOf(minLat));
-        filters.put("minLng", String.valueOf(minLng));
-        filters.put("maxLat", String.valueOf(maxLat));
-        filters.put("maxLng", String.valueOf(maxLng));
-        
-        return fetchParkingLocations(filters);
+    public List<JSONObject> fetchNearbyParkingLocations(double lat, double lng, int radius) throws ApiClient.ApiException {
+        try {
+            Map<String, String> queryParams = new HashMap<>();
+            queryParams.put("lat", String.valueOf(lat));
+            queryParams.put("lng", String.valueOf(lng));
+            queryParams.put("radius", String.valueOf(radius));
+            
+            org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations/nearby/search", queryParams);
+            
+            List<JSONObject> locations = new ArrayList<>();
+            for (int i = 0; i < responseArray.length(); i++) {
+                locations.add(responseArray.getJSONObject(i));
+            }
+            
+            return locations;
+            
+        } catch (ApiClient.ApiException e) {
+            Gdx.app.error("ParkingService", "Failed to fetch nearby parking locations", e);
+            throw e;
+        }
     }
     
     /**
-     * Fetches parking locations by city.
+     * Fetches occupancy status for all parking locations.
+     * Backend endpoint: GET /parkingLocations/occupancy/status
+     * Returns occupancy percentage for each location.
      * 
-     * @param city City name
-     * @return List of parking locations as JSONObjects
+     * @return List of parking locations with occupancy data as JSONObjects
+     *         Each object contains: _id, name, address, location, occupancy (percentage)
      * @throws ApiException if request fails
      */
-    public List<JSONObject> fetchParkingLocationsByCity(String city) throws ApiClient.ApiException {
-        Map<String, String> filters = new HashMap<>();
-        filters.put("city", city);
-        
-        return fetchParkingLocations(filters);
+    public List<JSONObject> fetchOccupancyStatus() throws ApiClient.ApiException {
+        try {
+            org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations/occupancy/status");
+            
+            List<JSONObject> locations = new ArrayList<>();
+            for (int i = 0; i < responseArray.length(); i++) {
+                locations.add(responseArray.getJSONObject(i));
+            }
+            
+            Gdx.app.debug("ParkingService", "Fetched occupancy status for " + locations.size() + " locations");
+            return locations;
+            
+        } catch (ApiClient.ApiException e) {
+            Gdx.app.error("ParkingService", "Failed to fetch occupancy status", e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Fetches detailed occupancy data for a specific parking location.
+     * This includes all spot types (regular, invalid, bus).
+     * Backend endpoint: GET /parkingLocations/:id
+     * 
+     * @param parkingId Parking location ID
+     * @return JSONObject with detailed occupancy data including:
+     *         - total_regular_spots, available_regular_spots
+     *         - total_invalid_spots, available_invalid_spots
+     *         - total_bus_spots, available_bus_spots
+     * @throws ApiException if request fails
+     */
+    public JSONObject fetchOccupancyData(String parkingId) throws ApiClient.ApiException {
+        try {
+            // Use existing method to get full location data which includes occupancy
+            JSONObject location = fetchParkingLocationById(parkingId);
+            
+            // Location already contains all occupancy data
+            return location;
+            
+        } catch (ApiClient.ApiException e) {
+            Gdx.app.error("ParkingService", "Failed to fetch occupancy data for: " + parkingId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Fetches parking logs (historical occupancy data) for a specific location.
+     * Backend endpoint: GET /parkingLocations/:id/logs?from=DATE&to=DATE
+     * 
+     * @param parkingId Parking location ID
+     * @param fromDate Optional start date (ISO 8601 format or timestamp)
+     * @param toDate Optional end date (ISO 8601 format or timestamp)
+     * @return List of parking log entries as JSONObjects
+     *         Each log contains: timestamp, available_regular_spots, available_invalid_spots, available_bus_spots
+     * @throws ApiException if request fails
+     */
+    public List<JSONObject> fetchParkingLogs(String parkingId, String fromDate, String toDate) throws ApiClient.ApiException {
+        try {
+            Map<String, String> queryParams = new HashMap<>();
+            if (fromDate != null && !fromDate.isEmpty()) {
+                queryParams.put("from", fromDate);
+            }
+            if (toDate != null && !toDate.isEmpty()) {
+                queryParams.put("to", toDate);
+            }
+            
+            org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations/" + parkingId + "/logs", queryParams);
+            
+            List<JSONObject> logs = new ArrayList<>();
+            for (int i = 0; i < responseArray.length(); i++) {
+                logs.add(responseArray.getJSONObject(i));
+            }
+            
+            Gdx.app.debug("ParkingService", "Fetched " + logs.size() + " parking logs for location: " + parkingId);
+            return logs;
+            
+        } catch (ApiClient.ApiException e) {
+            Gdx.app.error("ParkingService", "Failed to fetch parking logs for: " + parkingId, e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Fetches parking logs for a specific location (without date filters).
+     * 
+     * @param parkingId Parking location ID
+     * @return List of parking log entries as JSONObjects
+     * @throws ApiException if request fails
+     */
+    public List<JSONObject> fetchParkingLogs(String parkingId) throws ApiClient.ApiException {
+        return fetchParkingLogs(parkingId, null, null);
     }
 }
 

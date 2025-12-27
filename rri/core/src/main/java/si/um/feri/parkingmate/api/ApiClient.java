@@ -58,6 +58,43 @@ public class ApiClient {
     }
     
     /**
+     * Performs a GET request that returns an array.
+     * 
+     * @param endpoint API endpoint
+     * @return JSONArray response
+     * @throws ApiException if request fails
+     */
+    public org.json.JSONArray getArray(String endpoint) throws ApiException {
+        return getArray(endpoint, null);
+    }
+    
+    /**
+     * Performs a GET request that returns an array with query parameters.
+     * 
+     * @param endpoint API endpoint
+     * @param queryParams Query parameters (key-value pairs)
+     * @return JSONArray response
+     * @throws ApiException if request fails
+     */
+    public org.json.JSONArray getArray(String endpoint, Map<String, String> queryParams) throws ApiException {
+        try {
+            String urlString = buildUrl(endpoint, queryParams);
+            URL url = new URL(urlString);
+            
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(CONNECT_TIMEOUT);
+            connection.setReadTimeout(READ_TIMEOUT);
+            connection.setRequestProperty("Accept", "application/json");
+            
+            return executeRequestAsArray(connection);
+            
+        } catch (IOException e) {
+            throw new ApiException("Failed to execute GET request: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
      * Performs a GET request with query parameters.
      * 
      * @param endpoint API endpoint
@@ -136,6 +173,63 @@ public class ApiClient {
             
         } catch (IOException e) {
             throw new ApiException("Failed to execute POST request: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Executes the HTTP request and returns the response as JSONArray.
+     */
+    private org.json.JSONArray executeRequestAsArray(HttpURLConnection connection) throws IOException, ApiException {
+        int responseCode = connection.getResponseCode();
+        
+        InputStream inputStream;
+        if (responseCode >= 200 && responseCode < 300) {
+            inputStream = connection.getInputStream();
+        } else {
+            inputStream = connection.getErrorStream();
+        }
+        
+        if (inputStream == null) {
+            throw new ApiException("No response from server. HTTP code: " + responseCode);
+        }
+        
+        // Read response
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(inputStream, StandardCharsets.UTF_8)
+        );
+        
+        StringBuilder response = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            response.append(line);
+        }
+        reader.close();
+        connection.disconnect();
+        
+        // Check for errors
+        if (responseCode < 200 || responseCode >= 300) {
+            String errorMessage = "HTTP Error " + responseCode;
+            try {
+                JSONObject errorJson = new JSONObject(response.toString());
+                if (errorJson.has("message")) {
+                    errorMessage = errorJson.getString("message");
+                } else if (errorJson.has("error")) {
+                    errorMessage = errorJson.getString("error");
+                }
+            } catch (Exception e) {
+                if (response.length() > 0) {
+                    errorMessage += ": " + response.toString();
+                }
+            }
+            throw new ApiException(errorMessage, responseCode);
+        }
+        
+        // Parse JSON array response
+        try {
+            return new org.json.JSONArray(response.toString());
+        } catch (Exception e) {
+            Gdx.app.error("ApiClient", "Failed to parse JSON array response: " + response.toString(), e);
+            throw new ApiException("Invalid JSON array response: " + e.getMessage(), e);
         }
     }
     
