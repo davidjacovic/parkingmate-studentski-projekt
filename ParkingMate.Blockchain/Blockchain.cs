@@ -31,5 +31,9 @@ namespace ParkingMate.Blockchain
             return genesis;
         }
 
+        public Block GetLatestBlock()
+        {
+            return chain[^1];
+        }
     }
 }
