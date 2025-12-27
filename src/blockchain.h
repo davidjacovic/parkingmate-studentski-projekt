@@ -19,6 +19,13 @@ public:
     uint32_t difficulty;
     uint64_t nonce;
     string hash;
+
+    Block(uint32_t index,
+          const std::string& data,
+          int64_t timestamp,
+          const std::string& previousHash,
+          uint32_t difficulty,
+          uint64_t nonce);
 };
 
 
