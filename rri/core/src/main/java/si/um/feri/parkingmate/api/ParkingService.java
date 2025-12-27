@@ -16,6 +16,7 @@ public class ParkingService {
     
     private ApiClient apiClient;
     private String baseUrl;
+    private boolean fallbackEnabled = true; // Enable fallback to empty results on errors
     
     /**
      * Constructor with base URL.
@@ -43,6 +44,23 @@ public class ParkingService {
     }
     
     /**
+     * Enables or disables fallback to empty results on errors.
+     * When enabled, methods return empty lists/null instead of throwing exceptions.
+     * @param enabled true to enable fallback, false to throw exceptions
+     */
+    public void setFallbackEnabled(boolean enabled) {
+        this.fallbackEnabled = enabled;
+    }
+    
+    /**
+     * Checks if fallback is enabled.
+     * @return true if fallback is enabled
+     */
+    public boolean isFallbackEnabled() {
+        return fallbackEnabled;
+    }
+    
+    /**
      * Fetches all parking locations from the API.
      * 
      * @return List of parking locations as JSONObjects
@@ -56,8 +74,8 @@ public class ParkingService {
      * Fetches parking locations with optional filters.
      * 
      * @param filters Optional filters (e.g., city, type, etc.)
-     * @return List of parking locations as JSONObjects
-     * @throws ApiException if request fails
+     * @return List of parking locations as JSONObjects, empty list on error if fallback enabled
+     * @throws ApiException if request fails and fallback is disabled
      */
     public List<JSONObject> fetchParkingLocations(Map<String, String> filters) throws ApiClient.ApiException {
         try {
@@ -82,10 +100,18 @@ public class ParkingService {
             return locations;
             
         } catch (ApiClient.ApiException e) {
-            Gdx.app.error("ParkingService", "Failed to fetch parking locations", e);
+            Gdx.app.error("ParkingService", "Failed to fetch parking locations: " + e.getMessage(), e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning empty list");
+                return new ArrayList<>();
+            }
             throw e;
         } catch (Exception e) {
             Gdx.app.error("ParkingService", "Unexpected error while fetching parking locations", e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning empty list");
+                return new ArrayList<>();
+            }
             throw new ApiClient.ApiException("Failed to parse parking locations: " + e.getMessage(), e);
         }
     }
@@ -94,8 +120,8 @@ public class ParkingService {
      * Fetches a single parking location by ID.
      * 
      * @param parkingId Parking location ID
-     * @return Parking location as JSONObject
-     * @throws ApiException if request fails
+     * @return Parking location as JSONObject, null on error if fallback enabled
+     * @throws ApiException if request fails and fallback is disabled
      */
     public JSONObject fetchParkingLocationById(String parkingId) throws ApiClient.ApiException {
         try {
@@ -106,7 +132,11 @@ public class ParkingService {
             return response;
             
         } catch (ApiClient.ApiException e) {
-            Gdx.app.error("ParkingService", "Failed to fetch parking location: " + parkingId, e);
+            Gdx.app.error("ParkingService", "Failed to fetch parking location: " + parkingId + " - " + e.getMessage(), e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning null");
+                return null;
+            }
             throw e;
         }
     }
@@ -118,8 +148,8 @@ public class ParkingService {
      * @param lat Latitude
      * @param lng Longitude
      * @param radius Radius in meters
-     * @return List of parking locations as JSONObjects
-     * @throws ApiException if request fails
+     * @return List of parking locations as JSONObjects, empty list on error if fallback enabled
+     * @throws ApiException if request fails and fallback is disabled
      */
     public List<JSONObject> fetchNearbyParkingLocations(double lat, double lng, int radius) throws ApiClient.ApiException {
         try {
@@ -138,7 +168,11 @@ public class ParkingService {
             return locations;
             
         } catch (ApiClient.ApiException e) {
-            Gdx.app.error("ParkingService", "Failed to fetch nearby parking locations", e);
+            Gdx.app.error("ParkingService", "Failed to fetch nearby parking locations: " + e.getMessage(), e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning empty list");
+                return new ArrayList<>();
+            }
             throw e;
         }
     }
@@ -150,7 +184,8 @@ public class ParkingService {
      * 
      * @return List of parking locations with occupancy data as JSONObjects
      *         Each object contains: _id, name, address, location, occupancy (percentage)
-     * @throws ApiException if request fails
+     *         Empty list on error if fallback enabled
+     * @throws ApiException if request fails and fallback is disabled
      */
     public List<JSONObject> fetchOccupancyStatus() throws ApiClient.ApiException {
         try {
@@ -165,7 +200,11 @@ public class ParkingService {
             return locations;
             
         } catch (ApiClient.ApiException e) {
-            Gdx.app.error("ParkingService", "Failed to fetch occupancy status", e);
+            Gdx.app.error("ParkingService", "Failed to fetch occupancy status: " + e.getMessage(), e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning empty list");
+                return new ArrayList<>();
+            }
             throw e;
         }
     }
@@ -180,7 +219,8 @@ public class ParkingService {
      *         - total_regular_spots, available_regular_spots
      *         - total_invalid_spots, available_invalid_spots
      *         - total_bus_spots, available_bus_spots
-     * @throws ApiException if request fails
+     *         null on error if fallback enabled
+     * @throws ApiException if request fails and fallback is disabled
      */
     public JSONObject fetchOccupancyData(String parkingId) throws ApiClient.ApiException {
         try {
@@ -191,7 +231,11 @@ public class ParkingService {
             return location;
             
         } catch (ApiClient.ApiException e) {
-            Gdx.app.error("ParkingService", "Failed to fetch occupancy data for: " + parkingId, e);
+            Gdx.app.error("ParkingService", "Failed to fetch occupancy data for: " + parkingId + " - " + e.getMessage(), e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning null");
+                return null;
+            }
             throw e;
         }
     }
@@ -205,7 +249,8 @@ public class ParkingService {
      * @param toDate Optional end date (ISO 8601 format or timestamp)
      * @return List of parking log entries as JSONObjects
      *         Each log contains: timestamp, available_regular_spots, available_invalid_spots, available_bus_spots
-     * @throws ApiException if request fails
+     *         Empty list on error if fallback enabled
+     * @throws ApiException if request fails and fallback is disabled
      */
     public List<JSONObject> fetchParkingLogs(String parkingId, String fromDate, String toDate) throws ApiClient.ApiException {
         try {
@@ -228,7 +273,11 @@ public class ParkingService {
             return logs;
             
         } catch (ApiClient.ApiException e) {
-            Gdx.app.error("ParkingService", "Failed to fetch parking logs for: " + parkingId, e);
+            Gdx.app.error("ParkingService", "Failed to fetch parking logs for: " + parkingId + " - " + e.getMessage(), e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning empty list");
+                return new ArrayList<>();
+            }
             throw e;
         }
     }
