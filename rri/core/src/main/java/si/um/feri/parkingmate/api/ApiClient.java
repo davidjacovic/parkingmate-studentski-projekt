@@ -21,7 +21,11 @@ public class ApiClient {
     
     private static final int CONNECT_TIMEOUT = 5000; // 5 seconds
     private static final int READ_TIMEOUT = 10000; // 10 seconds
+    private static final int MAX_RETRIES = 3; // Maximum number of retry attempts
+    private static final long RETRY_DELAY_MS = 1000; // Delay between retries (1 second)
+    
     private String baseUrl;
+    private boolean retryEnabled = true;
     
     /**
      * Constructor with base URL.
@@ -44,6 +48,22 @@ public class ApiClient {
      */
     public void setBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+    }
+    
+    /**
+     * Enables or disables automatic retry on failures.
+     * @param enabled true to enable retries, false to disable
+     */
+    public void setRetryEnabled(boolean enabled) {
+        this.retryEnabled = enabled;
+    }
+    
+    /**
+     * Checks if retry is enabled.
+     * @return true if retries are enabled
+     */
+    public boolean isRetryEnabled() {
+        return retryEnabled;
     }
     
     /**
@@ -77,6 +97,13 @@ public class ApiClient {
      * @throws ApiException if request fails
      */
     public org.json.JSONArray getArray(String endpoint, Map<String, String> queryParams) throws ApiException {
+        return getArrayWithRetry(endpoint, queryParams, 0);
+    }
+    
+    /**
+     * Internal method to perform GET request with retry logic.
+     */
+    private org.json.JSONArray getArrayWithRetry(String endpoint, Map<String, String> queryParams, int attempt) throws ApiException {
         try {
             String urlString = buildUrl(endpoint, queryParams);
             URL url = new URL(urlString);
@@ -90,6 +117,16 @@ public class ApiClient {
             return executeRequestAsArray(connection);
             
         } catch (IOException e) {
+            // Check if we should retry
+            if (retryEnabled && attempt < MAX_RETRIES && isRetryableError(e)) {
+                Gdx.app.debug("ApiClient", "Retrying GET request (attempt " + (attempt + 1) + "/" + MAX_RETRIES + ")");
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                return getArrayWithRetry(endpoint, queryParams, attempt + 1);
+            }
             throw new ApiException("Failed to execute GET request: " + e.getMessage(), e);
         }
     }
@@ -103,6 +140,13 @@ public class ApiClient {
      * @throws ApiException if request fails
      */
     public JSONObject get(String endpoint, Map<String, String> queryParams) throws ApiException {
+        return getWithRetry(endpoint, queryParams, 0);
+    }
+    
+    /**
+     * Internal method to perform GET request with retry logic.
+     */
+    private JSONObject getWithRetry(String endpoint, Map<String, String> queryParams, int attempt) throws ApiException {
         try {
             String urlString = buildUrl(endpoint, queryParams);
             URL url = new URL(urlString);
@@ -116,6 +160,16 @@ public class ApiClient {
             return executeRequest(connection);
             
         } catch (IOException e) {
+            // Check if we should retry
+            if (retryEnabled && attempt < MAX_RETRIES && isRetryableError(e)) {
+                Gdx.app.debug("ApiClient", "Retrying GET request (attempt " + (attempt + 1) + "/" + MAX_RETRIES + ")");
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                }
+                return getWithRetry(endpoint, queryParams, attempt + 1);
+            }
             throw new ApiException("Failed to execute GET request: " + e.getMessage(), e);
         }
     }
@@ -190,7 +244,8 @@ public class ApiClient {
         }
         
         if (inputStream == null) {
-            throw new ApiException("No response from server. HTTP code: " + responseCode);
+            String errorMsg = getErrorMessageForHttpCode(responseCode);
+            throw new ApiException(errorMsg, responseCode);
         }
         
         // Read response
@@ -208,7 +263,7 @@ public class ApiClient {
         
         // Check for errors
         if (responseCode < 200 || responseCode >= 300) {
-            String errorMessage = "HTTP Error " + responseCode;
+            String errorMessage = getErrorMessageForHttpCode(responseCode);
             try {
                 JSONObject errorJson = new JSONObject(response.toString());
                 if (errorJson.has("message")) {
@@ -247,7 +302,8 @@ public class ApiClient {
         }
         
         if (inputStream == null) {
-            throw new ApiException("No response from server. HTTP code: " + responseCode);
+            String errorMsg = getErrorMessageForHttpCode(responseCode);
+            throw new ApiException(errorMsg, responseCode);
         }
         
         // Read response
@@ -265,7 +321,7 @@ public class ApiClient {
         
         // Check for errors
         if (responseCode < 200 || responseCode >= 300) {
-            String errorMessage = "HTTP Error " + responseCode;
+            String errorMessage = getErrorMessageForHttpCode(responseCode);
             try {
                 JSONObject errorJson = new JSONObject(response.toString());
                 if (errorJson.has("message")) {
@@ -288,6 +344,53 @@ public class ApiClient {
         } catch (Exception e) {
             Gdx.app.error("ApiClient", "Failed to parse JSON response: " + response.toString(), e);
             throw new ApiException("Invalid JSON response: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Checks if an error is retryable (network errors, timeouts, 5xx server errors).
+     */
+    private boolean isRetryableError(IOException e) {
+        String message = e.getMessage().toLowerCase();
+        return message.contains("timeout") || 
+               message.contains("connection") || 
+               message.contains("network") ||
+               message.contains("refused");
+    }
+    
+    /**
+     * Gets a user-friendly error message for HTTP status codes.
+     */
+    private String getErrorMessageForHttpCode(int httpCode) {
+        switch (httpCode) {
+            case 400:
+                return "Bad request - Invalid parameters";
+            case 401:
+                return "Unauthorized - Authentication required";
+            case 403:
+                return "Forbidden - Access denied";
+            case 404:
+                return "Not found - Resource does not exist";
+            case 408:
+                return "Request timeout - Server took too long to respond";
+            case 429:
+                return "Too many requests - Rate limit exceeded";
+            case 500:
+                return "Internal server error - Server encountered an error";
+            case 502:
+                return "Bad gateway - Server is temporarily unavailable";
+            case 503:
+                return "Service unavailable - Server is down for maintenance";
+            case 504:
+                return "Gateway timeout - Server did not respond in time";
+            default:
+                if (httpCode >= 500) {
+                    return "Server error (HTTP " + httpCode + ")";
+                } else if (httpCode >= 400) {
+                    return "Client error (HTTP " + httpCode + ")";
+                } else {
+                    return "Unexpected response (HTTP " + httpCode + ")";
+                }
         }
     }
     
