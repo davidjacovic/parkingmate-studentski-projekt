@@ -52,3 +52,35 @@ Desktop.ini
 *.swp
 *.tgz
 *.bak
+
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / VS / VS Code
+.vs/
+.vscode/
+
+# NuGet
+packages/
+*.nupkg
+.nuget/
+
+# Test results
+TestResults/
+
+# Publish output
+publish/
+
+# Dotnet tools
+.dotnet/
+
+# Logs
+*.log
