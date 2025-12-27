@@ -51,5 +51,15 @@ namespace ParkingMate.Blockchain
             sb.AppendLine("}");
             return sb.ToString();
         }
+
+        public string CalculateHash()
+        {
+            using var sha256 = SHA256.Create();
+            byte[] inputBytes = Encoding.UTF8.GetBytes(Serialize());
+            byte[] hashBytes = sha256.ComputeHash(inputBytes);
+
+            return Convert.ToHexString(hashBytes).ToLower();
+        }
+
     }
 }
