@@ -29,6 +29,7 @@ public:
           uint64_t nonce);
 
     string serialize() const;
+    string toString() const;
 };
 
 

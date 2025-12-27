@@ -21,7 +21,7 @@ Block::Block(uint32_t index,
 
 }
 string Block::serialize() const {
-    std::ostringstream ss;
+    ostringstream ss;
     ss << index
        << data
        << timestamp
@@ -29,4 +29,18 @@ string Block::serialize() const {
        << difficulty
        << nonce;
     return ss.str();
+}
+string Block::toString() const {
+    ostringstream ss;
+    ss << "Block {\n"
+       << "  index: " << index << "\n"
+       << "  data: " << data << "\n"
+       << "  timestamp: " << timestamp << "\n"
+       << "  previousHash: " << previousHash << "\n"
+       << "  difficulty: " << difficulty << "\n"
+       << "  nonce: " << nonce << "\n"
+       << "  hash: " << hash << "\n"
+       << "}";
+    return ss.str();
+
 }
