@@ -8,6 +8,7 @@
 
 #include <string>
 #include <cstdint>
+#include <sstream>
 using namespace std;
 
 class Block {
@@ -26,6 +27,8 @@ public:
           const std::string& previousHash,
           uint32_t difficulty,
           uint64_t nonce);
+
+    string serialize() const;
 };
 
 
