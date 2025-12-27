@@ -43,8 +43,27 @@ namespace ParkingMate.Blockchain
             newBlock.PreviousHash = latest.Hash;
             newBlock.Hash = newBlock.CalculateHash();
 
+            if (!IsValidNewBlock(newBlock, latest))
+                throw new InvalidOperationException("Invalid block");
+
             chain.Add(newBlock);
         }
+        public bool IsValidNewBlock(Block current, Block previous)
+        {
+            if (current.Index != previous.Index + 1)
+                return false;
 
+            if (current.PreviousHash != previous.Hash)
+                return false;
+
+            if (current.Hash != current.CalculateHash())
+                return false;
+
+            string prefix = new string('0', (int)current.Difficulty);
+            if (!current.Hash.StartsWith(prefix))
+                return false;
+
+            return true;
+        }
     }
 }
