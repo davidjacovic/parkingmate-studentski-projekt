@@ -7,11 +7,7 @@ namespace ParkingMate.Blockchain
 {
     public class Block
     {
-<<<<<<< HEAD
         public uint Index { get; set; }
-=======
-        public uint Index { get; set;}
->>>>>>> 9aa9dd8 (PAR-335-PAR-335-Implementacija-strukture-blockchaina in dodan testni primer ta task)
         public string Data { get; }
         public long Timestamp { get; }
         public string PreviousHash { get; set; }
