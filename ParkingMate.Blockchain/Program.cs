@@ -15,8 +15,11 @@ namespace ParkingMate.Blockchain
                 0
             );
 
-            Console.WriteLine(block.Serialize());
-            Console.WriteLine(block);
+            //Console.WriteLine(block.Serialize());
+            //Console.WriteLine(block);
+
+            string hash = block.CalculateHash();
+            Console.WriteLine(hash);
         }
     }
 }
