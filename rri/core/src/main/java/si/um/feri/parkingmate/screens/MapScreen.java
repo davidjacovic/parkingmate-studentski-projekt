@@ -22,8 +22,11 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import si.um.feri.parkingmate.ParkingMate;
+import si.um.feri.parkingmate.api.ParkingMapper;
+import si.um.feri.parkingmate.api.ParkingService;
 import si.um.feri.parkingmate.map.*;
 import si.um.feri.parkingmate.model.Marker;
+import si.um.feri.parkingmate.model.Parking;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,10 +58,18 @@ public class MapScreen extends BaseScreen {
     
     // Font for info panel text
     private BitmapFont font;
+    
+    // API service for fetching parking data
+    private ParkingService parkingService;
+    
+    // Backend API base URL (backend runs on port 3002)
+    // Change this if your backend runs on a different URL
+    private static final String API_BASE_URL = "http://localhost:3002";
 
     public MapScreen(ParkingMate game) {
         this.game = game;
         this.markers = new ArrayList<>();
+        this.parkingService = new ParkingService(API_BASE_URL);
     }
 
     @Override
@@ -156,8 +167,8 @@ public class MapScreen extends BaseScreen {
         // Try to load marker textures (optional - will fallback to shapes if not found)
         loadMarkerTextures();
 
-        // Initialize test markers (will be replaced with API data in EPIC 3)
-        initializeTestMarkers();
+        // Load parking locations from API
+        loadParkingLocationsFromAPI();
     }
     
     /**
@@ -218,8 +229,96 @@ public class MapScreen extends BaseScreen {
     }
 
     /**
-     * Initialize test markers for demonstration.
-     * In EPIC 3, this will be replaced with data from API.
+     * Loads parking locations from the API and converts them to markers.
+     * This runs in a separate thread to avoid blocking the UI.
+     */
+    private void loadParkingLocationsFromAPI() {
+        // Run API call in a separate thread to avoid blocking the UI
+        new Thread(() -> {
+            try {
+                Gdx.app.log("MapScreen", "Fetching parking locations from API...");
+                
+                // Fetch parking locations from API
+                List<org.json.JSONObject> jsonLocations = parkingService.fetchParkingLocations();
+                
+                // Map JSON to Parking models
+                List<Parking> parkingList = ParkingMapper.mapToParkingList(jsonLocations);
+                
+                Gdx.app.log("MapScreen", "Loaded " + parkingList.size() + " parking locations from API");
+                
+                // Convert Parking models to Marker models and add to markers list
+                // We need to do this on the main thread (libGDX thread)
+                final List<Parking> finalParkingList = parkingList;
+                Gdx.app.postRunnable(() -> {
+                    markers.clear();
+                    for (Parking parking : finalParkingList) {
+                        Marker marker = convertParkingToMarker(parking);
+                        if (marker != null) {
+                            markers.add(marker);
+                        }
+                    }
+                    Gdx.app.log("MapScreen", "Added " + markers.size() + " markers to map");
+                });
+                
+            } catch (Exception e) {
+                Gdx.app.error("MapScreen", "Failed to load parking locations from API", e);
+                Gdx.app.error("MapScreen", "Error: " + e.getMessage());
+                
+                // Fallback to test markers if API fails
+                Gdx.app.postRunnable(() -> {
+                    Gdx.app.log("MapScreen", "Using test markers as fallback");
+                    initializeTestMarkers();
+                });
+            }
+        }).start();
+    }
+    
+    /**
+     * Converts a Parking model to a Marker model for display on the map.
+     */
+    private Marker convertParkingToMarker(Parking parking) {
+        if (parking == null || parking.getLocation() == null) {
+            return null;
+        }
+        
+        // Determine marker type (default to PARKING_LOT)
+        Marker.MarkerType markerType = Marker.MarkerType.PARKING_LOT;
+        
+        // Determine marker state based on occupancy
+        Marker.MarkerState markerState;
+        int totalSpots = parking.getTotalSpots();
+        int availableSpots = parking.getTotalAvailableSpots();
+        
+        if (totalSpots == 0) {
+            markerState = Marker.MarkerState.UNKNOWN;
+        } else {
+            float occupancyRatio = (float) availableSpots / totalSpots;
+            if (occupancyRatio >= 0.5f) {
+                markerState = Marker.MarkerState.FREE;
+            } else if (occupancyRatio > 0f) {
+                markerState = Marker.MarkerState.PARTIAL;
+            } else {
+                markerState = Marker.MarkerState.FULL;
+            }
+        }
+        
+        // Create marker
+        Marker marker = new Marker(
+                parking.getLocation(),
+                markerType,
+                markerState,
+                parking.getId(),
+                parking.getName() != null ? parking.getName() : "Unknown",
+                totalSpots,
+                availableSpots,
+                0f // Price not available in backend model
+        );
+        
+        return marker;
+    }
+    
+    /**
+     * Initialize test markers for demonstration (fallback when API fails).
      */
     private void initializeTestMarkers() {
         // Test markers around Ljubljana center
