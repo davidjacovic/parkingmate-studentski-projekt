@@ -53,6 +53,10 @@ namespace ParkingMate.Blockchain
             if (current.PreviousHash != previous.Hash)
                 return false;
 
+            if (current.Hash != current.CalculateHash())
+                return false;
+
+
             return true;
         }
 
