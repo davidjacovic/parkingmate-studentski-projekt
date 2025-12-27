@@ -69,7 +69,11 @@ namespace ParkingMate.Blockchain
         {
             for (int i = 1; i < chain.Count; i++)
             {
-                
+                Block current = chain[i];
+                Block previous = chain[i - 1];
+
+                if (!IsValidNewBlock(current, previous))
+                    return false;
             }
             return true;
         }
