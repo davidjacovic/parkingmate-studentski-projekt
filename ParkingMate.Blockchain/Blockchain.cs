@@ -50,6 +50,9 @@ namespace ParkingMate.Blockchain
             if (current.Index != previous.Index + 1)
                 return false;
 
+            if (current.PreviousHash != previous.Hash)
+                return false;
+
             return true;
         }
 
