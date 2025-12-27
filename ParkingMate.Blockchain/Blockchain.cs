@@ -45,6 +45,14 @@ namespace ParkingMate.Blockchain
 
             chain.Add(newBlock);
         }
+        public bool IsValidNewBlock(Block current, Block previous)
+        {
+            if (current.Index != previous.Index + 1)
+                return false;
+
+            return true;
+        }
+
 
     }
 }
