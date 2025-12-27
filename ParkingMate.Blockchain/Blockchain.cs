@@ -42,9 +42,14 @@ namespace ParkingMate.Blockchain
             newBlock.Index = latest.Index + 1;
             newBlock.PreviousHash = latest.Hash;
             newBlock.Hash = newBlock.CalculateHash();
+<<<<<<< HEAD
 
             chain.Add(newBlock);
         }
 
     }
+=======
+            chain.Add(newBlock);
+
+>>>>>>> 9aa9dd8 (PAR-335-PAR-335-Implementacija-strukture-blockchaina in dodan testni primer ta task)
 }
