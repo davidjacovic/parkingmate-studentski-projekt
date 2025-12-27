@@ -8,16 +8,16 @@ namespace ParkingMate.Blockchain
         {
             var blockchain = new Blockchain();
 
-            blockchain.AddBlock(new Block(
+            var block = new Block(
                 0,
-                "First real block",
+                "Valid block",
                 DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 "",
-                2,
+                1,
                 0
-            ));
+            );
 
-            Console.WriteLine("=== Blockchain contents ===");
+            /*Console.WriteLine("=== Blockchain contents ===");
 
             foreach (var block in blockchain.Chain)
             {
@@ -28,7 +28,16 @@ namespace ParkingMate.Blockchain
             Console.WriteLine($"Block count: {blockchain.Chain.Count}");
             Console.WriteLine($"Genesis previousHash: {blockchain.Chain[0].PreviousHash}");
             Console.WriteLine($"Second block previousHash == genesis hash: " +
-                $"{blockchain.Chain[1].PreviousHash == blockchain.Chain[0].Hash}");
+                $"{blockchain.Chain[1].PreviousHash == blockchain.Chain[0].Hash}");*/
+            do
+            {
+                block.Hash = block.CalculateHash();
+                block.Nonce++;
+            }
+            while (!block.Hash.StartsWith("0"));
+
+            blockchain.AddBlock(block);
+            Console.WriteLine("Block added successfully.");
         }
     }
 }
