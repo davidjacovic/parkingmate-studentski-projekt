@@ -65,5 +65,22 @@ namespace ParkingMate.Blockchain
 
             return true;
         }
+        public bool IsValidChain()
+        {
+            if (chain.Count == 0)
+                return false;
+
+            for (int i = 1; i < chain.Count; i++)
+            {
+                Block current = chain[i];
+                Block previous = chain[i - 1];
+
+                if (!IsValidNewBlock(current, previous))
+                    return false;
+            }
+            
+            return true;
+        }
+
     }
 }
