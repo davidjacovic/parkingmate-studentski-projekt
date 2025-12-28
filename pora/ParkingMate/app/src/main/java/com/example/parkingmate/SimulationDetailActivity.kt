@@ -30,20 +30,57 @@ class SimulationDetailActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
         binding.spinnerSimulationType.adapter = adapter
+
+        binding.spinnerSimulationType.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: android.view.View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    val type = SimulationType.values()[position]
+                    updateHint(type)
+                }
+
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            }
     }
+    private fun updateHint(type: SimulationType) {
+        binding.etValue.text.clear()
+
+        binding.etValue.hint = when (type) {
+            SimulationType.TOTAL_SPACES -> "Unesi ukupan broj mesta"
+            SimulationType.FREE_SPACES -> "Unesi broj slobodnih mesta"
+            SimulationType.OCCUPIED_SPACES -> "Unesi broj zauzetih mesta"
+            SimulationType.ALL -> "Unesi simuliranu vrednost"
+        }
+    }
+
 
     private fun setupListeners() {
 
         binding.btnConfirm.setOnClickListener {
-            val selectedType =
-                binding.spinnerSimulationType.selectedItem.toString()
+
+            val type = SimulationType.values()[
+                binding.spinnerSimulationType.selectedItemPosition
+            ]
+
+            val value = binding.etValue.text.toString()
+
+            if (value.isEmpty()) {
+                Toast.makeText(this, "Unesi vrednost", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             Toast.makeText(
                 this,
-                "Izabran tip: $selectedType",
+                "Tip: ${type.name}, vrednost: $value",
                 Toast.LENGTH_SHORT
             ).show()
         }
+
 
         binding.btnCancel.setOnClickListener {
             finish()
