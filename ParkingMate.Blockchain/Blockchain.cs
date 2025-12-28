@@ -43,11 +43,15 @@ namespace ParkingMate.Blockchain
             newBlock.PreviousHash = latest.Hash;
 
             newBlock.Nonce = 0;
+            string prefix = new string('0', (int)newBlock.Difficulty);
+
             while (true)
             {
                 newBlock.Hash = newBlock.CalculateHash();
+                if (newBlock.Hash.StartsWith(prefix))
+                    break;
                 newBlock.Nonce++;
-                break;
+
             }
 
             chain.Add(newBlock);
