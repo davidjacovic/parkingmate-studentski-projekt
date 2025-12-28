@@ -9,19 +9,6 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 object ApiClient {
-
-    private const val EMULATOR_URL = "http://10.0.2.2:3002"
-    private const val PHONE_URL = "http://192.168.56.1:3002"
-
-    private fun getBaseUrl(): String {
-        return if (Build.MODEL.contains("Emulator") ||
-            Build.MODEL.contains("Android SDK built for x86")) {
-            "http://10.0.2.2:3002"
-        } else {
-            "http://192.168.56.1:3002"
-        }
-    }
-
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
