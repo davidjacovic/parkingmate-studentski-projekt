@@ -58,6 +58,9 @@ namespace ParkingMate.Blockchain
             long miningTimeMs = endTime - startTime;
             Console.WriteLine($"Mining time: {miningTimeMs} ms");
 
+            if (!IsValidNewBlock(newBlock, latest))
+                throw new InvalidOperationException("Invalid mined block");
+
             chain.Add(newBlock);
         }
 
