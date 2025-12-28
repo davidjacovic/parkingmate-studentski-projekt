@@ -67,7 +67,11 @@ namespace ParkingMate.Blockchain
             if (current.Timestamp > now + 60)
                 return false;
 
+            if (current.Timestamp < previous.Timestamp - 60)
+                return false;
+
             return true;
+
         }
         public bool IsValidChain()
         {
