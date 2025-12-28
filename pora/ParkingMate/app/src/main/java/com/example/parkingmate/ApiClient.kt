@@ -1,12 +1,29 @@
+import android.os.Build
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import org.json.JSONObject
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 object ApiClient {
 
-    private const val BASE_URL = "http://10.0.2.2:3002"
-    private val client = OkHttpClient()
+    private const val EMULATOR_URL = "http://10.0.2.2:3002"
+    private const val PHONE_URL = "http://192.168.56.1:3002"
+
+    private fun getBaseUrl(): String {
+        return if (Build.MODEL.contains("Emulator") ||
+            Build.MODEL.contains("Android SDK built for x86")) {
+            "http://10.0.2.2:3002"
+        } else {
+            "http://192.168.56.1:3002"
+        }
+    }
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .build()
 
     fun register(
         username: String,
@@ -17,13 +34,14 @@ object ApiClient {
         registrationNumber: String,
         callback: (success: Boolean, response: String?) -> Unit
     ) {
-        val json = JSONObject()
-        json.put("username", username)
-        json.put("email", email)
-        json.put("password", password)
-        json.put("phone_number", phone)
-        json.put("credit_card_number", creditCard)
-        json.put("registration_number", registrationNumber)
+        val json = JSONObject().apply {
+            put("username", username)
+            put("email", email)
+            put("password", password)
+            put("phone_number", phone)
+            put("credit_card_number", creditCard)
+            put("registration_number", registrationNumber)
+        }
 
         val body = RequestBody.create(
             "application/json; charset=utf-8".toMediaTypeOrNull(),
@@ -31,13 +49,13 @@ object ApiClient {
         )
 
         val request = Request.Builder()
-            .url("$BASE_URL/users")
+            .url("${getBaseUrl()}/users")
             .post(body)
             .build()
 
-        client.newCall(request).enqueue(object: Callback {
+        client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback(false, e.message)
+                callback(false, "Network error: ${e.message}")
             }
 
             override fun onResponse(call: Call, response: Response) {
@@ -51,9 +69,10 @@ object ApiClient {
         password: String,
         callback: (success: Boolean, response: String?) -> Unit
     ) {
-        val json = JSONObject()
-        json.put("username", username)
-        json.put("password", password)
+        val json = JSONObject().apply {
+            put("username", username)
+            put("password", password)
+        }
 
         val body = RequestBody.create(
             "application/json; charset=utf-8".toMediaTypeOrNull(),
@@ -61,13 +80,13 @@ object ApiClient {
         )
 
         val request = Request.Builder()
-            .url("$BASE_URL/users/login")
+            .url("${getBaseUrl()}/users/login")
             .post(body)
             .build()
 
-        client.newCall(request).enqueue(object: Callback {
+        client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback(false, e.message)
+                callback(false, "Network error: ${e.message}")
             }
 
             override fun onResponse(call: Call, response: Response) {
