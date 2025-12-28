@@ -41,13 +41,19 @@ namespace ParkingMate.Blockchain
 
             newBlock.Index = latest.Index + 1;
             newBlock.PreviousHash = latest.Hash;
-            newBlock.Hash = newBlock.CalculateHash();
 
-            if (!IsValidNewBlock(newBlock, latest))
-                throw new InvalidOperationException("Invalid block");
+            newBlock.Nonce = 0;
+            while (true)
+            {
+                newBlock.Hash = newBlock.CalculateHash();
+                newBlock.Nonce++;
+                break;
+            }
 
             chain.Add(newBlock);
         }
+
+
         public bool IsValidNewBlock(Block current, Block previous)
         {
             if (current.Index != previous.Index + 1)
@@ -78,7 +84,7 @@ namespace ParkingMate.Blockchain
                 if (!IsValidNewBlock(current, previous))
                     return false;
             }
-            
+
             return true;
         }
 
