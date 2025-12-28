@@ -45,6 +45,7 @@ namespace ParkingMate.Blockchain
             newBlock.Nonce = 0;
             string prefix = new string('0', (int)newBlock.Difficulty);
 
+            long startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             while (true)
             {
                 newBlock.Hash = newBlock.CalculateHash();
@@ -53,6 +54,9 @@ namespace ParkingMate.Blockchain
                 newBlock.Nonce++;
 
             }
+            long endTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            long miningTimeMs = endTime - startTime;
+            Console.WriteLine($"Mining time: {miningTimeMs} ms");
 
             chain.Add(newBlock);
         }
