@@ -1,7 +1,10 @@
 import android.os.Build
+import android.util.Log
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
 import org.json.JSONObject
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
@@ -25,72 +28,41 @@ object ApiClient {
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
-    fun register(
-        username: String,
-        email: String,
-        password: String,
-        phone: String,
-        creditCard: String,
-        registrationNumber: String,
-        callback: (success: Boolean, response: String?) -> Unit
+    fun uploadParkingImage(
+        parkingLocationId: String,
+        lat: Double?,
+        lon: Double?,
+        imagePath: String
     ) {
-        val json = JSONObject().apply {
-            put("username", username)
-            put("email", email)
-            put("password", password)
-            put("phone_number", phone)
-            put("credit_card_number", creditCard)
-            put("registration_number", registrationNumber)
-        }
+        val file = File(imagePath)
+        val mediaType = "image/jpeg".toMediaTypeOrNull()
+        val requestBodyFile = file.asRequestBody(mediaType)
 
-        val body = RequestBody.create(
-            "application/json; charset=utf-8".toMediaTypeOrNull(),
-            json.toString()
-        )
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("parkingLocationId", parkingLocationId)
+            .addFormDataPart("coordinates[]", lon?.toString() ?: "")
+            .addFormDataPart("coordinates[]", lat?.toString() ?: "")
+            .addFormDataPart("imageUrl", file.name)
+            .addFormDataPart("file", file.name, requestBodyFile)
+            .build()
 
         val request = Request.Builder()
-            .url("${getBaseUrl()}/users")
-            .post(body)
+            .url("http://10.0.2.2:3002/api/parking-images") // emulator URL
+            .post(requestBody)
             .build()
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                callback(false, "Network error: ${e.message}")
+                Log.e("UPLOAD", "Failed: ${e.message}")
             }
 
             override fun onResponse(call: Call, response: Response) {
-                callback(response.isSuccessful, response.body?.string())
-            }
-        })
-    }
-
-    fun login(
-        username: String,
-        password: String,
-        callback: (success: Boolean, response: String?) -> Unit
-    ) {
-        val json = JSONObject().apply {
-            put("username", username)
-            put("password", password)
-        }
-
-        val body = RequestBody.create(
-            "application/json; charset=utf-8".toMediaTypeOrNull(),
-            json.toString()
-        )
-
-        val request = Request.Builder()
-            .url("${getBaseUrl()}/users/login")
-            .post(body)
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                callback(false, "Network error: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                callback(response.isSuccessful, response.body?.string())
+                if (response.isSuccessful) {
+                    Log.d("UPLOAD", "Success: ${response.body?.string()}")
+                } else {
+                    Log.e("UPLOAD", "Error: ${response.code}")
+                }
             }
         })
     }
