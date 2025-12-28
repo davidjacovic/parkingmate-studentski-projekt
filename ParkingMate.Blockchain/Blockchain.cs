@@ -63,6 +63,10 @@ namespace ParkingMate.Blockchain
             if (!current.Hash.StartsWith(prefix))
                 return false;
 
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (current.Timestamp > now + 60)
+                return false;
+
             return true;
         }
         public bool IsValidChain()
@@ -78,7 +82,7 @@ namespace ParkingMate.Blockchain
                 if (!IsValidNewBlock(current, previous))
                     return false;
             }
-            
+
             return true;
         }
 
