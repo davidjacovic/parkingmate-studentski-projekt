@@ -152,12 +152,23 @@ class CameraActivity : AppCompatActivity() {
                     binding.tvData.text =
                         "Lat: $lastLat\nLon: $lastLon\nVreme: $formattedTime"
 
-                    saveMetadata(
-                        photoFile,
-                        lastLat!!,
-                        lastLon!!,
-                        formattedTime
+                    //saveMetadata(
+                      //  photoFile,
+                      //  lastLat!!,
+                      //  lastLon!!,
+                       // formattedTime
+                    //)
+                    // ID parking lokacije (za početak možeš hardkodirati)
+                    val parkingLocationId = "64a9b8c2f0a5c1234567890a" // primer Mongo ObjectId
+
+// Šalji samo sliku, sve ostalo kao null
+                    ApiClient.uploadParkingImage(
+                        parkingLocationId,
+                        lat = 0.0,      // šaljemo 0 ili može null ako backend podržava
+                        lon = 0.0,      // šaljemo 0 ili null
+                        imagePath = photoFile.absolutePath
                     )
+
 
                     Toast.makeText(
                         this@CameraActivity,
