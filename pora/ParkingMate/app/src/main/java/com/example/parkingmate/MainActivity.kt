@@ -14,12 +14,20 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnCamera.setOnClickListener {
-            startActivity(Intent(this, CameraActivity::class.java))
+        binding.btnSensors.setOnClickListener {
+            startActivity(Intent(this, SensorsActivity::class.java))
         }
 
-        binding.btnGallery.setOnClickListener {
-            startActivity(Intent(this, GalleryActivity::class.java))
+        binding.btnSimulation.setOnClickListener {
+            startActivity(Intent(this, SimulationActivity::class.java))
+        }
+
+        binding.btnMessages.setOnClickListener {
+            startActivity(Intent(this, MessagesActivity::class.java))
+        }
+
+        binding.btnAlerts.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
         }
     }
 }

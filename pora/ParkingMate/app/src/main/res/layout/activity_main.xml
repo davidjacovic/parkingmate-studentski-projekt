@@ -6,55 +6,41 @@
     android:padding="16dp">
 
     <Button
-        android:id="@+id/btnCamera"
+        android:id="@+id/btnSensors"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Kamera"
+        android:text="Sensors"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
     <Button
-        android:id="@+id/btnGallery"
+        android:id="@+id/btnSimulation"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Galerija"
-        app:layout_constraintTop_toBottomOf="@id/btnCamera"
+        android:text="Simulation"
+        app:layout_constraintTop_toBottomOf="@id/btnSensors"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="8dp"/>
 
-    <androidx.camera.view.PreviewView
-        android:id="@+id/viewFinder"
+    <Button
+        android:id="@+id/btnMessages"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/btnGallery"
+        android:layout_height="wrap_content"
+        android:text="Messages"
+        app:layout_constraintTop_toBottomOf="@id/btnSimulation"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/previewImage"
-        android:visibility="gone"/>
-
-    <ImageView
-        android:id="@+id/previewImage"
-        android:layout_width="0dp"
-        android:layout_height="150dp"
-        android:scaleType="centerCrop"
-        app:layout_constraintTop_toBottomOf="@id/viewFinder"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        android:contentDescription="Preview slike"
-        android:visibility="gone"/>
+        android:layout_marginTop="8dp"/>
 
     <Button
-        android:id="@+id/btnCapture"
-        android:layout_width="wrap_content"
+        android:id="@+id/btnAlerts"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Capture"
-        app:layout_constraintBottom_toTopOf="@+id/previewImage"
+        android:text="Alerts"
+        app:layout_constraintTop_toBottomOf="@id/btnMessages"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="16dp"
-        android:visibility="gone"/>
-
+        android:layout_marginTop="8dp"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

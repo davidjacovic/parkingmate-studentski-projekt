@@ -115,7 +115,6 @@ class CameraActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun takePhoto() {
 
         if (!locationAvailable) {
@@ -152,13 +151,14 @@ class CameraActivity : AppCompatActivity() {
                     binding.tvData.text =
                         "Lat: $lastLat\nLon: $lastLon\nVreme: $formattedTime"
 
-                    saveMetadata(
-                        photoFile,
-                        lastLat!!,
-                        lastLon!!,
-                        formattedTime
+                    val parkingLocationId = "64a9b8c2f0a5c1234567890a"
+                    ApiClient.uploadParkingImage(
+                        parkingLocationId = parkingLocationId,
+                        lat = lastLat ?: 0.0,
+                        lon = lastLon ?: 0.0,
+                        timestamp = formattedTime,
+                        imagePath = photoFile.absolutePath
                     )
-
                     Toast.makeText(
                         this@CameraActivity,
                         "Slikano i sačuvani podaci",
