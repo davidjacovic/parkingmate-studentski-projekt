@@ -8,36 +8,30 @@ namespace ParkingMate.Blockchain
         {
             var blockchain = new Blockchain();
 
-            var block = new Block(
-                0,
-                "Valid block",
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                "",
-                1,
-                0
-            );
+            int blocksToMine = 30;
 
-            /*Console.WriteLine("=== Blockchain contents ===");
+            for (int i = 1; i <= blocksToMine; i++)
+            {
+                var block = new Block(
+                    index: 0,
+                    data: $"Auto-mined block #{i}",
+                    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    previousHash: "",
+                    difficulty: 3,
+                    nonce: 0
+                );
 
+                Console.WriteLine($"\nMining block {i}...");
+                blockchain.AddBlock(block);
+            }
+
+            Console.WriteLine("\n=== Final Blockchain ===");
             foreach (var block in blockchain.Chain)
             {
                 Console.WriteLine(block);
             }
 
-            Console.WriteLine("=== Structural checks ===");
-            Console.WriteLine($"Block count: {blockchain.Chain.Count}");
-            Console.WriteLine($"Genesis previousHash: {blockchain.Chain[0].PreviousHash}");
-            Console.WriteLine($"Second block previousHash == genesis hash: " +
-                $"{blockchain.Chain[1].PreviousHash == blockchain.Chain[0].Hash}");*/
-            do
-            {
-                block.Hash = block.CalculateHash();
-                block.Nonce++;
-            }
-            while (!block.Hash.StartsWith("0"));
-
-            blockchain.AddBlock(block);
-            Console.WriteLine("Block added successfully.");
+            Console.WriteLine("Blockchain valid: " + blockchain.IsValidChain());
         }
     }
 }
