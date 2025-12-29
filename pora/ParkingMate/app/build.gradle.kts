@@ -56,4 +56,5 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.0")
     implementation("org.osmdroid:osmdroid-android:6.1.17")
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("androidx.core:core-ktx:1.12.0")
 }
