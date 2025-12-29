@@ -33,7 +33,21 @@
         app:layout_constraintTop_toBottomOf="@id/barrierTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintBottom_toTopOf="@id/tvEmptyList"/>
+
+    <TextView
+        android:id="@+id/tvEmptyList"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Nema simulacija\nDodajte prvu simulaciju klikom na +"
+        android:textSize="16sp"
+        android:textColor="#666"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/barrierTitle"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddSimulation"

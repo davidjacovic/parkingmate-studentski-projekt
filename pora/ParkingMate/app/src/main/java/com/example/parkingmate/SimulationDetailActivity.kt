@@ -1,6 +1,7 @@
 package com.example.parkingmate
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.location.Geocoder
 import android.os.Bundle
 import android.os.Handler
@@ -71,6 +72,7 @@ class SimulationDetailActivity : AppCompatActivity() {
                     TimeUnit.SECONDS.toMillis(binding.npSeconds.value.toLong())
         }
     }
+
     private fun setupMap() {
         map = MapView(this)
         map.setTileSource(TileSourceFactory.MAPNIK)
@@ -262,6 +264,7 @@ class SimulationDetailActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun saveSimulation() {
         val type = SimulationType.values()[binding.spinnerSimulationType.selectedItemPosition]
         val value = binding.etValue.text.toString().trim()
@@ -272,23 +275,29 @@ class SimulationDetailActivity : AppCompatActivity() {
             return
         }
 
-        val simulationData = """
-            === SAČUVANA SIMULACIJA ===
-            Tip: ${type.name}
-            Vrednost: $value
-            Lokacija: $location
-            Interval: ${String.format("%02d:%02d:%02d",
+        val simulationName = "${type.name.replace("_", " ")} - $location"
+        val interval = String.format("%02d:%02d:%02d",
             binding.npHours.value,
             binding.npMinutes.value,
-            binding.npSeconds.value)}
-            Status: ${if (binding.switchActivate.isChecked) "AKTIVNA" else "NEAKTIVNA"}
-        """.trimIndent()
-
-        println(simulationData)
+            binding.npSeconds.value)
+        val newSimulation = Simulation(
+            name = simulationName,
+            type = type,
+            value = value,
+            interval = interval,
+            location = location,
+            isActive = binding.switchActivate.isChecked
+        )
+        val resultIntent = Intent().apply {
+            putExtra("new_simulation", newSimulation)
+        }
+        setResult(RESULT_OK, resultIntent)
 
         Toast.makeText(this,
             "Simulacija sačuvana!\n${type.name}: $value\nLokacija: $location",
             Toast.LENGTH_LONG).show()
+
+        finish()
     }
 
     private fun searchAddress(addressStr: String) {
