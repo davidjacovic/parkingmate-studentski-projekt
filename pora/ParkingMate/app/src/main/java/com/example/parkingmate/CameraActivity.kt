@@ -99,13 +99,10 @@ class CameraActivity : AppCompatActivity() {
                 lastLon = lon
                 lastTimestamp = timestamp
 
-                val formattedTime = SimpleDateFormat(
-                    "yyyy-MM-dd HH:mm:ss",
-                    Locale.getDefault()
-                ).format(Date(timestamp))
+                val timestampMillis = lastTimestamp ?: System.currentTimeMillis()
 
                 binding.tvData.text =
-                    "Lat: $lat\nLon: $lon\nVreme: $formattedTime"
+                    "Lat: $lat\nLon: $lon\nVreme: $timestampMillis"
 
             } else {
 
@@ -133,8 +130,7 @@ class CameraActivity : AppCompatActivity() {
             "parking_${System.currentTimeMillis()}.jpg"
         )
 
-        val outputOptions =
-            ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
         imageCapture?.takePicture(
             outputOptions,
@@ -142,23 +138,21 @@ class CameraActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-
-                    val formattedTime = SimpleDateFormat(
-                        "yyyy-MM-dd HH:mm:ss",
-                        Locale.getDefault()
-                    ).format(Date(lastTimestamp!!))
+                    val timestampMillis = lastTimestamp ?: System.currentTimeMillis()
 
                     binding.tvData.text =
-                        "Lat: $lastLat\nLon: $lastLon\nVreme: $formattedTime"
+                        "Lat: $lastLat\nLon: $lastLon\nVreme: ${Date(timestampMillis)}"
+                    val parkingLocationId = "64a9b8c2f0a5c1234567890b"
 
-                    val parkingLocationId = "64a9b8c2f0a5c1234567890a"
                     ApiClient.uploadParkingImage(
                         parkingLocationId = parkingLocationId,
                         lat = lastLat ?: 0.0,
                         lon = lastLon ?: 0.0,
-                        timestamp = formattedTime,
+                        timestamp = timestampMillis,
                         imagePath = photoFile.absolutePath
                     )
+
+
                     Toast.makeText(
                         this@CameraActivity,
                         "Slikano i sačuvani podaci",
@@ -176,6 +170,7 @@ class CameraActivity : AppCompatActivity() {
             }
         )
     }
+
 
     @SuppressLint("MissingPermission")
     private fun getCurrentLocation(

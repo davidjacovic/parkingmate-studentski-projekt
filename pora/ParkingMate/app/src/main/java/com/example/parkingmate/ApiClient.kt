@@ -19,18 +19,19 @@ object ApiClient {
         parkingLocationId: String,
         lat: Double?,
         lon: Double?,
-        timestamp: String?,
+        timestamp: Long?,
         imagePath: String
     ) {
         val file = File(imagePath)
         val mediaType = "image/jpeg".toMediaTypeOrNull()
         val requestBodyFile = file.asRequestBody(mediaType)
+        val coordinates = "${lon ?: 0},${lat ?: 0}"
 
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("parkingLocationId", parkingLocationId)
-            .addFormDataPart("coordinates", "${lat ?: 0},${lon ?: 0}")
-            .addFormDataPart("timestamp", timestamp ?: "")
+            .addFormDataPart("coordinates", coordinates)
+            .addFormDataPart("timestamp", timestamp?.toString() ?: "")
             .addFormDataPart("file", file.name, requestBodyFile)
             .build()
 
@@ -43,6 +44,7 @@ object ApiClient {
             override fun onFailure(call: Call, e: IOException) {
                 Log.e("UPLOAD", "Failed: ${e.message}")
             }
+
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
                     Log.d("UPLOAD", "Success: ${response.body?.string()}")
@@ -53,3 +55,4 @@ object ApiClient {
         })
     }
 }
+

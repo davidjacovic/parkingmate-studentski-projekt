@@ -9,12 +9,20 @@ import android.os.Looper
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.example.parkingmate.databinding.ActivitySimulationDetailBinding
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -242,6 +250,8 @@ class SimulationDetailActivity : AppCompatActivity() {
         println("Lokacija: $location")
         println("Interval: ${intervalInMillis/1000} sekundi")
 
+        sendSimulatedDataToBackend(value, location)
+
         if (simulationCounter % 5 == 0) {
             runOnUiThread {
                 Toast.makeText(this,
@@ -250,6 +260,42 @@ class SimulationDetailActivity : AppCompatActivity() {
             }
         }
         animateMarker()
+    }
+
+    private fun sendSimulatedDataToBackend(value: String, location: String) {
+        val coords = location.split(",")
+        if (coords.size != 2) return
+
+        val lat = coords[0].trim().toDoubleOrNull() ?: 0.0
+        val lon = coords[1].trim().toDoubleOrNull() ?: 0.0
+
+        val json = """
+        {
+            "parkingLocationId": "64a9b8c2f0a5c1234567890b",
+            "coordinates": "$lon,$lat",
+            "timestamp": ${System.currentTimeMillis()},
+            "value": "$value"
+        }
+    """.trimIndent()
+
+        val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+        val request = Request.Builder()
+            .url("http://10.0.2.2:3002/api/parking-images/simulated")
+            .post(body)
+            .build()
+
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                println("Simulated upload failed: ${e.message}")
+            }
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    println("Simulated upload successful")
+                } else {
+                    println("Simulated upload error: ${response.code}")
+                }
+            }
+        })
     }
 
     private fun animateMarker() {

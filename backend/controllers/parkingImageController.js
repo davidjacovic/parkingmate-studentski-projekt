@@ -29,7 +29,7 @@ exports.create = async (req, res) => {
                 coords = parts.map(Number);
             }
         }
-        const imageTimestamp = timestamp ? new Date(timestamp) : Date.now();
+        const imageTimestamp = timestamp ? new Date(Number(timestamp)) : Date.now();
 
         const newImage = new ParkingImage({
             parkingLocationId,
@@ -49,3 +49,48 @@ exports.create = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: err.message });
     }
 };
+
+exports.createSimulated = async ({ parkingLocationId, coordinates, timestamp, value }) => {
+    try {
+        let coords = [0, 0];
+        if (coordinates) {
+            if (Array.isArray(coordinates)) {
+                coords = coordinates.map(Number);
+            } else {
+                const parts = coordinates.split(',');
+                coords = parts.map(Number);
+            }
+        }
+
+        const imageTimestamp = timestamp ? new Date(Number(timestamp)) : Date.now();
+
+        const newImage = new ParkingImage({
+            parkingLocationId,
+            location: {
+                type: 'Point',
+                coordinates: coords
+            },
+            imageUrl: 'simulated.jpg',
+            timestamp: imageTimestamp,
+            urvrvResult: whenSimulation(value) 
+        });
+
+        await newImage.save();
+        console.log('Simulated ParkingImage saved:', newImage._id);
+        return newImage;
+    } catch (err) {
+        console.error('Error saving simulated parking image:', err);
+        throw err;
+    }
+};
+
+function whenSimulation(value) {
+    const num = Number(value) || 0;
+    return {
+        totalSpots: 100,
+        freeSpaces: 100 - num,
+        occupiedSpaces: num,
+        spotsCoordinates: []
+    };
+}
+
