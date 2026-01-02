@@ -50,7 +50,7 @@ exports.create = async (req, res) => {
     }
 };
 
-exports.createSimulated = async ({ parkingLocationId, coordinates, timestamp, value }) => {
+exports.createSimulated = async ({ parkingLocationId, coordinates, timestamp, imageUrl, urvrvResult }) => {
     try {
         let coords = [0, 0];
         if (coordinates) {
@@ -70,9 +70,9 @@ exports.createSimulated = async ({ parkingLocationId, coordinates, timestamp, va
                 type: 'Point',
                 coordinates: coords
             },
-            imageUrl: 'simulated.jpg',
+            imageUrl: imageUrl || 'simulated.jpg',
             timestamp: imageTimestamp,
-            urvrvResult: whenSimulation(value) 
+            urvrvResult: urvrvResult || whenSimulation(value)
         });
 
         await newImage.save();
@@ -84,13 +84,19 @@ exports.createSimulated = async ({ parkingLocationId, coordinates, timestamp, va
     }
 };
 
+
 function whenSimulation(value) {
     const num = Number(value) || 0;
+    const totalSpots = 100;
+    const occupiedSpaces = Math.min(num, totalSpots);
+    const freeSpaces = totalSpots - occupiedSpaces;
+
     return {
-        totalSpots: 100,
-        freeSpaces: 100 - num,
-        occupiedSpaces: num,
+        totalSpots,
+        freeSpaces,
+        occupiedSpaces,
         spotsCoordinates: []
     };
 }
+
 
