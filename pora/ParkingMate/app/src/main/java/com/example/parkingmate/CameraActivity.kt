@@ -38,6 +38,7 @@ class CameraActivity : AppCompatActivity() {
         Manifest.permission.ACCESS_FINE_LOCATION
     )
 
+    // Inicijalizacija aktivnosti i UI elementata
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCameraBinding.inflate(layoutInflater)
@@ -58,6 +59,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    // Pokreće kameru i postavlja preview
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
@@ -88,6 +90,7 @@ class CameraActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    // Ažurira trenutnu lokaciju i vreme prikazano na ekranu
     private fun updateLocationAndTime() {
         getCurrentLocation { success, lat, lon, timestamp ->
 
@@ -107,16 +110,18 @@ class CameraActivity : AppCompatActivity() {
 
                 locationAvailable = false
                 binding.tvData.text =
-                    "Lokacija nije dostupna\nUključite GPS ili sačekajte signal"
+                    "Location not available\\nTurn on GPS or wait for signal"
             }
         }
     }
+
+    // Snima fotografiju parkinga
     private fun takePhoto() {
 
         if (!locationAvailable) {
             Toast.makeText(
                 this,
-                "Nije moguće slikati bez dostupne lokacije",
+                "Cannot take a photo without an available location",
                 Toast.LENGTH_SHORT
             ).show()
             return
@@ -143,6 +148,7 @@ class CameraActivity : AppCompatActivity() {
                         "Lat: $lastLat\nLon: $lastLon\nVreme: ${Date(timestampMillis)}"
                     val parkingLocationId = "64a9b8c2f0a5c1234567890b"
 
+                    // Šalje sliku i meta-podatke na server
                     ApiClient.uploadParkingImage(
                         parkingLocationId = parkingLocationId,
                         lat = lastLat ?: 0.0,
@@ -154,7 +160,7 @@ class CameraActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this@CameraActivity,
-                        "Slikano i sačuvani podaci",
+                        "Photo taken and data saved",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -162,7 +168,7 @@ class CameraActivity : AppCompatActivity() {
                 override fun onError(exception: ImageCaptureException) {
                     Toast.makeText(
                         this@CameraActivity,
-                        "Greška pri slikanju",
+                        "Error while taking photo",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -170,6 +176,7 @@ class CameraActivity : AppCompatActivity() {
         )
     }
 
+    // Dobavlja trenutnu GPS lokaciju uređaja
     @SuppressLint("MissingPermission")
     private fun getCurrentLocation(
         onResult: (Boolean, Double?, Double?, Long?) -> Unit
@@ -198,6 +205,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    // Sačuva meta-podatke (lokacija, vreme) u JSON fajl (trenutno nekorisćeno)
     private fun saveMetadata(
         imageFile: File,
         lat: Double,
@@ -220,12 +228,14 @@ class CameraActivity : AppCompatActivity() {
         jsonFile.writeText(content)
     }
 
+    // Vraća direktorijum za čuvanje fotografija
     private fun getOutputDirectory(): File {
         return externalMediaDirs.firstOrNull()?.let {
             File(it, "ParkingMatePhotos").apply { mkdirs() }
         } ?: filesDir
     }
 
+    // Proverava da li su sve potrebne permisije odobrene
     private fun allPermissionsGranted() =
         REQUIRED_PERMISSIONS.all {
             ContextCompat.checkSelfPermission(
@@ -234,6 +244,7 @@ class CameraActivity : AppCompatActivity() {
             ) == PackageManager.PERMISSION_GRANTED
         }
 
+    // Obrada rezultata zahteva za permisije
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -251,7 +262,7 @@ class CameraActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(
                     this,
-                    "Permisije odbijene",
+                    "Permissions denied",
                     Toast.LENGTH_SHORT
                 ).show()
                 finish()

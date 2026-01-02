@@ -28,7 +28,7 @@
         android:id="@+id/tvData"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Lat: --\nLon: --\nVreme: --"
+        android:text="Lat: --\nLon: --\nTime: --"
         android:textColor="@android:color/white"
         android:background="#66000000"
         android:padding="8dp"

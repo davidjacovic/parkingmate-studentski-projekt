@@ -11,13 +11,14 @@ import com.example.parkingmate.databinding.ActivitySimulationBinding
 import java.util.*
 import java.util.concurrent.TimeUnit
 
+// Glavna aktivnost za prikaz i upravljanje simulacijama
 class SimulationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySimulationBinding
     private lateinit var adapter: SimulationAdapter
     private lateinit var dataManager: DataManager
     private var simulationHandler: Handler? = null
-    private val activeSimulationsRunnables = mutableMapOf<String, Runnable>()
+    private val activeSimulationsRunnables = mutableMapOf<String, Runnable>() // Mapa aktivnih simulacija
 
     private val simulations = mutableListOf<Simulation>()
 
@@ -28,9 +29,11 @@ class SimulationActivity : AppCompatActivity() {
 
         dataManager = DataManager(this)
 
+        // Učitava sačuvane simulacije
         val savedSimulations = dataManager.loadSimulations()
         simulations.addAll(savedSimulations)
 
+        // Kreira adapter za RecyclerView
         adapter = SimulationAdapter(
             simulations = simulations,
             onSwitchChanged = { simulation, isChecked ->
@@ -44,7 +47,7 @@ class SimulationActivity : AppCompatActivity() {
                 adapter.removeSimulation(simulation)
                 dataManager.deleteSimulation(simulation)
                 updateEmptyState()
-                Toast.makeText(this, "Simulacija obrisana", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Simulation deleted", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -52,12 +55,14 @@ class SimulationActivity : AppCompatActivity() {
         binding.recyclerView.adapter = adapter
         updateEmptyState()
 
+        // Dugme za dodavanje nove simulacije
         binding.fabAddSimulation.setOnClickListener {
             val intent = Intent(this, SimulationDetailActivity::class.java)
             startActivityForResult(intent, ADD_SIMULATION_REQUEST)
         }
     }
 
+    // Ažurira status simulacije (aktivna/neaktivna)
     private fun updateSimulationStatus(simulation: Simulation, isActive: Boolean) {
         val index = simulations.indexOfFirst { it.id == simulation.id }
         if (index != -1) {
@@ -72,11 +77,12 @@ class SimulationActivity : AppCompatActivity() {
                 stopSimulationInterval(updated)
             }
 
-            val message = if (isActive) "Simulacija aktivirana" else "Simulacija deaktivirana"
+            val message = if (isActive) "Simulation activated" else "Simulation deactivated"
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
     }
 
+    // Pokreće periodično slanje podataka za simulaciju
     private fun startSimulationInterval(simulation: Simulation) {
         if (simulationHandler == null) simulationHandler = Handler(Looper.getMainLooper())
 
@@ -91,6 +97,7 @@ class SimulationActivity : AppCompatActivity() {
         simulationHandler?.post(runnable)
     }
 
+    // Zaustavlja periodično slanje podataka za simulaciju
     private fun stopSimulationInterval(simulation: Simulation) {
         activeSimulationsRunnables[simulation.id]?.let {
             simulationHandler?.removeCallbacks(it)
@@ -98,6 +105,7 @@ class SimulationActivity : AppCompatActivity() {
         activeSimulationsRunnables.remove(simulation.id)
     }
 
+    // Pretvara vremenski interval iz stringa (HH:MM:SS) u milisekunde
     private fun getIntervalMillis(interval: String): Long {
         val parts = interval.split(":").map { it.toLongOrNull() ?: 0L }
         val hours = if (parts.size > 0) parts[0] else 0L
@@ -106,6 +114,7 @@ class SimulationActivity : AppCompatActivity() {
         return TimeUnit.HOURS.toMillis(hours) + TimeUnit.MINUTES.toMillis(minutes) + TimeUnit.SECONDS.toMillis(seconds)
     }
 
+    // Izvršava jedan korak simulacije - ažurira brojač i šalje podatke
     private fun saveSimulationStep(simulation: Simulation) {
         val index = simulations.indexOfFirst { it.id == simulation.id }
         if (index != -1) {
@@ -121,6 +130,7 @@ class SimulationActivity : AppCompatActivity() {
         sendSimulatedDataToBackend(simulation.value, simulation.location, simulation.type)
     }
 
+    // Šalje simulirane podatke o parking mestima na server
     private fun sendSimulatedDataToBackend(value: String, location: String, type: SimulationType) {
         val coords = location.split(",")
         if (coords.size != 2) return
@@ -132,6 +142,7 @@ class SimulationActivity : AppCompatActivity() {
         var freeSpaces = 0
         var occupiedSpaces = 0
 
+        // Postavlja vrednosti u zavisnosti od tipa simulacije
         when (type) {
             SimulationType.TOTAL_SPACES -> totalSpots = numValue
             SimulationType.FREE_SPACES -> freeSpaces = numValue
@@ -165,12 +176,14 @@ class SimulationActivity : AppCompatActivity() {
         ApiClient.uploadSimulatedData(json)
     }
 
+    // Prikazuje detalje simulacije u Toast poruci
     private fun showSimulationDetails(simulation: Simulation) {
         Toast.makeText(this,
             "${simulation.name}\n${simulation.type.name}: ${simulation.value}",
             Toast.LENGTH_SHORT).show()
     }
 
+    // Obrada rezultata iz SimulationDetailActivity
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -181,12 +194,13 @@ class SimulationActivity : AppCompatActivity() {
                 dataManager.addSimulation(it)
 
                 binding.recyclerView.smoothScrollToPosition(0)
-                Toast.makeText(this, "Simulacija dodata!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Simulation added!", Toast.LENGTH_SHORT).show()
                 updateEmptyState()
             }
         }
     }
 
+    // Ažurira prikaz kada je lista prazna
     private fun updateEmptyState() {
         if (simulations.isEmpty()) {
             binding.tvEmptyList.visibility = View.VISIBLE
@@ -198,6 +212,6 @@ class SimulationActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val ADD_SIMULATION_REQUEST = 1001
+        const val ADD_SIMULATION_REQUEST = 1001 // Request kod za dodavanje simulacije
     }
 }
