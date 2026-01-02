@@ -605,7 +605,6 @@ public class MapScreen extends BaseScreen {
                 );
             }
         }
-
         spriteBatch.end();
     }
 
