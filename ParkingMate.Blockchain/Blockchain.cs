@@ -41,13 +41,30 @@ namespace ParkingMate.Blockchain
 
             newBlock.Index = latest.Index + 1;
             newBlock.PreviousHash = latest.Hash;
-            newBlock.Hash = newBlock.CalculateHash();
+
+            newBlock.Nonce = 0;
+            string prefix = new string('0', (int)newBlock.Difficulty);
+
+            long startTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            while (true)
+            {
+                newBlock.Hash = newBlock.CalculateHash();
+                if (newBlock.Hash.StartsWith(prefix))
+                    break;
+                newBlock.Nonce++;
+
+            }
+            long endTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            long miningTimeMs = endTime - startTime;
+            Console.WriteLine($"Mining time: {miningTimeMs} ms");
 
             if (!IsValidNewBlock(newBlock, latest))
-                throw new InvalidOperationException("Invalid block");
+                throw new InvalidOperationException("Invalid mined block");
 
             chain.Add(newBlock);
         }
+
+
         public bool IsValidNewBlock(Block current, Block previous)
         {
             if (current.Index != previous.Index + 1)
@@ -78,7 +95,7 @@ namespace ParkingMate.Blockchain
                 if (!IsValidNewBlock(current, previous))
                     return false;
             }
-            
+
             return true;
         }
 
