@@ -12,21 +12,25 @@ class GalleryActivity : AppCompatActivity() {
     private lateinit var binding: ActivityGalleryBinding
     private lateinit var adapter: GalleryAdapter
 
+    // Aktivnost za prikaz galerije snimljenih fotografija parkinga
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityGalleryBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Učitava sve slike iz direktorijuma
         val images = loadImages()
         if (images.isEmpty()) {
-            Toast.makeText(this, "Nema snimljenih slika", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No photos saved", Toast.LENGTH_SHORT).show()
         }
 
+        // Inicijalizuje adapter za RecyclerView sa grid rasporedom (2 kolone)
         adapter = GalleryAdapter(images)
         binding.recyclerView.layoutManager = GridLayoutManager(this, 2)
         binding.recyclerView.adapter = adapter
     }
 
+    // Vraća direktorijum gde se čuvaju fotografije parkinga
     private fun getOutputDirectory(): File {
         val mediaDir = externalMediaDirs.firstOrNull()?.let {
             File(it, "ParkingMatePhotos").apply { mkdirs() }
@@ -34,6 +38,7 @@ class GalleryActivity : AppCompatActivity() {
         return if (mediaDir != null && mediaDir.exists()) mediaDir else filesDir
     }
 
+    // Učitava sve slike iz direktorijuma, sortirane po datumu (najnovije prvo)
     private fun loadImages(): List<File> {
         val dir = getOutputDirectory()
         return dir.listFiles()?.sortedByDescending { it.lastModified() }?.toList() ?: emptyList()
