@@ -1,9 +1,8 @@
-import android.os.Build
 import android.util.Log
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
-import org.json.JSONObject
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -14,6 +13,57 @@ object ApiClient {
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
+    const val EMULATOR_URL = "http://10.0.2.2:3002"
+    const val PHONE_URL = "http://192.168.1.11:3002"
+
+    fun getBaseUrl(): String {
+        return if (android.os.Build.FINGERPRINT.contains("generic")) {
+            EMULATOR_URL
+        } else {
+            PHONE_URL
+        }
+    }
+    fun deleteSimulation(simulationId: String) {
+        val request = Request.Builder()
+            .url("${getBaseUrl()}/api/parking-images/$simulationId")
+            .delete()
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("DELETE_SIMULATION", "Failed: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    Log.d("DELETE_SIMULATION", "Simulation deleted successfully")
+                } else {
+                    Log.e("DELETE_SIMULATION", "Error: ${response.code}")
+                }
+            }
+        })
+    }
+
+    fun uploadSimulatedData(jsonBody: String) {
+        val body = jsonBody.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+        val request = Request.Builder()
+            .url("${getBaseUrl()}/api/parking-images/simulated")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("SIMULATED_UPLOAD", "Failed: ${e.message}")
+            }
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    Log.d("SIMULATED_UPLOAD", "Success")
+                } else {
+                    Log.e("SIMULATED_UPLOAD", "Error: ${response.code}")
+                }
+            }
+        })
+    }
 
     fun uploadParkingImage(
         parkingLocationId: String,
@@ -36,7 +86,7 @@ object ApiClient {
             .build()
 
         val request = Request.Builder()
-            .url("http://10.0.2.2:3002/api/parking-images")
+            .url("${getBaseUrl()}/api/parking-images")
             .post(requestBody)
             .build()
 

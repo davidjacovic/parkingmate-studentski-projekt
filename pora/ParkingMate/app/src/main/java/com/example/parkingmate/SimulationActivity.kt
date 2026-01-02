@@ -1,5 +1,4 @@
 package com.example.parkingmate
-
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -9,14 +8,6 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.parkingmate.databinding.ActivitySimulationBinding
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import java.io.IOException
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -47,6 +38,13 @@ class SimulationActivity : AppCompatActivity() {
             },
             onItemClicked = { simulation ->
                 showSimulationDetails(simulation)
+            },
+            onDeleteClicked = { simulation ->
+                if (simulation.isActive) stopSimulationInterval(simulation)
+                adapter.removeSimulation(simulation)
+                dataManager.deleteSimulation(simulation)
+                updateEmptyState()
+                Toast.makeText(this, "Simulacija obrisana", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -78,6 +76,7 @@ class SimulationActivity : AppCompatActivity() {
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
         }
     }
+
     private fun startSimulationInterval(simulation: Simulation) {
         if (simulationHandler == null) simulationHandler = Handler(Looper.getMainLooper())
 
@@ -108,45 +107,62 @@ class SimulationActivity : AppCompatActivity() {
     }
 
     private fun saveSimulationStep(simulation: Simulation) {
-        val newRecord = simulation.copy(
-            id = UUID.randomUUID().toString(),
-            createdAt = Date(),
-            runCount = simulation.runCount + 1
-        )
-        dataManager.addSimulation(newRecord)
-        sendSimulatedDataToBackend(newRecord.value, newRecord.location)
+        val index = simulations.indexOfFirst { it.id == simulation.id }
+        if (index != -1) {
+            val updated = simulation.copy(
+                runCount = simulation.runCount + 1,
+                lastRun = Date()
+            )
+            simulations[index] = updated
+            dataManager.updateSimulation(updated)
+            adapter.notifyItemChanged(index)
+        }
+
+        sendSimulatedDataToBackend(simulation.value, simulation.location, simulation.type)
     }
-    private fun sendSimulatedDataToBackend(value: String, location: String) {
+
+    private fun sendSimulatedDataToBackend(value: String, location: String, type: SimulationType) {
         val coords = location.split(",")
         if (coords.size != 2) return
 
         val lat = coords[0].trim().toDoubleOrNull() ?: 0.0
         val lon = coords[1].trim().toDoubleOrNull() ?: 0.0
+        val numValue = value.toIntOrNull() ?: 0
+        var totalSpots = 0
+        var freeSpaces = 0
+        var occupiedSpaces = 0
+
+        when (type) {
+            SimulationType.TOTAL_SPACES -> totalSpots = numValue
+            SimulationType.FREE_SPACES -> freeSpaces = numValue
+            SimulationType.OCCUPIED_SPACES -> occupiedSpaces = numValue
+            SimulationType.ALL -> {
+                totalSpots = numValue
+                freeSpaces = numValue
+                occupiedSpaces = numValue
+            }
+        }
+
+        val urvrvResultJson = """
+        {
+            "totalSpots": $totalSpots,
+            "freeSpaces": $freeSpaces,
+            "occupiedSpaces": $occupiedSpaces,
+            "spotsCoordinates": []
+        }
+        """.trimIndent()
 
         val json = """
         {
             "parkingLocationId": "64a9b8c2f0a5c1234567890b",
             "coordinates": "$lon,$lat",
             "timestamp": ${System.currentTimeMillis()},
-            "value": "$value"
+            "imageUrl": "simulated.jpg",
+            "urvrvResult": $urvrvResultJson
         }
-    """.trimIndent()
+        """.trimIndent()
 
-        val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-        val request = Request.Builder()
-            .url("http://10.0.2.2:3002/api/parking-images/simulated")
-            .post(body)
-            .build()
-
-        OkHttpClient().newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                println("Simulated upload failed: ${e.message}")
-            }
-            override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) println("Simulated upload successful")
-                else println("Simulated upload error: ${response.code}")
-            }
-        })
+        ApiClient.uploadSimulatedData(json)
     }
 
     private fun showSimulationDetails(simulation: Simulation) {
@@ -170,6 +186,7 @@ class SimulationActivity : AppCompatActivity() {
             }
         }
     }
+
     private fun updateEmptyState() {
         if (simulations.isEmpty()) {
             binding.tvEmptyList.visibility = View.VISIBLE
@@ -179,6 +196,7 @@ class SimulationActivity : AppCompatActivity() {
             binding.recyclerView.visibility = View.VISIBLE
         }
     }
+
     companion object {
         const val ADD_SIMULATION_REQUEST = 1001
     }

@@ -10,7 +10,8 @@ import androidx.recyclerview.widget.RecyclerView
 class SimulationAdapter(
     private var simulations: MutableList<Simulation>,
     private val onSwitchChanged: (Simulation, Boolean) -> Unit,
-    private val onItemClicked: (Simulation) -> Unit
+    private val onItemClicked: (Simulation) -> Unit,
+    private val onDeleteClicked: (Simulation) -> Unit
 ) : RecyclerView.Adapter<SimulationAdapter.SimulationViewHolder>() {
 
     class SimulationViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -22,6 +23,7 @@ class SimulationAdapter(
         val location: TextView = itemView.findViewById(R.id.tvLocation)
         val switch: Switch = itemView.findViewById(R.id.switchActive)
         val card: androidx.cardview.widget.CardView = itemView.findViewById(R.id.cardSimulation)
+        val delete: ImageView = itemView.findViewById(R.id.ivDelete)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SimulationViewHolder {
@@ -68,11 +70,31 @@ class SimulationAdapter(
         holder.card.setOnClickListener {
             onItemClicked(simulation)
         }
+        holder.switch.setOnCheckedChangeListener { _, isChecked ->
+            onSwitchChanged(simulation, isChecked)
+        }
+
+        holder.card.setOnClickListener {
+            onItemClicked(simulation)
+        }
+
+        holder.delete.setOnClickListener {
+            onDeleteClicked(simulation)
+        }
     }
 
     override fun getItemCount(): Int = simulations.size
+
     fun addSimulation(simulation: Simulation) {
         simulations.add(0, simulation)
         notifyItemInserted(0)
+    }
+
+    fun removeSimulation(simulation: Simulation) {
+        val index = simulations.indexOfFirst { it.id == simulation.id }
+        if (index != -1) {
+            simulations.removeAt(index)
+            notifyItemRemoved(index)
+        }
     }
 }

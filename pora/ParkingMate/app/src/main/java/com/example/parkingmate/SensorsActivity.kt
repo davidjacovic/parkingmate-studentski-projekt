@@ -14,7 +14,6 @@ class SensorsActivity : AppCompatActivity() {
         binding = ActivitySensorsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // PREBACENO iz MainActivity
         binding.btnCamera.setOnClickListener {
             startActivity(Intent(this, CameraActivity::class.java))
         }

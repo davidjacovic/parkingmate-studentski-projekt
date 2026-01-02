@@ -9,20 +9,12 @@ import android.os.Looper
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.example.parkingmate.databinding.ActivitySimulationDetailBinding
-import okhttp3.Call
-import okhttp3.Callback
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.io.File
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -268,36 +260,45 @@ class SimulationDetailActivity : AppCompatActivity() {
 
         val lat = coords[0].trim().toDoubleOrNull() ?: 0.0
         val lon = coords[1].trim().toDoubleOrNull() ?: 0.0
+        val numValue = value.toIntOrNull() ?: 0
 
-        val json = """
-        {
-            "parkingLocationId": "64a9b8c2f0a5c1234567890b",
-            "coordinates": "$lon,$lat",
-            "timestamp": ${System.currentTimeMillis()},
-            "value": "$value"
+        val type = SimulationType.values()[binding.spinnerSimulationType.selectedItemPosition]
+        var totalSpots = 0
+        var freeSpaces = 0
+        var occupiedSpaces = 0
+
+        when (type) {
+            SimulationType.TOTAL_SPACES -> totalSpots = numValue
+            SimulationType.FREE_SPACES -> freeSpaces = numValue
+            SimulationType.OCCUPIED_SPACES -> occupiedSpaces = numValue
+            SimulationType.ALL -> {
+                totalSpots = numValue
+                freeSpaces = numValue
+                occupiedSpaces = numValue
+            }
         }
+
+        val urvrvResultJson = """
+    {
+        "totalSpots": $totalSpots,
+        "freeSpaces": $freeSpaces,
+        "occupiedSpaces": $occupiedSpaces,
+        "spotsCoordinates": []
+    }
     """.trimIndent()
 
-        val body = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
-        val request = Request.Builder()
-            .url("http://10.0.2.2:3002/api/parking-images/simulated")
-            .post(body)
-            .build()
-
-        OkHttpClient().newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                println("Simulated upload failed: ${e.message}")
-            }
-            override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    println("Simulated upload successful")
-                } else {
-                    println("Simulated upload error: ${response.code}")
-                }
-            }
-        })
+        val json = """
+    {
+        "parkingLocationId": "64a9b8c2f0a5c1234567890b",
+        "coordinates": "$lon,$lat",
+        "timestamp": ${System.currentTimeMillis()},
+        "imageUrl": "simulated.jpg",
+        "urvrvResult": $urvrvResultJson
     }
+    """.trimIndent()
 
+        ApiClient.uploadSimulatedData(json)
+    }
     private fun animateMarker() {
         runOnUiThread {
             currentMarker?.let { marker ->

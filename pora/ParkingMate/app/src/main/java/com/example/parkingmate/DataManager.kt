@@ -39,6 +39,16 @@ class DataManager(private val context: Context) {
         saveSimulations(currentList)
     }
 
+    fun deleteSimulation(simulation: Simulation) {
+        val simulations = loadSimulations().toMutableList()
+        val index = simulations.indexOfFirst { it.id == simulation.id }
+        if (index != -1) {
+            simulations.removeAt(index)
+            saveSimulations(simulations)
+        }
+        ApiClient.deleteSimulation(simulation.id)
+    }
+
     fun updateSimulation(updatedSimulation: Simulation) {
         val currentList = loadSimulations().toMutableList()
         val index = currentList.indexOfFirst { it.id == updatedSimulation.id }

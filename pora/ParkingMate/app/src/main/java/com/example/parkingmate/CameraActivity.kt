@@ -19,7 +19,6 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 
 class CameraActivity : AppCompatActivity() {
@@ -170,7 +169,6 @@ class CameraActivity : AppCompatActivity() {
             }
         )
     }
-
 
     @SuppressLint("MissingPermission")
     private fun getCurrentLocation(
