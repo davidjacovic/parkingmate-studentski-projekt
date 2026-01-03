@@ -7,7 +7,7 @@ import si.um.feri.parkingmate.map.Geolocation;
  * Contains position, type, and state information.
  */
 public class Marker {
-    
+
     /**
      * Marker types for different parking lot categories.
      */
@@ -17,7 +17,7 @@ public class Marker {
         GARAGE,         // Parking garage
         PRIVATE         // Private parking
     }
-    
+
     /**
      * Marker state representing occupancy level.
      */
@@ -27,7 +27,7 @@ public class Marker {
         FULL,           // No spots available (red)
         UNKNOWN         // Occupancy data not available (gray)
     }
-    
+
     private Geolocation position;
     private MarkerType type;
     private MarkerState state;
@@ -36,7 +36,9 @@ public class Marker {
     private int totalSpots;          // Total number of parking spots
     private int availableSpots;      // Number of available spots
     private float pricePerHour;      // Price per hour (optional)
-    
+    private Parking parkingData;            // Full parking data including tariffs
+
+
     /**
      * Constructor with required fields.
      */
@@ -48,11 +50,11 @@ public class Marker {
         this.availableSpots = 0;
         this.pricePerHour = 0f;
     }
-    
+
     /**
      * Full constructor with all fields.
      */
-    public Marker(Geolocation position, MarkerType type, MarkerState state, 
+    public Marker(Geolocation position, MarkerType type, MarkerState state,
                   String id, String name, int totalSpots, int availableSpots, float pricePerHour) {
         this.position = position;
         this.type = type;
@@ -63,7 +65,21 @@ public class Marker {
         this.availableSpots = availableSpots;
         this.pricePerHour = pricePerHour;
     }
-    
+
+    public Marker(Geolocation position, MarkerType type, MarkerState state,
+                  String id, String name, int totalSpots, int availableSpots,
+                  float pricePerHour, Parking parkingData) {
+        this.position = position;
+        this.type = type;
+        this.state = state;
+        this.id = id;
+        this.name = name;
+        this.totalSpots = totalSpots;
+        this.availableSpots = availableSpots;
+        this.pricePerHour = pricePerHour;
+        this.parkingData = parkingData;
+    }
+
     /**
      * Calculates and updates the marker state based on available spots.
      */
@@ -81,75 +97,82 @@ public class Marker {
             }
         }
     }
-    
+
     // Getters and Setters
-    
+
     public Geolocation getPosition() {
         return position;
     }
-    
+
     public void setPosition(Geolocation position) {
         this.position = position;
     }
-    
+
     public MarkerType getType() {
         return type;
     }
-    
+
     public void setType(MarkerType type) {
         this.type = type;
     }
-    
+
+    public Parking getParkingData() {
+        return parkingData;
+    }
+
+    public void setParkingData(Parking parkingData) {
+        this.parkingData = parkingData;
+    }
     public MarkerState getState() {
         return state;
     }
-    
+
     public void setState(MarkerState state) {
         this.state = state;
     }
-    
+
     public String getId() {
         return id;
     }
-    
+
     public void setId(String id) {
         this.id = id;
     }
-    
+
     public String getName() {
         return name;
     }
-    
+
     public void setName(String name) {
         this.name = name;
     }
-    
+
     public int getTotalSpots() {
         return totalSpots;
     }
-    
+
     public void setTotalSpots(int totalSpots) {
         this.totalSpots = totalSpots;
         updateStateFromSpots();
     }
-    
+
     public int getAvailableSpots() {
         return availableSpots;
     }
-    
+
     public void setAvailableSpots(int availableSpots) {
         this.availableSpots = availableSpots;
         updateStateFromSpots();
     }
-    
+
     public float getPricePerHour() {
         return pricePerHour;
     }
-    
+
     public void setPricePerHour(float pricePerHour) {
         this.pricePerHour = pricePerHour;
     }
-    
+
     /**
      * Returns occupancy percentage (0-100).
      */
@@ -159,7 +182,7 @@ public class Marker {
         }
         return ((float) (totalSpots - availableSpots) / totalSpots) * 100f;
     }
-    
+
     @Override
     public String toString() {
         return "Marker{" +

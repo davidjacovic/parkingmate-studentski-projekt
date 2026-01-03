@@ -13,11 +13,11 @@ import java.util.Map;
  * Handles communication with parking API endpoints.
  */
 public class ParkingService {
-    
+
     private ApiClient apiClient;
     private String baseUrl;
     private boolean fallbackEnabled = true; // Enable fallback to empty results on errors
-    
+
     /**
      * Constructor with base URL.
      * @param baseUrl Base URL for the parking API
@@ -26,7 +26,7 @@ public class ParkingService {
         this.baseUrl = baseUrl;
         this.apiClient = new ApiClient(baseUrl);
     }
-    
+
     /**
      * Default constructor.
      * Base URL should be set via setBaseUrl().
@@ -34,7 +34,7 @@ public class ParkingService {
     public ParkingService() {
         this.apiClient = new ApiClient();
     }
-    
+
     /**
      * Sets the base URL for the parking API.
      */
@@ -42,7 +42,7 @@ public class ParkingService {
         this.baseUrl = baseUrl;
         this.apiClient.setBaseUrl(baseUrl);
     }
-    
+
     /**
      * Enables or disables fallback to empty results on errors.
      * When enabled, methods return empty lists/null instead of throwing exceptions.
@@ -51,7 +51,7 @@ public class ParkingService {
     public void setFallbackEnabled(boolean enabled) {
         this.fallbackEnabled = enabled;
     }
-    
+
     /**
      * Checks if fallback is enabled.
      * @return true if fallback is enabled
@@ -59,20 +59,20 @@ public class ParkingService {
     public boolean isFallbackEnabled() {
         return fallbackEnabled;
     }
-    
+
     /**
      * Fetches all parking locations from the API.
-     * 
+     *
      * @return List of parking locations as JSONObjects
      * @throws ApiException if request fails
      */
     public List<JSONObject> fetchParkingLocations() throws ApiClient.ApiException {
         return fetchParkingLocations(null);
     }
-    
+
     /**
      * Fetches parking locations with optional filters.
-     * 
+     *
      * @param filters Optional filters (e.g., city, type, etc.)
      * @return List of parking locations as JSONObjects, empty list on error if fallback enabled
      * @throws ApiException if request fails and fallback is disabled
@@ -84,21 +84,21 @@ public class ParkingService {
             if (filters != null) {
                 queryParams.putAll(filters);
             }
-            
+
             // Make API call to parkingLocations endpoint
             // Backend returns array directly (res.json(array)), not wrapped in object
             org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations", queryParams);
-            
+
             // Parse response - backend returns array directly
             List<JSONObject> locations = new ArrayList<>();
-            
+
             for (int i = 0; i < responseArray.length(); i++) {
                 locations.add(responseArray.getJSONObject(i));
             }
-            
+
             Gdx.app.debug("ParkingService", "Fetched " + locations.size() + " parking locations");
             return locations;
-            
+
         } catch (ApiClient.ApiException e) {
             Gdx.app.error("ParkingService", "Failed to fetch parking locations: " + e.getMessage(), e);
             if (fallbackEnabled) {
@@ -115,10 +115,10 @@ public class ParkingService {
             throw new ApiClient.ApiException("Failed to parse parking locations: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Fetches a single parking location by ID.
-     * 
+     *
      * @param parkingId Parking location ID
      * @return Parking location as JSONObject, null on error if fallback enabled
      * @throws ApiException if request fails and fallback is disabled
@@ -127,10 +127,10 @@ public class ParkingService {
         try {
             // Backend endpoint: GET /parkingLocations/:id
             JSONObject response = apiClient.get("/parkingLocations/" + parkingId);
-            
+
             // Backend returns object directly
             return response;
-            
+
         } catch (ApiClient.ApiException e) {
             Gdx.app.error("ParkingService", "Failed to fetch parking location: " + parkingId + " - " + e.getMessage(), e);
             if (fallbackEnabled) {
@@ -140,11 +140,11 @@ public class ParkingService {
             throw e;
         }
     }
-    
+
     /**
      * Fetches nearby parking locations using geospatial search.
      * Backend endpoint: GET /parkingLocations/nearby/search?lat=X&lng=Y&radius=Z
-     * 
+     *
      * @param lat Latitude
      * @param lng Longitude
      * @param radius Radius in meters
@@ -157,16 +157,16 @@ public class ParkingService {
             queryParams.put("lat", String.valueOf(lat));
             queryParams.put("lng", String.valueOf(lng));
             queryParams.put("radius", String.valueOf(radius));
-            
+
             org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations/nearby/search", queryParams);
-            
+
             List<JSONObject> locations = new ArrayList<>();
             for (int i = 0; i < responseArray.length(); i++) {
                 locations.add(responseArray.getJSONObject(i));
             }
-            
+
             return locations;
-            
+
         } catch (ApiClient.ApiException e) {
             Gdx.app.error("ParkingService", "Failed to fetch nearby parking locations: " + e.getMessage(), e);
             if (fallbackEnabled) {
@@ -176,12 +176,12 @@ public class ParkingService {
             throw e;
         }
     }
-    
+
     /**
      * Fetches occupancy status for all parking locations.
      * Backend endpoint: GET /parkingLocations/occupancy/status
      * Returns occupancy percentage for each location.
-     * 
+     *
      * @return List of parking locations with occupancy data as JSONObjects
      *         Each object contains: _id, name, address, location, occupancy (percentage)
      *         Empty list on error if fallback enabled
@@ -190,15 +190,15 @@ public class ParkingService {
     public List<JSONObject> fetchOccupancyStatus() throws ApiClient.ApiException {
         try {
             org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations/occupancy/status");
-            
+
             List<JSONObject> locations = new ArrayList<>();
             for (int i = 0; i < responseArray.length(); i++) {
                 locations.add(responseArray.getJSONObject(i));
             }
-            
+
             Gdx.app.debug("ParkingService", "Fetched occupancy status for " + locations.size() + " locations");
             return locations;
-            
+
         } catch (ApiClient.ApiException e) {
             Gdx.app.error("ParkingService", "Failed to fetch occupancy status: " + e.getMessage(), e);
             if (fallbackEnabled) {
@@ -208,12 +208,12 @@ public class ParkingService {
             throw e;
         }
     }
-    
+
     /**
      * Fetches detailed occupancy data for a specific parking location.
      * This includes all spot types (regular, invalid, bus).
      * Backend endpoint: GET /parkingLocations/:id
-     * 
+     *
      * @param parkingId Parking location ID
      * @return JSONObject with detailed occupancy data including:
      *         - total_regular_spots, available_regular_spots
@@ -226,10 +226,10 @@ public class ParkingService {
         try {
             // Use existing method to get full location data which includes occupancy
             JSONObject location = fetchParkingLocationById(parkingId);
-            
+
             // Location already contains all occupancy data
             return location;
-            
+
         } catch (ApiClient.ApiException e) {
             Gdx.app.error("ParkingService", "Failed to fetch occupancy data for: " + parkingId + " - " + e.getMessage(), e);
             if (fallbackEnabled) {
@@ -239,11 +239,11 @@ public class ParkingService {
             throw e;
         }
     }
-    
+
     /**
      * Fetches parking logs (historical occupancy data) for a specific location.
      * Backend endpoint: GET /parkingLocations/:id/logs?from=DATE&to=DATE
-     * 
+     *
      * @param parkingId Parking location ID
      * @param fromDate Optional start date (ISO 8601 format or timestamp)
      * @param toDate Optional end date (ISO 8601 format or timestamp)
@@ -261,17 +261,17 @@ public class ParkingService {
             if (toDate != null && !toDate.isEmpty()) {
                 queryParams.put("to", toDate);
             }
-            
+
             org.json.JSONArray responseArray = apiClient.getArray("/parkingLocations/" + parkingId + "/logs", queryParams);
-            
+
             List<JSONObject> logs = new ArrayList<>();
             for (int i = 0; i < responseArray.length(); i++) {
                 logs.add(responseArray.getJSONObject(i));
             }
-            
+
             Gdx.app.debug("ParkingService", "Fetched " + logs.size() + " parking logs for location: " + parkingId);
             return logs;
-            
+
         } catch (ApiClient.ApiException e) {
             Gdx.app.error("ParkingService", "Failed to fetch parking logs for: " + parkingId + " - " + e.getMessage(), e);
             if (fallbackEnabled) {
@@ -281,16 +281,79 @@ public class ParkingService {
             throw e;
         }
     }
-    
+
     /**
      * Fetches parking logs for a specific location (without date filters).
-     * 
+     *
      * @param parkingId Parking location ID
      * @return List of parking log entries as JSONObjects
      * @throws ApiException if request fails
      */
     public List<JSONObject> fetchParkingLogs(String parkingId) throws ApiClient.ApiException {
         return fetchParkingLogs(parkingId, null, null);
+    }
+
+
+    /**
+     * Fetches tariffs (pricing information) for a specific parking location.
+     * Backend endpoint: GET /tariffs/by-location/:id
+     *
+     * @param parkingId Parking location ID
+     * @return List of tariff JSON objects, empty list on error if fallback enabled
+     * @throws ApiException if request fails and fallback is disabled
+     */
+    public List<JSONObject> fetchTariffsForLocation(String parkingId) throws ApiClient.ApiException {
+        try {
+            // Backend endpoint: GET /tariffs/by-location/:id
+            org.json.JSONArray responseArray = apiClient.getArray("/tariffs/by-location/" + parkingId);
+
+            List<JSONObject> tariffs = new ArrayList<>();
+            for (int i = 0; i < responseArray.length(); i++) {
+                tariffs.add(responseArray.getJSONObject(i));
+            }
+
+            Gdx.app.debug("ParkingService", "Fetched " + tariffs.size() + " tariffs for location: " + parkingId);
+            return tariffs;
+
+        } catch (ApiClient.ApiException e) {
+            Gdx.app.error("ParkingService", "Failed to fetch tariffs for location: " + parkingId + " - " + e.getMessage(), e);
+            if (fallbackEnabled) {
+                Gdx.app.log("ParkingService", "Using fallback: returning empty list for tariffs");
+                return new ArrayList<>();
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Fetches parking locations with their tariffs.
+     * This fetches basic location info first, then tariffs for each location.
+     *
+     * @return List of parking locations with tariff information
+     * @throws ApiException if request fails
+     */
+    public List<JSONObject> fetchParkingLocationsWithTariffs() throws ApiClient.ApiException {
+        List<JSONObject> locations = fetchParkingLocations();
+
+        // For each location, fetch tariffs
+        for (JSONObject location : locations) {
+            try {
+                String locationId = location.optString("_id", null);
+                if (locationId == null) {
+                    locationId = location.optString("id", null);
+                }
+
+                if (locationId != null) {
+                    List<JSONObject> tariffs = fetchTariffsForLocation(locationId);
+                    location.put("tariffs", new org.json.JSONArray(tariffs));
+                }
+            } catch (Exception e) {
+                Gdx.app.error("ParkingService", "Failed to fetch tariffs for location", e);
+                // Continue with other locations
+            }
+        }
+
+        return locations;
     }
 }
 

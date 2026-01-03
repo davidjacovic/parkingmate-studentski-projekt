@@ -9,7 +9,12 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Rectangle;
+
+import java.util.List;
+
 import si.um.feri.parkingmate.model.Marker;
+import si.um.feri.parkingmate.model.Parking;
+import si.um.feri.parkingmate.model.Tariff;
 
 /**
  * UI component for displaying parking information with animation.
@@ -33,36 +38,36 @@ public class InfoPanel {
     private float animationDuration = 0.3f;
     private AnimationState animationState = AnimationState.HIDDEN;
 
-    // Colors - BELA POZADINA, CRNA SLOVA
-    private Color backgroundColor = new Color(0.98f, 0.98f, 0.98f, 0.98f); // Bela pozadina
-    private Color borderColor = new Color(0.8f, 0.8f, 0.8f, 1f); // Siva border
-    private Color titleColor = new Color(0.1f, 0.1f, 0.1f, 1f); // Tamno siva za naslov
-    private Color labelColor = new Color(0.4f, 0.4f, 0.4f, 1f); // Siva za labele
-    private Color valueColor = new Color(0.1f, 0.1f, 0.1f, 1f); // Crna za vrednosti
-    private Color dividerColor = new Color(0.85f, 0.85f, 0.85f, 1f); // Svetlo siva za linije
+    // Colors
+    private Color backgroundColor = new Color(0.98f, 0.98f, 0.98f, 0.98f);
+    private Color borderColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+    private Color titleColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+    private Color labelColor = new Color(0.4f, 0.4f, 0.4f, 1f);
+    private Color valueColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+    private Color dividerColor = new Color(0.85f, 0.85f, 0.85f, 1f);
 
-    // Status colors - ostaju iste, samo će se lepo videti na beloj pozadini
-    private Color statusFreeColor = new Color(0.2f, 0.7f, 0.2f, 1f); // Tamnije zeleno
-    private Color statusPartialColor = new Color(0.9f, 0.6f, 0.1f, 1f); // Tamnije žuto
-    private Color statusFullColor = new Color(0.8f, 0.2f, 0.2f, 1f); // Tamnije crveno
-    private Color statusUnknownColor = new Color(0.5f, 0.5f, 0.5f, 1f); // Siva
-    private Color priceColor = new Color(0.9f, 0.5f, 0.1f, 1f); // Narandžasta za cene
+    // Status colors
+    private Color statusFreeColor = new Color(0.2f, 0.7f, 0.2f, 1f);
+    private Color statusPartialColor = new Color(0.9f, 0.6f, 0.1f, 1f);
+    private Color statusFullColor = new Color(0.8f, 0.2f, 0.2f, 1f);
+    private Color statusUnknownColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+    private Color priceColor = new Color(0.9f, 0.5f, 0.1f, 1f);
 
-    // Spacing - još manje
-    private float padding = 18f; // Još manje padding
-    private float titleTopPadding = 22f; // Manje top padding
-    private float lineHeight = 20f; // Manje razmaka između linija
-    private float sectionSpacing = 22f; // Manje razmaka između sekcija
-    private float dividerHeight = 1.5f; // Tanja linija
+    // Spacing
+    private float padding = 18f;
+    private float titleTopPadding = 22f;
+    private float lineHeight = 20f;
+    private float sectionSpacing = 22f;
+    private float dividerHeight = 1.5f;
 
-    // Font scales - JOŠ MANJE
-    private float titleFontScale = 0.52f; // Još manji header (bilo 0.6f)
-    private float sectionFontScale = 0.45f; // Manji za sekcije (bilo 0.5f)
-    private float detailFontScale = 0.36f; // Manji za detalje (bilo 0.4f)
+    // Font scales
+    private float titleFontScale = 0.52f;
+    private float sectionFontScale = 0.45f;
+    private float detailFontScale = 0.36f;
 
-    // Close button - promenjena boja za belu pozadinu
+    // Close button
     private Rectangle closeButton;
-    private float closeButtonSize = 18f; // Još manje dugme
+    private float closeButtonSize = 18f;
 
     // Header icon
     private Texture headerIcon;
@@ -73,8 +78,15 @@ public class InfoPanel {
     private Texture markerFullTexture;
     private Texture markerUnknownTexture;
 
-    private float headerIconSize = 28f; // Ikona malo veća da bude vidljivija na beloj
-    private float headerIconMargin = 12f; // Razmak
+    // Tariff button
+    private Rectangle tariffButton;
+    private boolean showTariffButton = false;
+
+    // Tariff popup
+    private TariffPopup tariffPopup;
+
+    private float headerIconSize = 28f;
+    private float headerIconMargin = 12f;
 
     // Animation states
     private enum AnimationState {
@@ -91,6 +103,8 @@ public class InfoPanel {
         this.visible = false;
         this.isAnimating = false;
         this.closeButton = new Rectangle();
+        this.tariffButton = new Rectangle();
+        this.tariffPopup = new TariffPopup();
         loadIcons();
         loadMarkerTextures();
     }
@@ -239,7 +253,9 @@ public class InfoPanel {
      */
     public void setFont(BitmapFont font) {
         this.font = font;
+        this.tariffPopup.setFont(font);
     }
+
 
     /**
      * Set bounds - NOW FULL WINDOW HEIGHT
@@ -248,13 +264,17 @@ public class InfoPanel {
         this.x = x;
         this.y = y;
         this.width = width;
-        this.height = height; // Full window height
+        this.height = height;
 
         closeButton.set(x + width - closeButtonSize - padding/2,
             y + height - closeButtonSize - padding/2,
             closeButtonSize, closeButtonSize);
-    }
 
+        // Tariff button position
+        tariffButton.set(x + width - closeButtonSize - padding/2 - closeButtonSize - 10,
+            y + height - closeButtonSize - padding/2,
+            closeButtonSize, closeButtonSize);
+    }
     /**
      * Show panel
      */
@@ -264,8 +284,63 @@ public class InfoPanel {
         this.animationState = AnimationState.SHOWING;
         this.isAnimating = true;
         this.animationTime = 0f;
+        this.showTariffButton = false;
+
+        if (marker.getParkingData() != null &&
+            !marker.getParkingData().getTariffs().isEmpty()) {
+            this.showTariffButton = true;
+        }
     }
 
+    /**
+     * Check if tariff button clicked
+     */
+    public boolean isTariffButtonClicked(float screenX, float screenY) {
+        if (!showTariffButton || !isVisibleForInteraction()) {
+            return false;
+        }
+
+        float currentX = getCurrentX();
+        Rectangle currentTariffButton = new Rectangle(
+            currentX + width - closeButtonSize - padding/2 - closeButtonSize - 10,
+            tariffButton.y,
+            tariffButton.width,
+            tariffButton.height
+        );
+        return currentTariffButton.contains(screenX, screenY);
+    }
+
+    /**
+     * Open tariff popup
+     */
+    public void openTariffPopup() {
+        if (selectedMarker != null && selectedMarker.getParkingData() != null) {
+            String parkingName = selectedMarker.getName();
+            List<Tariff> tariffs = selectedMarker.getParkingData().getTariffs();
+            tariffPopup.show(parkingName, tariffs);
+        }
+    }
+
+    /**
+     * Close tariff popup
+     */
+    public void closeTariffPopup() {
+        tariffPopup.hide();
+    }
+
+    /**
+     * Check if tariff popup close button clicked
+     */
+    public boolean isTariffPopupCloseButtonClicked(float screenX, float screenY) {
+        return tariffPopup.isCloseButtonClicked(screenX, screenY);
+    }
+
+    /**
+     * Check if click is on tariff popup
+     */
+    public boolean isTariffPopupClicked(float screenX, float screenY) {
+        return tariffPopup.contains(screenX, screenY);
+    }
     /**
      * Hide panel
      */
@@ -339,7 +414,7 @@ public class InfoPanel {
      * Draw X for close button - CRNA NA BELOJ POZADINI
      */
     private void drawX(float x, float y, float size, float alpha) {
-        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, alpha); // Tamno siva/crna
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, alpha);
         shapeRenderer.rectLine(
             x + size * 0.2f, y + size * 0.2f,
             x + size * 0.8f, y + size * 0.8f,
@@ -389,7 +464,7 @@ public class InfoPanel {
         float currentX = getCurrentX();
         float alpha = getCurrentAlpha();
 
-        // Render background - BELA POZADINA
+        // Render background
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a * alpha);
         shapeRenderer.rect(currentX, y, width, height);
@@ -420,8 +495,8 @@ public class InfoPanel {
 
         spriteBatch.end();
 
-        // Draw divider line under header - MALO NIŽE (minus 20 umesto 18)
-        currentY -= 20; // Linija niže
+        // Draw divider line under header
+        currentY -= 20;
         drawDivider(contentStartX, currentY, contentWidth, alpha);
         currentY -= sectionSpacing;
 
@@ -456,29 +531,9 @@ public class InfoPanel {
         }
 
         // Divider
-        currentY -= 10; // Manji razmak pre dividera
+        currentY -= 10;
         drawDivider(contentStartX, currentY, contentWidth, alpha);
         currentY -= sectionSpacing;
-
-        // SECTION 2: PRICES (if available)
-        if (selectedMarker.getPricePerHour() > 0) {
-            drawSectionLabel("CENA", contentStartX, currentY, contentWidth, alpha);
-            currentY -= lineHeight;
-
-            drawLine("CENA / SAT", String.format("%.2f €", selectedMarker.getPricePerHour()),
-                contentStartX, currentY, contentWidth, alpha, labelColor, priceColor);
-            currentY -= lineHeight;
-
-            float pricePerDay = selectedMarker.getPricePerHour() * 24;
-            drawLine("CENA / DAN", String.format("%.2f €", pricePerDay),
-                contentStartX, currentY, contentWidth, alpha, labelColor, priceColor);
-            currentY -= lineHeight;
-
-            // Divider
-            currentY -= 10;
-            drawDivider(contentStartX, currentY, contentWidth, alpha);
-            currentY -= sectionSpacing;
-        }
 
         // SECTION 3: LOCATION
         drawSectionLabel("LOKACIJA", contentStartX, currentY, contentWidth, alpha);
@@ -491,7 +546,36 @@ public class InfoPanel {
         drawLine("LNG", String.format("%.6f", selectedMarker.getPosition().lng),
             contentStartX, currentY, contentWidth, alpha, labelColor, valueColor);
 
-        // Draw close button - CRVENA NA BELOJ POZADINI
+        if (showTariffButton && isVisibleForInteraction()) {
+            // Draw tariff button
+            float tariffBtnX = currentX + width - closeButtonSize - padding/2 - closeButtonSize - 10;
+            float tariffBtnY = y + height - closeButtonSize - padding/2;
+
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0.3f, 0.5f, 0.8f, alpha);
+            shapeRenderer.rect(tariffBtnX, tariffBtnY, closeButtonSize, closeButtonSize);
+            shapeRenderer.end();
+
+            // Draw "T" inside tariff button
+            spriteBatch.begin();
+            font.setColor(1f, 1f, 1f, alpha);
+            font.getData().setScale(0.5f);
+
+            String tariffText = "T";
+            glyphLayout.setText(font, tariffText);
+            float textXpos = tariffBtnX + (closeButtonSize - glyphLayout.width) / 2;
+            float textYpos = tariffBtnY + (closeButtonSize + glyphLayout.height) / 2;
+            font.draw(spriteBatch, tariffText, textXpos, textYpos);
+
+            font.getData().setScale(1.0f);
+            spriteBatch.end();
+        }
+
+        // Render tariff popup if visible
+        if (tariffPopup.isVisible()) {
+            tariffPopup.render();
+        }
+        // Draw close button
         if (isVisibleForInteraction()) {
             float closeBtnX = currentX + width - closeButtonSize - padding/2;
             float closeBtnY = y + height - closeButtonSize - padding/2;
@@ -614,6 +698,9 @@ public class InfoPanel {
         if (markerPartialTexture != null) markerPartialTexture.dispose();
         if (markerFullTexture != null) markerFullTexture.dispose();
         if (markerUnknownTexture != null) markerUnknownTexture.dispose();
+
+        // Dispose tariff popup
+        if (tariffPopup != null) tariffPopup.dispose();
     }
 
     // Getters
