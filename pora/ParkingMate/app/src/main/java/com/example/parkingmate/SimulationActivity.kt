@@ -3,6 +3,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -153,6 +154,15 @@ class SimulationActivity : AppCompatActivity() {
                 occupiedSpaces = numValue
             }
         }
+        val eventType: EventType? =
+            if (totalSpots > 0 && freeSpaces == 0) {
+                EventType.PARKING_FULL
+            } else {
+                null
+            }
+
+
+
 
         val urvrvResultJson = """
         {
@@ -174,6 +184,7 @@ class SimulationActivity : AppCompatActivity() {
         """.trimIndent()
 
         ApiClient.uploadSimulatedData(json)
+
     }
 
     // Prikazuje detalje simulacije u Toast poruci
