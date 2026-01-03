@@ -1,11 +1,13 @@
 package si.um.feri.parkingmate.screens;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -19,6 +21,7 @@ import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
@@ -54,6 +57,24 @@ public class MapScreen extends BaseScreen {
     private Texture markerPartialTexture;
     private Texture markerFullTexture;
     private Texture markerUnknownTexture;
+
+
+    // NAVIGATION BUTTON
+    private Texture navButtonTexture;
+    private Texture navButtonActiveTexture;
+    private Texture carIconTexture;
+    private boolean navigationMode = false;
+    private Vector2 carPosition; // Car position on the map
+    private Vector2 cursorWorldPos; // Cursor position in world coordinates
+
+    // BUTTON DIMENSIONS AND POSITION
+    private float navButtonSize = 48f;
+    private float navButtonMargin = 15f;
+    private float navButtonX, navButtonY;
+
+    // DASHED LINE PROPERTIES
+    private float[] dashedLinePattern = {10f, 5f}; // 10px line, 5px gap
+    private float dashedLinePhase = 0f;
 
     // Marker size configuration (in pixels)
     private float markerSize = 128f;
@@ -91,7 +112,6 @@ public class MapScreen extends BaseScreen {
         if (Keys.GEOAPIFY == null || Keys.GEOAPIFY.isEmpty()) {
             Gdx.app.error("MapScreen", "Geoapify API key is not set! Please add your API key in Keys.java");
             Gdx.app.error("MapScreen", "Get your free API key at: https://www.geoapify.com/get-started-with-maps-api");
-            // Still setup camera so the screen doesn't crash
             setupCamera();
             return;
         }
@@ -120,7 +140,6 @@ public class MapScreen extends BaseScreen {
             if (e.getMessage() != null && e.getMessage().contains("401")) {
                 Gdx.app.error("MapScreen", "Invalid or missing API key! Please check Keys.GEOAPIFY");
             }
-            // Still setup camera so the screen doesn't crash
             setupCamera();
             return;
         }
@@ -137,7 +156,7 @@ public class MapScreen extends BaseScreen {
             MapRasterTiles.TILE_SIZE
         );
 
-        // Fill layer with tiles (note: tiles are arranged from top to bottom, left to right)
+        // Fill layer with tiles
         int index = 0;
         for (int j = MapConstants.NUM_TILES - 1; j >= 0; j--) {
             for (int i = 0; i < MapConstants.NUM_TILES; i++) {
@@ -181,14 +200,107 @@ public class MapScreen extends BaseScreen {
         // Initialize info panel with font
         infoPanel.setFont(font);
 
-        // Try to load marker textures (optional - will fallback to shapes if not found)
+        // Try to load marker textures
         loadMarkerTextures();
 
         infoPanel.setMarkerTextures(markerFreeTexture, markerPartialTexture,
             markerFullTexture, markerUnknownTexture);
 
+        // Initialize navigation button
+        initializeNavigationButton();
+
+        // Set initial car position (center of Ljubljana)
+        carPosition = new Vector2(MapConstants.MAP_WIDTH / 2f, MapConstants.MAP_HEIGHT / 2f);
+        cursorWorldPos = new Vector2();
+
         // Load parking locations from API
         loadParkingLocationsFromAPI();
+
+        // Set initial car position (camera center)
+        setupInitialCarPosition();
+
+        // Load parking locations from API
+        loadParkingLocationsFromAPI();
+    }
+
+    /**
+     * Initialize textures for navigation button.
+     */
+    private void initializeNavigationButton() {
+        Gdx.app.log("MapScreen", "=== INITIALIZING NAVIGATION ===");
+
+        try {
+            navButtonTexture = new Texture(Gdx.files.internal("ui/nav_button.png"));
+        } catch (Exception e) {
+            createDefaultNavButton();
+        }
+
+        try {
+            navButtonActiveTexture = new Texture(Gdx.files.internal("ui/nav_button_active.png"));
+        } catch (Exception e) {
+            navButtonActiveTexture = navButtonTexture;
+        }
+
+        try {
+            carIconTexture = new Texture(Gdx.files.internal("markers/car_icon.png"));
+        } catch (Exception e) {
+            createDefaultCarIcon();
+        }
+
+        navButtonX = navButtonMargin;
+        navButtonY = Gdx.graphics.getHeight() - navButtonSize - navButtonMargin;
+
+        Gdx.app.log("MapScreen", "Nav button (TOP-LEFT) at: " + navButtonX + ", " + navButtonY);
+    }
+
+
+    /**
+     * Create default navigation button (red circle).
+     */
+    private void createDefaultNavButton() {
+        Pixmap pixmap = new Pixmap((int)navButtonSize, (int)navButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.RED);
+        pixmap.fillCircle((int)navButtonSize/2, (int)navButtonSize/2, (int)navButtonSize/2 - 2);
+
+        // White arrow symbol
+        pixmap.setColor(Color.WHITE);
+        pixmap.fillTriangle(
+            (int)(navButtonSize * 0.3f), (int)(navButtonSize * 0.3f),
+            (int)(navButtonSize * 0.3f), (int)(navButtonSize * 0.7f),
+            (int)(navButtonSize * 0.7f), (int)(navButtonSize * 0.5f)
+        );
+
+        navButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Create default car icon (blue rectangle).
+     */
+    /**
+     * Create default car icon for 48px.
+     */
+    private void createDefaultCarIcon() {
+        int size = 48; // Changed from 32 to 48
+        Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
+        pixmap.setColor(Color.BLUE);
+
+        // Car body
+        pixmap.fillRectangle(8, 15, 32, 18);
+
+        // Windows
+        pixmap.setColor(Color.CYAN);
+        pixmap.fillRectangle(10, 24, 12, 6);
+        pixmap.fillRectangle(26, 24, 12, 6);
+
+        // Wheels
+        pixmap.setColor(Color.BLACK);
+        pixmap.fillCircle(12, 12, 6);
+        pixmap.fillCircle(36, 12, 6);
+
+        carIconTexture = new Texture(pixmap);
+        pixmap.dispose();
+        Gdx.app.log("MapScreen", "Created 48px default car icon");
     }
 
     /**
@@ -284,7 +396,6 @@ public class MapScreen extends BaseScreen {
             } catch (Exception e) {
                 Gdx.app.error("MapScreen", "Failed to load parking locations with tariffs", e);
 
-                // Fallback: try without tariffs
                 try {
                     List<JSONObject> jsonLocations = parkingService.fetchParkingLocations();
                     List<Parking> parkingList = ParkingMapper.mapToParkingList(jsonLocations);
@@ -427,9 +538,34 @@ public class MapScreen extends BaseScreen {
                 return true;
             }
 
-            @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
+
+                // CHECK CLICK ON NAVIGATION BUTTON
+                if (isNavButtonClicked(screenX, gdxY)) {
+                    navigationMode = !navigationMode;
+                    Gdx.app.log("MapScreen", "Navigation mode: " + navigationMode);
+
+                    // WHEN NAVIGATION IS TURNED ON, CENTER CAMERA ON CAR
+                    if (navigationMode) {
+
+                        Vector2 ljubljanaPixel = MapRasterTiles.getPixelPosition(
+                            46.0569, 14.5058,
+                            beginTile.x,
+                            beginTile.y
+                        );
+
+                        carPosition = new Vector2(ljubljanaPixel);
+                        cursorWorldPos = new Vector2(carPosition);
+
+                        camera.position.set(carPosition.x, carPosition.y, 0);
+                        camera.update();
+
+                        Gdx.app.log("MapScreen", "Navigation ON – car at Ljubljana: " + carPosition);
+                    }
+                    return true;
+
+                }
 
                 if (infoPanel.isTariffPopupCloseButtonClicked(screenX, gdxY)) {
                     infoPanel.closeTariffPopup();
@@ -453,10 +589,25 @@ public class MapScreen extends BaseScreen {
                 if (infoPanel.contains(screenX, gdxY)) {
                     return true;
                 }
+                if (navigationMode) {
+                    return true;
+                }
+
 
                 handleMarkerClick(screenX, screenY);
                 return false;
             }
+
+            @Override
+            public boolean mouseMoved(int screenX, int screenY) {
+                if (navigationMode) {
+                    Vector3 worldPos = new Vector3(screenX, screenY, 0);
+                    camera.unproject(worldPos);
+                    cursorWorldPos.set(worldPos.x, worldPos.y);
+                }
+                return false;
+            }
+
         };
 
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
@@ -465,9 +616,62 @@ public class MapScreen extends BaseScreen {
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
+    /**
+     * Checks if the navigation button was clicked.
+     */
+    private boolean isNavButtonClicked(float screenX, float screenY) {
+        float x = navButtonMargin;
+        float y = Gdx.graphics.getHeight() - navButtonSize - navButtonMargin;
+
+        return screenX >= x &&
+            screenX <= x + navButtonSize &&
+            screenY >= y &&
+            screenY <= y + navButtonSize;
+    }
+
+    /**
+     * Draw dashed line between two points.
+     */
+    private void drawDashedLine(ShapeRenderer shapeRenderer, Vector2 start, Vector2 end) {
+        if (shapeRenderer == null) return;
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0f, 0f, 0.8f);
+
+        float distance = start.dst(end);
+        Vector2 direction = new Vector2(end).sub(start).nor();
+
+        float dashLength = 25f;
+        float gapLength = 12f;
+
+        float drawn = 0;
+        boolean draw = true;
+
+        while (drawn < distance) {
+            float segmentLength = draw ? dashLength : gapLength;
+            float segmentEnd = Math.min(drawn + segmentLength, distance);
+
+            if (draw) {
+                Vector2 s = new Vector2(start).add(new Vector2(direction).scl(drawn));
+                Vector2 e = new Vector2(start).add(new Vector2(direction).scl(segmentEnd));
+                shapeRenderer.rectLine(s, e, 6f);
+            }
+
+            drawn = segmentEnd;
+            draw = !draw;
+        }
+
+        shapeRenderer.end();
+    }
+
     @Override
     public void render(float delta) {
         handleKeyboardInput();
+        // Update dashed line phase for animation
+        if (navigationMode) {
+            dashedLinePhase += delta * 100f;
+        }
 
         // Update info panel animation
         infoPanel.update(delta);
@@ -489,9 +693,75 @@ public class MapScreen extends BaseScreen {
             // Draw markers on top of the map
             drawMarkers();
 
+            // DRAW NAVIGATION IF ACTIVE
+            if (navigationMode) {
+                drawNavigation();
+            }
             // Draw info panel if visible
             infoPanel.render();
+            drawNavigationButton();
         }
+    }
+
+    /**
+     * Draw navigation (car + dashed line).
+     */
+    private void drawNavigation() {
+        if (shapeRenderer == null || spriteBatch == null || carPosition == null) return;
+
+        if (cursorWorldPos != null && carPosition.dst(cursorWorldPos) > 5f) {
+            drawDashedLine(shapeRenderer, carPosition, cursorWorldPos);
+        }
+
+        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.begin();
+
+        float carIconSize = 150f;
+
+        spriteBatch.draw(
+            carIconTexture,
+            carPosition.x - carIconSize / 2f,
+            carPosition.y - carIconSize / 2f,
+            carIconSize,
+            carIconSize
+        );
+
+        spriteBatch.end();
+    }
+
+    /**
+     * Draw navigation button (always on top of everything).
+     */
+    private void drawNavigationButton() {
+        if (spriteBatch == null || navButtonTexture == null) return;
+
+        float x = navButtonMargin;
+        float y = Gdx.graphics.getHeight() - navButtonSize - navButtonMargin;
+
+        spriteBatch.setProjectionMatrix(
+            new Matrix4().setToOrtho2D(
+                0, 0,
+                Gdx.graphics.getWidth(),
+                Gdx.graphics.getHeight()
+            )
+        );
+
+        spriteBatch.begin();
+        spriteBatch.draw(
+            navigationMode ? navButtonActiveTexture : navButtonTexture,
+            x, y,
+            navButtonSize, navButtonSize
+        );
+        spriteBatch.end();
+    }
+
+    // Set initial car position
+    private void setupInitialCarPosition() {
+        // Place car at screen center (camera) instead of map center
+        carPosition = new Vector2(camera.position.x, camera.position.y);
+        cursorWorldPos = new Vector2(carPosition);
+
+        Gdx.app.log("MapScreen", "Initial car position (camera center): " + carPosition);
     }
 
     /**
@@ -578,7 +848,10 @@ public class MapScreen extends BaseScreen {
         spriteBatch.begin();
 
         for (Marker marker : markers) {
-            // Convert geolocation to pixel position
+            if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
+                continue;
+            }
+
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
                 marker.getPosition().lat,
                 marker.getPosition().lng,
@@ -586,11 +859,9 @@ public class MapScreen extends BaseScreen {
                 beginTile.y
             );
 
-            // Get texture for marker state
             Texture markerTexture = getTextureForState(marker.getState());
 
             if (markerTexture != null) {
-                // Draw texture centered at marker position
                 spriteBatch.draw(
                     markerTexture,
                     pixelPos.x - markerSize / 2f,
@@ -600,8 +871,10 @@ public class MapScreen extends BaseScreen {
                 );
             }
         }
+
         spriteBatch.end();
     }
+
 
     /**
      * Draws markers using colored circles (fallback when textures not available).
@@ -615,7 +888,10 @@ public class MapScreen extends BaseScreen {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
         for (Marker marker : markers) {
-            // Convert geolocation to pixel position
+            if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
+                continue;
+            }
+
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
                 marker.getPosition().lat,
                 marker.getPosition().lng,
@@ -623,23 +899,11 @@ public class MapScreen extends BaseScreen {
                 beginTile.y
             );
 
-            // Set color based on marker state
             Color markerColor = getColorForState(marker.getState());
             shapeRenderer.setColor(markerColor);
 
-            // Draw marker as a circle (size scales with markerSize)
-            float markerRadius = markerSize / 2f; // Scale circle radius with marker size
+            float markerRadius = markerSize / 2f;
             shapeRenderer.circle(pixelPos.x, pixelPos.y, markerRadius);
-
-            // Draw a small border in darker color
-            shapeRenderer.setColor(markerColor.cpy().mul(0.7f));
-            shapeRenderer.circle(pixelPos.x, pixelPos.y, markerRadius + 2f);
-
-            // Highlight selected marker
-            if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
-                shapeRenderer.setColor(Color.WHITE);
-                shapeRenderer.circle(pixelPos.x, pixelPos.y, markerRadius + 4f, 20);
-            }
         }
 
         shapeRenderer.end();
@@ -721,7 +985,7 @@ public class MapScreen extends BaseScreen {
         float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
         float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
 
-        // Only clamp if viewport is smaller than map (don't clamp when zoomed out too much)
+        // Only clamp if viewport is smaller than map
         if (effectiveViewportWidth < MapConstants.MAP_WIDTH) {
             camera.position.x = MathUtils.clamp(
                 camera.position.x,
@@ -780,6 +1044,15 @@ public class MapScreen extends BaseScreen {
         }
         if (infoPanel != null) {
             infoPanel.dispose();
+        }
+        if (navButtonTexture != null) {
+            navButtonTexture.dispose();
+        }
+        if (navButtonActiveTexture != null && navButtonActiveTexture != navButtonTexture) {
+            navButtonActiveTexture.dispose();
+        }
+        if (carIconTexture != null) {
+            carIconTexture.dispose();
         }
         FontManager.dispose();
     }
