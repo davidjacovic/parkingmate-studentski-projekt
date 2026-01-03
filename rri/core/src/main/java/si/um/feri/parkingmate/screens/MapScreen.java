@@ -21,12 +21,17 @@ import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+
+import org.json.JSONObject;
+
 import si.um.feri.parkingmate.ParkingMate;
 import si.um.feri.parkingmate.api.ParkingMapper;
 import si.um.feri.parkingmate.api.ParkingService;
 import si.um.feri.parkingmate.map.*;
 import si.um.feri.parkingmate.model.Marker;
 import si.um.feri.parkingmate.model.Parking;
+import si.um.feri.parkingmate.ui.InfoPanel;
+import si.um.feri.parkingmate.util.FontManager;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,32 +49,36 @@ public class MapScreen extends BaseScreen {
     private SpriteBatch spriteBatch;
     private List<Marker> markers; // List of markers to display
 
-    // Marker textures (can be null if using default shapes)
+    // Marker textures
     private Texture markerFreeTexture;
     private Texture markerPartialTexture;
     private Texture markerFullTexture;
     private Texture markerUnknownTexture;
 
     // Marker size configuration (in pixels)
-    private float markerSize = 64f; // Default size, can be adjusted
-    
-    // Selected marker for info panel
-    private Marker selectedMarker = null;
-    
+    private float markerSize = 128f;
+
+    // Info Panel
+    private InfoPanel infoPanel;
+    private float infoPanelWidth;
+    private float infoPanelHeight;
+    private float infoPanelX;
+    private float infoPanelY;
+
     // Font for info panel text
     private BitmapFont font;
-    
+
     // API service for fetching parking data
     private ParkingService parkingService;
-    
+
     // Backend API base URL (backend runs on port 3002)
-    // Change this if your backend runs on a different URL
     private static final String API_BASE_URL = "http://localhost:3002";
 
     public MapScreen(ParkingMate game) {
         this.game = game;
         this.markers = new ArrayList<>();
         this.parkingService = new ParkingService(API_BASE_URL);
+        this.infoPanel = new InfoPanel();
     }
 
     @Override
@@ -90,9 +99,9 @@ public class MapScreen extends BaseScreen {
         try {
             // Get center tile based on center geolocation (Ljubljana)
             ZoomXY centerTile = MapRasterTiles.getTileNumber(
-                    MapConstants.CENTER_GEOLOCATION.lat,
-                    MapConstants.CENTER_GEOLOCATION.lng,
-                    MapConstants.ZOOM
+                MapConstants.CENTER_GEOLOCATION.lat,
+                MapConstants.CENTER_GEOLOCATION.lng,
+                MapConstants.ZOOM
             );
 
             // Fetch tiles for the area (NUM_TILES x NUM_TILES grid)
@@ -100,9 +109,9 @@ public class MapScreen extends BaseScreen {
 
             // Calculate beginning tile (top left corner)
             beginTile = new ZoomXY(
-                    MapConstants.ZOOM,
-                    centerTile.x - ((MapConstants.NUM_TILES - 1) / 2),
-                    centerTile.y - ((MapConstants.NUM_TILES - 1) / 2)
+                MapConstants.ZOOM,
+                centerTile.x - ((MapConstants.NUM_TILES - 1) / 2),
+                centerTile.y - ((MapConstants.NUM_TILES - 1) / 2)
             );
         } catch (IOException e) {
             e.printStackTrace();
@@ -122,10 +131,10 @@ public class MapScreen extends BaseScreen {
 
         // Create a tile layer
         TiledMapTileLayer layer = new TiledMapTileLayer(
-                MapConstants.NUM_TILES,
-                MapConstants.NUM_TILES,
-                MapRasterTiles.TILE_SIZE,
-                MapRasterTiles.TILE_SIZE
+            MapConstants.NUM_TILES,
+            MapConstants.NUM_TILES,
+            MapRasterTiles.TILE_SIZE,
+            MapRasterTiles.TILE_SIZE
         );
 
         // Fill layer with tiles (note: tiles are arranged from top to bottom, left to right)
@@ -134,11 +143,11 @@ public class MapScreen extends BaseScreen {
             for (int i = 0; i < MapConstants.NUM_TILES; i++) {
                 TiledMapTileLayer.Cell cell = new TiledMapTileLayer.Cell();
                 cell.setTile(new StaticTiledMapTile(
-                        new TextureRegion(
-                                mapTiles[index],
-                                MapRasterTiles.TILE_SIZE,
-                                MapRasterTiles.TILE_SIZE
-                        )
+                    new TextureRegion(
+                        mapTiles[index],
+                        MapRasterTiles.TILE_SIZE,
+                        MapRasterTiles.TILE_SIZE
+                    )
                 ));
                 layer.setCell(i, j, cell);
                 index++;
@@ -152,6 +161,11 @@ public class MapScreen extends BaseScreen {
         // Setup camera
         setupCamera();
 
+        // Setup info panel
+        setupInfoPanel();
+
+        infoPanel.setAnimationDuration(0.4f);
+
         // Setup input handlers for zoom and pan
         setupInputHandlers();
 
@@ -164,39 +178,48 @@ public class MapScreen extends BaseScreen {
         // Load font for info panel
         loadFont();
 
+        // Initialize info panel with font
+        infoPanel.setFont(font);
+
         // Try to load marker textures (optional - will fallback to shapes if not found)
         loadMarkerTextures();
+
+        infoPanel.setMarkerTextures(markerFreeTexture, markerPartialTexture,
+            markerFullTexture, markerUnknownTexture);
 
         // Load parking locations from API
         loadParkingLocationsFromAPI();
     }
-    
+
+    /**
+     * Setup info panel dimensions and position.
+     */
+    private void setupInfoPanel() {
+        float screenWidth = Gdx.graphics.getWidth();
+        float screenHeight = Gdx.graphics.getHeight();
+
+        // Set panel width to 40% of screen width
+        infoPanelWidth = screenWidth * 0.40f;
+        infoPanelHeight = screenHeight;
+
+        // Position at right side of screen
+        infoPanelX = screenWidth - infoPanelWidth;
+        infoPanelY = 0; // Start from bottom of screen
+
+        // Set bounds for info panel
+        infoPanel.setBounds(infoPanelX, infoPanelY, infoPanelWidth, infoPanelHeight);
+    }
     /**
      * Loads font for info panel text rendering.
      */
     private void loadFont() {
-        try {
-            font = new BitmapFont(Gdx.files.internal("fonts/arial-32.fnt"), false);
-            font.setColor(Color.WHITE);
-            // Scale down the font size (0.75 = 75% of original size, adjust as needed)
-            font.getData().setScale(0.75f);
-        } catch (Exception e) {
-            Gdx.app.error("MapScreen", "Failed to load font: fonts/arial-32.fnt", e);
-            // Use default font as fallback
-            font = new BitmapFont();
-            font.getData().setScale(0.75f);
-        }
+        font = FontManager.getFont();
+        infoPanel.setFont(font);
     }
 
     /**
      * Loads marker textures from assets folder.
      * If textures are not found, will use default shape rendering.
-     *
-     * Place your PNG marker images in: assets/markers/
-     * - marker_free.png (green marker)
-     * - marker_partial.png (yellow marker)
-     * - marker_full.png (red marker)
-     * - marker_unknown.png (gray marker)
      */
     private void loadMarkerTextures() {
         try {
@@ -233,21 +256,19 @@ public class MapScreen extends BaseScreen {
      * This runs in a separate thread to avoid blocking the UI.
      */
     private void loadParkingLocationsFromAPI() {
-        // Run API call in a separate thread to avoid blocking the UI
         new Thread(() -> {
             try {
-                Gdx.app.log("MapScreen", "Fetching parking locations from API...");
-                
-                // Fetch parking locations from API
-                List<org.json.JSONObject> jsonLocations = parkingService.fetchParkingLocations();
-                
-                // Map JSON to Parking models
-                List<Parking> parkingList = ParkingMapper.mapToParkingList(jsonLocations);
-                
-                Gdx.app.log("MapScreen", "Loaded " + parkingList.size() + " parking locations from API");
-                
-                // Convert Parking models to Marker models and add to markers list
-                // We need to do this on the main thread (libGDX thread)
+                Gdx.app.log("MapScreen", "Fetching parking locations with tariffs from API...");
+
+                // Fetch parking locations WITH TARIFFS
+                List<JSONObject> jsonLocations = parkingService.fetchParkingLocationsWithTariffs();
+
+                // Map JSON to Parking models WITH TARIFFS
+                List<Parking> parkingList = ParkingMapper.mapToParkingListWithTariffs(jsonLocations);
+
+                Gdx.app.log("MapScreen", "Loaded " + parkingList.size() + " parking locations with tariffs");
+
+                // Convert Parking models to Marker models
                 final List<Parking> finalParkingList = parkingList;
                 Gdx.app.postRunnable(() -> {
                     markers.clear();
@@ -259,20 +280,35 @@ public class MapScreen extends BaseScreen {
                     }
                     Gdx.app.log("MapScreen", "Added " + markers.size() + " markers to map");
                 });
-                
+
             } catch (Exception e) {
-                Gdx.app.error("MapScreen", "Failed to load parking locations from API", e);
-                Gdx.app.error("MapScreen", "Error: " + e.getMessage());
-                
-                // Fallback to test markers if API fails
-                Gdx.app.postRunnable(() -> {
-                    Gdx.app.log("MapScreen", "Using test markers as fallback");
-                    initializeTestMarkers();
-                });
+                Gdx.app.error("MapScreen", "Failed to load parking locations with tariffs", e);
+
+                // Fallback: try without tariffs
+                try {
+                    List<JSONObject> jsonLocations = parkingService.fetchParkingLocations();
+                    List<Parking> parkingList = ParkingMapper.mapToParkingList(jsonLocations);
+
+                    final List<Parking> finalParkingList = parkingList;
+                    Gdx.app.postRunnable(() -> {
+                        markers.clear();
+                        for (Parking parking : finalParkingList) {
+                            Marker marker = convertParkingToMarker(parking);
+                            if (marker != null) {
+                                markers.add(marker);
+                            }
+                        }
+                        Gdx.app.log("MapScreen", "Added " + markers.size() + " markers (without tariffs)");
+                    });
+                } catch (Exception e2) {
+                    Gdx.app.error("MapScreen", "Fallback also failed, using test markers", e2);
+                    Gdx.app.postRunnable(() -> {
+                        initializeTestMarkers();
+                    });
+                }
             }
         }).start();
     }
-    
     /**
      * Converts a Parking model to a Marker model for display on the map.
      */
@@ -280,15 +316,15 @@ public class MapScreen extends BaseScreen {
         if (parking == null || parking.getLocation() == null) {
             return null;
         }
-        
-        // Determine marker type (default to PARKING_LOT)
+
+        // Determine marker type
         Marker.MarkerType markerType = Marker.MarkerType.PARKING_LOT;
-        
-        // Determine marker state based on occupancy
+
+        // Determine marker state
         Marker.MarkerState markerState;
         int totalSpots = parking.getTotalSpots();
         int availableSpots = parking.getTotalAvailableSpots();
-        
+
         if (totalSpots == 0) {
             markerState = Marker.MarkerState.UNKNOWN;
         } else {
@@ -301,67 +337,70 @@ public class MapScreen extends BaseScreen {
                 markerState = Marker.MarkerState.FULL;
             }
         }
-        
+
+        // Get price from tariffs
+        float pricePerHour = parking.getPricePerHour();
+
         // Create marker
         Marker marker = new Marker(
-                parking.getLocation(),
-                markerType,
-                markerState,
-                parking.getId(),
-                parking.getName() != null ? parking.getName() : "Unknown",
-                totalSpots,
-                availableSpots,
-                0f // Price not available in backend model
+            parking.getLocation(),
+            markerType,
+            markerState,
+            parking.getId(),
+            parking.getName() != null ? parking.getName() : "Unknown",
+            totalSpots,
+            availableSpots,
+            pricePerHour
         );
-        
+
+        // Store the full Parking object in the marker for tariffs
+        marker.setParkingData(parking);
+
         return marker;
     }
-    
     /**
      * Initialize test markers for demonstration (fallback when API fails).
      */
     private void initializeTestMarkers() {
         // Test markers around Ljubljana center
         markers.add(new Marker(
-                new Geolocation(46.0569, 14.5058), // Center of Ljubljana
-                Marker.MarkerType.PARKING_LOT,
-                Marker.MarkerState.FREE,
-                "test-1", "Parking Center", 50, 35, 2.5f
+            new Geolocation(46.0569, 14.5058), // Center of Ljubljana
+            Marker.MarkerType.PARKING_LOT,
+            Marker.MarkerState.FREE,
+            "test-1", "Parking Center", 50, 35, 2.5f
         ));
 
         markers.add(new Marker(
-                new Geolocation(46.0580, 14.5070),
-                Marker.MarkerType.GARAGE,
-                Marker.MarkerState.PARTIAL,
-                "test-2", "Garage North", 100, 45, 3.0f
+            new Geolocation(46.0580, 14.5070),
+            Marker.MarkerType.GARAGE,
+            Marker.MarkerState.PARTIAL,
+            "test-2", "Garage North", 100, 45, 3.0f
         ));
 
         markers.add(new Marker(
-                new Geolocation(46.0550, 14.5040),
-                Marker.MarkerType.STREET_PARKING,
-                Marker.MarkerState.FULL,
-                "test-3", "Street Parking South", 20, 0, 1.5f
+            new Geolocation(46.0550, 14.5040),
+            Marker.MarkerType.STREET_PARKING,
+            Marker.MarkerState.FULL,
+            "test-3", "Street Parking South", 20, 0, 1.5f
         ));
 
         markers.add(new Marker(
-                new Geolocation(46.0590, 14.5030),
-                Marker.MarkerType.PARKING_LOT,
-                Marker.MarkerState.UNKNOWN,
-                "test-4", "Parking East", 30, 0, 0f
+            new Geolocation(46.0590, 14.5030),
+            Marker.MarkerType.PARKING_LOT,
+            Marker.MarkerState.UNKNOWN,
+            "test-4", "Parking East", 30, 0, 0f
         ));
     }
 
     /**
      * Sets the size of markers in pixels.
-     * @param size Size in pixels (default is 24f, recommended range: 16-48)
      */
     public void setMarkerSize(float size) {
-        this.markerSize = Math.max(8f, Math.min(64f, size)); // Clamp between 8 and 64 pixels
+        this.markerSize = Math.max(8f, Math.min(128f, size)); // Clamp between 8 and 64 pixels
     }
 
     /**
      * Gets the current marker size.
-     * @return Current marker size in pixels
      */
     public float getMarkerSize() {
         return markerSize;
@@ -377,22 +416,49 @@ public class MapScreen extends BaseScreen {
     }
 
     private void setupInputHandlers() {
-        // Create gesture detector for zoom and pan
         gestureDetector = new GestureDetector(new MapGestureListener());
 
-        // Create input adapter for scroll wheel
         InputAdapter scrollInputAdapter = new InputAdapter() {
             @Override
             public boolean scrolled(float amountX, float amountY) {
-                // amountY > 0 means scroll up (zoom in), < 0 means scroll down (zoom out)
                 float zoomSpeed = 0.1f;
                 camera.zoom += amountY * zoomSpeed;
                 camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
                 return true;
             }
+
+            @Override
+            public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                float gdxY = Gdx.graphics.getHeight() - screenY;
+
+                if (infoPanel.isTariffPopupCloseButtonClicked(screenX, gdxY)) {
+                    infoPanel.closeTariffPopup();
+                    return true;
+                }
+
+                if (infoPanel.isTariffPopupClicked(screenX, gdxY)) {
+                    return true;
+                }
+
+                if (infoPanel.isTariffButtonClicked(screenX, gdxY)) {
+                    infoPanel.openTariffPopup();
+                    return true;
+                }
+
+                if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
+                    infoPanel.hide();
+                    return true;
+                }
+
+                if (infoPanel.contains(screenX, gdxY)) {
+                    return true;
+                }
+
+                handleMarkerClick(screenX, screenY);
+                return false;
+            }
         };
 
-        // Use InputMultiplexer to handle gestures, scroll, and keyboard input
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(scrollInputAdapter);
         inputMultiplexer.addProcessor(gestureDetector);
@@ -402,6 +468,9 @@ public class MapScreen extends BaseScreen {
     @Override
     public void render(float delta) {
         handleKeyboardInput();
+
+        // Update info panel animation
+        infoPanel.update(delta);
 
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -419,12 +488,12 @@ public class MapScreen extends BaseScreen {
 
             // Draw markers on top of the map
             drawMarkers();
-            
-            // Draw info panel if marker is selected
-            drawInfoPanel();
+
+            // Draw info panel if visible
+            infoPanel.render();
         }
     }
-    
+
     /**
      * Handles click on marker.
      * Converts screen coordinates to world coordinates and checks if click is on a marker.
@@ -433,129 +502,47 @@ public class MapScreen extends BaseScreen {
         if (beginTile == null || markers == null) {
             return;
         }
-        
         // Convert screen coordinates to world coordinates
         Vector3 worldPos = new Vector3(screenX, screenY, 0);
         camera.unproject(worldPos);
-        
+
         // Check each marker to see if click is within marker bounds
-        float clickRadius = markerSize / 2f + 5f; // Add some tolerance
-        
+        float clickRadius = markerSize / 2f + 10f;
+
         for (Marker marker : markers) {
             Vector2 markerPixelPos = MapRasterTiles.getPixelPosition(
-                    marker.getPosition().lat,
-                    marker.getPosition().lng,
-                    beginTile.x,
-                    beginTile.y
+                marker.getPosition().lat,
+                marker.getPosition().lng,
+                beginTile.x,
+                beginTile.y
             );
-            
+
             // Calculate distance from click to marker
             float distance = Vector2.dst(
-                    worldPos.x, worldPos.y,
-                    markerPixelPos.x, markerPixelPos.y
+                worldPos.x, worldPos.y,
+                markerPixelPos.x, markerPixelPos.y
             );
-            
+
             if (distance <= clickRadius) {
-                // Marker clicked!
-                selectedMarker = marker;
+                // Marker clicked
                 Gdx.app.debug("MapScreen", "Marker clicked: " + marker.getName());
+
+                // Toggle info panel with animation
+                if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
+                    // If same marker is clicked again, hide panel
+                    infoPanel.hide();
+                } else {
+                    // Show panel for clicked marker
+                    infoPanel.show(marker);
+                }
                 return;
             }
         }
-        
-        // Click was not on any marker - deselect
-        selectedMarker = null;
-    }
-    
-    /**
-     * Draws info panel with marker information.
-     */
-    private void drawInfoPanel() {
-        if (selectedMarker == null) {
-            return;
-        }
-        
-        // Draw info panel using ShapeRenderer
-        if (shapeRenderer == null) {
-            return;
-        }
-        
-        float panelWidth = 300f;
-        float panelHeight = 150f;
-        float padding = 10f;
-        float screenWidth = Gdx.graphics.getWidth();
-        
-        // Position panel at bottom center
-        float panelX = (screenWidth - panelWidth) / 2f;
-        float panelY = padding;
-        
-        // Use orthographic camera for UI rendering (screen coordinates)
-        // Create a temporary camera for UI
-        com.badlogic.gdx.graphics.OrthographicCamera uiCamera = new com.badlogic.gdx.graphics.OrthographicCamera();
-        uiCamera.setToOrtho(false, screenWidth, Gdx.graphics.getHeight());
-        uiCamera.update();
-        
-        shapeRenderer.setProjectionMatrix(uiCamera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        
-        // Draw panel background (semi-transparent)
-        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.9f);
-        shapeRenderer.rect(panelX, panelY, panelWidth, panelHeight);
-        
-        // Draw border
-        shapeRenderer.setColor(0.5f, 0.5f, 0.5f, 1f);
-        shapeRenderer.rect(panelX, panelY, panelWidth, 2f); // Top border
-        shapeRenderer.rect(panelX, panelY + panelHeight - 2f, panelWidth, 2f); // Bottom border
-        shapeRenderer.rect(panelX, panelY, 2f, panelHeight); // Left border
-        shapeRenderer.rect(panelX + panelWidth - 2f, panelY, 2f, panelHeight); // Right border
-        
-        shapeRenderer.end();
-        
-        // Draw text with font
-        if (font != null && spriteBatch != null) {
-            spriteBatch.setProjectionMatrix(uiCamera.combined);
-            spriteBatch.begin();
-            
-            float textX = panelX + padding;
-            float textY = panelY + panelHeight - padding - 20f; // Start from top
-            
-            // Draw marker name
-            font.setColor(Color.WHITE);
-            font.draw(spriteBatch, selectedMarker.getName() != null ? selectedMarker.getName() : "Unknown", 
-                     textX, textY);
-            
-            textY -= 20f; // Smaller spacing for smaller font
-            
-            // Draw marker type
-            font.setColor(Color.LIGHT_GRAY);
-            font.draw(spriteBatch, "Type: " + selectedMarker.getType().name().replace("_", " "), 
-                     textX, textY);
-            
-            textY -= 20f; // Smaller spacing for smaller font
-            
-            // Draw occupancy info
-            if (selectedMarker.getTotalSpots() > 0) {
-                font.setColor(getColorForState(selectedMarker.getState()));
-                String spotsInfo = String.format("Spots: %d/%d (%.0f%%)", 
-                    selectedMarker.getAvailableSpots(), 
-                    selectedMarker.getTotalSpots(),
-                    selectedMarker.getOccupancyPercentage());
-                font.draw(spriteBatch, spotsInfo, textX, textY);
-            } else {
-                font.setColor(Color.GRAY);
-                font.draw(spriteBatch, "Spots: Unknown", textX, textY);
-            }
-            
-            textY -= 20f; // Smaller spacing for smaller font
-            
-            // Draw price if available
-            if (selectedMarker.getPricePerHour() > 0) {
-                font.setColor(Color.LIGHT_GRAY);
-                font.draw(spriteBatch, String.format("Price: %.2f €/h", selectedMarker.getPricePerHour()), 
-                         textX, textY);
-            }
-            
-            spriteBatch.end();
+
+        // Click was not on any marker - hide info panel if click was outside
+        float gdxY = Gdx.graphics.getHeight() - screenY;
+        if (!infoPanel.contains(screenX, gdxY)) {
+            infoPanel.hide();
         }
     }
 
@@ -572,10 +559,9 @@ public class MapScreen extends BaseScreen {
         if (beginTile == null || markers == null) {
             return;
         }
-
         // Check if we have any textures loaded
         boolean useTextures = markerFreeTexture != null || markerPartialTexture != null
-                           || markerFullTexture != null || markerUnknownTexture != null;
+            || markerFullTexture != null || markerUnknownTexture != null;
 
         if (useTextures) {
             drawMarkersWithTextures();
@@ -594,10 +580,10 @@ public class MapScreen extends BaseScreen {
         for (Marker marker : markers) {
             // Convert geolocation to pixel position
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
-                    marker.getPosition().lat,
-                    marker.getPosition().lng,
-                    beginTile.x,
-                    beginTile.y
+                marker.getPosition().lat,
+                marker.getPosition().lng,
+                beginTile.x,
+                beginTile.y
             );
 
             // Get texture for marker state
@@ -606,15 +592,14 @@ public class MapScreen extends BaseScreen {
             if (markerTexture != null) {
                 // Draw texture centered at marker position
                 spriteBatch.draw(
-                        markerTexture,
-                        pixelPos.x - markerSize / 2f,
-                        pixelPos.y - markerSize / 2f,
-                        markerSize,
-                        markerSize
+                    markerTexture,
+                    pixelPos.x - markerSize / 2f,
+                    pixelPos.y - markerSize / 2f,
+                    markerSize,
+                    markerSize
                 );
             }
         }
-
         spriteBatch.end();
     }
 
@@ -632,10 +617,10 @@ public class MapScreen extends BaseScreen {
         for (Marker marker : markers) {
             // Convert geolocation to pixel position
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
-                    marker.getPosition().lat,
-                    marker.getPosition().lng,
-                    beginTile.x,
-                    beginTile.y
+                marker.getPosition().lat,
+                marker.getPosition().lng,
+                beginTile.x,
+                beginTile.y
             );
 
             // Set color based on marker state
@@ -643,12 +628,18 @@ public class MapScreen extends BaseScreen {
             shapeRenderer.setColor(markerColor);
 
             // Draw marker as a circle (size scales with markerSize)
-            float markerRadius = markerSize / 3f; // Scale circle radius with marker size
+            float markerRadius = markerSize / 2f; // Scale circle radius with marker size
             shapeRenderer.circle(pixelPos.x, pixelPos.y, markerRadius);
 
             // Draw a small border in darker color
             shapeRenderer.setColor(markerColor.cpy().mul(0.7f));
             shapeRenderer.circle(pixelPos.x, pixelPos.y, markerRadius + 2f);
+
+            // Highlight selected marker
+            if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
+                shapeRenderer.setColor(Color.WHITE);
+                shapeRenderer.circle(pixelPos.x, pixelPos.y, markerRadius + 4f, 20);
+            }
         }
 
         shapeRenderer.end();
@@ -719,6 +710,11 @@ public class MapScreen extends BaseScreen {
         if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
             camera.translate(0, panSpeed, 0);
         }
+
+        // Close info panel with ESC key
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            infoPanel.hide();
+        }
     }
 
     private void clampCameraPosition() {
@@ -728,9 +724,9 @@ public class MapScreen extends BaseScreen {
         // Only clamp if viewport is smaller than map (don't clamp when zoomed out too much)
         if (effectiveViewportWidth < MapConstants.MAP_WIDTH) {
             camera.position.x = MathUtils.clamp(
-                    camera.position.x,
-                    effectiveViewportWidth / 2f,
-                    MapConstants.MAP_WIDTH - effectiveViewportWidth / 2f
+                camera.position.x,
+                effectiveViewportWidth / 2f,
+                MapConstants.MAP_WIDTH - effectiveViewportWidth / 2f
             );
         } else {
             // When zoomed out, center the camera
@@ -739,9 +735,9 @@ public class MapScreen extends BaseScreen {
 
         if (effectiveViewportHeight < MapConstants.MAP_HEIGHT) {
             camera.position.y = MathUtils.clamp(
-                    camera.position.y,
-                    effectiveViewportHeight / 2f,
-                    MapConstants.MAP_HEIGHT - effectiveViewportHeight / 2f
+                camera.position.y,
+                effectiveViewportHeight / 2f,
+                MapConstants.MAP_HEIGHT - effectiveViewportHeight / 2f
             );
         } else {
             // When zoomed out, center the camera
@@ -767,7 +763,6 @@ public class MapScreen extends BaseScreen {
         if (spriteBatch != null) {
             spriteBatch.dispose();
         }
-        // Dispose marker textures
         if (markerFreeTexture != null) {
             markerFreeTexture.dispose();
         }
@@ -783,6 +778,10 @@ public class MapScreen extends BaseScreen {
         if (font != null) {
             font.dispose();
         }
+        if (infoPanel != null) {
+            infoPanel.dispose();
+        }
+        FontManager.dispose();
     }
 
     /**
@@ -797,10 +796,6 @@ public class MapScreen extends BaseScreen {
 
         @Override
         public boolean tap(float x, float y, int count, int button) {
-            // Handle marker click
-            if (count == 1) { // Single tap
-                handleMarkerClick(x, y);
-            }
             return false;
         }
 
@@ -847,4 +842,3 @@ public class MapScreen extends BaseScreen {
         }
     }
 }
-
