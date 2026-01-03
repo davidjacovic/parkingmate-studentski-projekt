@@ -84,3 +84,7 @@ publish/
 
 # Logs
 *.log
+
+# Datasets
+raw_data/
+dataset/
