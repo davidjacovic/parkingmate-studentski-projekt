@@ -179,6 +179,14 @@ class SimulationActivity : AppCompatActivity() {
                 location = "$lat,$lon"
             )
         }
+        if (eventType == EventType.LOW_AVAILABILITY) {
+            val event = Event(
+                topic = "parking/low-availability",
+                message = "Low parking availability",
+                timestamp = System.currentTimeMillis(),
+                location = "$lat,$lon"
+            )
+        }
 
         val urvrvResultJson = """
         {
