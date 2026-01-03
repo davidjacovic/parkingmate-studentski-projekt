@@ -173,35 +173,34 @@ class SimulationActivity : AppCompatActivity() {
                 else -> null
             }
 
+        if (eventType != null && eventType != lastEventType) {
 
+            val event = when (eventType) {
+                EventType.PARKING_FULL -> Event(
+                    topic = "parking/full",
+                    message = "Parking is full",
+                    timestamp = System.currentTimeMillis(),
+                    location = "$lat,$lon"
+                )
 
-        if (eventType == EventType.PARKING_FULL) {
-            val event = Event(
-                topic = "parking/full",
-                message = "Parking is full",
-                timestamp = System.currentTimeMillis(),
-                location = "$lat,$lon"
-            )
+                EventType.LOW_AVAILABILITY -> Event(
+                    topic = "parking/low-availability",
+                    message = "Low parking availability",
+                    timestamp = System.currentTimeMillis(),
+                    location = "$lat,$lon"
+                )
+
+                EventType.PARKING_AVAILABLE -> Event(
+                    topic = "parking/available",
+                    message = "Parking is available",
+                    timestamp = System.currentTimeMillis(),
+                    location = "$lat,$lon"
+                )
+            }
+
+            // zapamti poslednji generisani event
+            lastEventType = eventType
         }
-        if (eventType == EventType.LOW_AVAILABILITY) {
-            val event = Event(
-                topic = "parking/low-availability",
-                message = "Low parking availability",
-                timestamp = System.currentTimeMillis(),
-                location = "$lat,$lon"
-            )
-        }
-        if (eventType == EventType.PARKING_AVAILABLE &&
-            lastEventType != EventType.PARKING_AVAILABLE
-        ) {
-            val event = Event(
-                topic = "parking/available",
-                message = "Parking is now available",
-                timestamp = System.currentTimeMillis(),
-                location = "$lat,$lon"
-            )
-        }
-        lastEventType = eventType
 
 
         val urvrvResultJson = """
