@@ -154,17 +154,22 @@ class SimulationActivity : AppCompatActivity() {
                 occupiedSpaces = numValue
             }
         }
+
         val eventType: EventType? =
             when {
                 totalSpots > 0 && freeSpaces == 0 ->
                     EventType.PARKING_FULL
 
-                totalSpots > 0 && freeSpaces > 0 ->
+                totalSpots > 0 &&
+                        freeSpaces > 0 &&
+                        freeSpaces.toDouble() / totalSpots <= 0.2 ->
+                    EventType.LOW_AVAILABILITY
+
+                totalSpots > 0 ->
                     EventType.PARKING_AVAILABLE
 
                 else -> null
             }
-
 
         val urvrvResultJson = """
         {
