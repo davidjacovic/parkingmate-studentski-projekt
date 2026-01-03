@@ -58,7 +58,6 @@ public class MapScreen extends BaseScreen {
     private Texture markerFullTexture;
     private Texture markerUnknownTexture;
 
-
     // NAVIGATION BUTTON
     private Texture navButtonTexture;
     private Texture navButtonActiveTexture;
@@ -66,6 +65,13 @@ public class MapScreen extends BaseScreen {
     private boolean navigationMode = false;
     private Vector2 carPosition; // Car position on the map
     private Vector2 cursorWorldPos; // Cursor position in world coordinates
+
+    // NAVIGATION TARGET VARIABLES
+    private Vector2 navigationTarget = null; // Target parking marker position
+    private Marker selectedParkingMarker = null; // Currently selected parking marker
+    private boolean isMovingToTarget = false; // Whether car is moving to target
+    private float moveProgress = 0f; // Progress of movement (0 to 1)
+    private float moveSpeed = 1.0f; // Speed of car movement (units per second)
 
     // BUTTON DIMENSIONS AND POSITION
     private float navButtonSize = 48f;
@@ -253,7 +259,6 @@ public class MapScreen extends BaseScreen {
         Gdx.app.log("MapScreen", "Nav button (TOP-LEFT) at: " + navButtonX + ", " + navButtonY);
     }
 
-
     /**
      * Create default navigation button (red circle).
      */
@@ -321,6 +326,7 @@ public class MapScreen extends BaseScreen {
         // Set bounds for info panel
         infoPanel.setBounds(infoPanelX, infoPanelY, infoPanelWidth, infoPanelHeight);
     }
+
     /**
      * Loads font for info panel text rendering.
      */
@@ -420,6 +426,7 @@ public class MapScreen extends BaseScreen {
             }
         }).start();
     }
+
     /**
      * Converts a Parking model to a Marker model for display on the map.
      */
@@ -469,6 +476,7 @@ public class MapScreen extends BaseScreen {
 
         return marker;
     }
+
     /**
      * Initialize test markers for demonstration (fallback when API fails).
      */
@@ -546,9 +554,13 @@ public class MapScreen extends BaseScreen {
                     navigationMode = !navigationMode;
                     Gdx.app.log("MapScreen", "Navigation mode: " + navigationMode);
 
+                    // Reset navigation state when turning off navigation
+                    if (!navigationMode) {
+                        resetNavigation();
+                    }
+
                     // WHEN NAVIGATION IS TURNED ON, CENTER CAMERA ON CAR
                     if (navigationMode) {
-
                         Vector2 ljubljanaPixel = MapRasterTiles.getPixelPosition(
                             46.0569, 14.5058,
                             beginTile.x,
@@ -564,7 +576,6 @@ public class MapScreen extends BaseScreen {
                         Gdx.app.log("MapScreen", "Navigation ON – car at Ljubljana: " + carPosition);
                     }
                     return true;
-
                 }
 
                 if (infoPanel.isTariffPopupCloseButtonClicked(screenX, gdxY)) {
@@ -589,10 +600,14 @@ public class MapScreen extends BaseScreen {
                 if (infoPanel.contains(screenX, gdxY)) {
                     return true;
                 }
-                if (navigationMode) {
-                    return true;
-                }
 
+                // Handle marker click for navigation
+                if (navigationMode) {
+                    boolean markerClicked = handleMarkerClickForNavigation(screenX, screenY);
+                    if (markerClicked) {
+                        return true;
+                    }
+                }
 
                 handleMarkerClick(screenX, screenY);
                 return false;
@@ -600,14 +615,13 @@ public class MapScreen extends BaseScreen {
 
             @Override
             public boolean mouseMoved(int screenX, int screenY) {
-                if (navigationMode) {
+                if (navigationMode && !isMovingToTarget) {
                     Vector3 worldPos = new Vector3(screenX, screenY, 0);
                     camera.unproject(worldPos);
                     cursorWorldPos.set(worldPos.x, worldPos.y);
                 }
                 return false;
             }
-
         };
 
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
@@ -665,11 +679,48 @@ public class MapScreen extends BaseScreen {
         shapeRenderer.end();
     }
 
+    /**
+     * Draw solid line between two points.
+     */
+    private void drawSolidLine(ShapeRenderer shapeRenderer, Vector2 start, Vector2 end, float thickness) {
+        if (shapeRenderer == null) return;
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f); // Blue color for navigation line
+        shapeRenderer.rectLine(start, end, thickness);
+        shapeRenderer.end();
+    }
+
+    /**
+     * Draw animated line that shrinks as car moves.
+     */
+    private void drawAnimatedLine(ShapeRenderer shapeRenderer, Vector2 start, Vector2 end, float progress) {
+        if (shapeRenderer == null) return;
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f); // Blue color
+
+        // Calculate current end point based on progress
+        Vector2 currentEnd = new Vector2(end).sub(start).scl(progress).add(start);
+
+        // Draw the line from current car position to current end point
+        shapeRenderer.rectLine(start, currentEnd, 6f);
+        shapeRenderer.end();
+    }
+
     @Override
     public void render(float delta) {
         handleKeyboardInput();
+
+        // Update car movement if moving to target
+        if (isMovingToTarget && navigationTarget != null) {
+            updateCarMovement(delta);
+        }
+
         // Update dashed line phase for animation
-        if (navigationMode) {
+        if (navigationMode && !isMovingToTarget) {
             dashedLinePhase += delta * 100f;
         }
 
@@ -697,6 +748,7 @@ public class MapScreen extends BaseScreen {
             if (navigationMode) {
                 drawNavigation();
             }
+
             // Draw info panel if visible
             infoPanel.render();
             drawNavigationButton();
@@ -704,12 +756,58 @@ public class MapScreen extends BaseScreen {
     }
 
     /**
-     * Draw navigation (car + dashed line).
+     * Update car movement animation.
+     */
+    private void updateCarMovement(float delta) {
+        if (navigationTarget == null) return;
+
+        // Calculate distance to target
+        float distanceToTarget = carPosition.dst(navigationTarget);
+        float totalDistance = carPosition.dst(navigationTarget) / (1 - moveProgress);
+
+        // Calculate movement based on speed and delta time
+        float moveDistance = moveSpeed * 50f * delta; // Adjust speed multiplier as needed
+
+        // Update progress
+        moveProgress += moveDistance / totalDistance;
+
+        // Clamp progress to 1.0
+        if (moveProgress >= 1.0f) {
+            moveProgress = 1.0f;
+            carPosition.set(navigationTarget);
+            isMovingToTarget = false;
+            Gdx.app.log("MapScreen", "Car arrived at parking spot");
+
+            // Optional: Center camera on car when it arrives
+            camera.position.set(carPosition.x, carPosition.y, 0);
+            camera.update();
+        } else {
+            // Interpolate car position
+            Vector2 direction = new Vector2(navigationTarget).sub(carPosition).nor();
+            carPosition.add(direction.scl(moveDistance));
+
+            // Keep camera following the car
+            camera.position.set(carPosition.x, carPosition.y, 0);
+            camera.update();
+        }
+    }
+
+    /**
+     * Draw navigation (car + dashed line or solid line).
      */
     private void drawNavigation() {
         if (shapeRenderer == null || spriteBatch == null || carPosition == null) return;
 
-        if (cursorWorldPos != null && carPosition.dst(cursorWorldPos) > 5f) {
+        // If moving to target, draw animated line
+        if (isMovingToTarget && navigationTarget != null) {
+            drawAnimatedLine(shapeRenderer, carPosition, navigationTarget, moveProgress);
+        }
+        // If we have a selected parking marker, draw solid line to it
+        else if (selectedParkingMarker != null && navigationTarget != null) {
+            drawSolidLine(shapeRenderer, carPosition, navigationTarget, 6f);
+        }
+        // Otherwise, draw dashed line to cursor (only if not too close)
+        else if (cursorWorldPos != null && carPosition.dst(cursorWorldPos) > 5f) {
             drawDashedLine(shapeRenderer, carPosition, cursorWorldPos);
         }
 
@@ -765,13 +863,64 @@ public class MapScreen extends BaseScreen {
     }
 
     /**
-     * Handles click on marker.
-     * Converts screen coordinates to world coordinates and checks if click is on a marker.
+     * Handles click on marker for navigation purposes.
+     */
+    private boolean handleMarkerClickForNavigation(float screenX, float screenY) {
+        if (beginTile == null || markers == null) {
+            return false;
+        }
+
+        // Convert screen coordinates to world coordinates
+        Vector3 worldPos = new Vector3(screenX, screenY, 0);
+        camera.unproject(worldPos);
+
+        // Check each marker to see if click is within marker bounds
+        float clickRadius = markerSize / 2f + 10f;
+
+        for (Marker marker : markers) {
+            Vector2 markerPixelPos = MapRasterTiles.getPixelPosition(
+                marker.getPosition().lat,
+                marker.getPosition().lng,
+                beginTile.x,
+                beginTile.y
+            );
+
+            // Calculate distance from click to marker
+            float distance = Vector2.dst(
+                worldPos.x, worldPos.y,
+                markerPixelPos.x, markerPixelPos.y
+            );
+
+            if (distance <= clickRadius) {
+                // Marker clicked - set as navigation target
+                selectedParkingMarker = marker;
+                navigationTarget = new Vector2(markerPixelPos);
+                isMovingToTarget = true;
+                moveProgress = 0f;
+
+                Gdx.app.log("MapScreen", "Navigation target set to: " + marker.getName());
+                Gdx.app.log("MapScreen", "Starting car movement from " + carPosition + " to " + navigationTarget);
+
+                // Hide the info panel if it's showing the same marker
+                if (infoPanel.getSelectedMarker() == marker) {
+                    infoPanel.hide();
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Handles click on marker for info panel display.
      */
     private void handleMarkerClick(float screenX, float screenY) {
-        if (beginTile == null || markers == null) {
+        if (beginTile == null || markers == null || navigationMode) {
             return;
         }
+
         // Convert screen coordinates to world coordinates
         Vector3 worldPos = new Vector3(screenX, screenY, 0);
         camera.unproject(worldPos);
@@ -814,6 +963,17 @@ public class MapScreen extends BaseScreen {
         if (!infoPanel.contains(screenX, gdxY)) {
             infoPanel.hide();
         }
+    }
+
+    /**
+     * Resets navigation state.
+     */
+    private void resetNavigation() {
+        selectedParkingMarker = null;
+        navigationTarget = null;
+        isMovingToTarget = false;
+        moveProgress = 0f;
+        cursorWorldPos = new Vector2(carPosition);
     }
 
     /**
@@ -874,7 +1034,6 @@ public class MapScreen extends BaseScreen {
 
         spriteBatch.end();
     }
-
 
     /**
      * Draws markers using colored circles (fallback when textures not available).
@@ -978,6 +1137,11 @@ public class MapScreen extends BaseScreen {
         // Close info panel with ESC key
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             infoPanel.hide();
+        }
+
+        // Reset navigation with R key
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            resetNavigation();
         }
     }
 
