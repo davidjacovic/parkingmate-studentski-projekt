@@ -171,6 +171,15 @@ class SimulationActivity : AppCompatActivity() {
                 else -> null
             }
 
+        if (eventType == EventType.PARKING_FULL) {
+            val event = Event(
+                topic = "parking/full",
+                message = "Parking is full",
+                timestamp = System.currentTimeMillis(),
+                location = "$lat,$lon"
+            )
+        }
+
         val urvrvResultJson = """
         {
             "totalSpots": $totalSpots,
