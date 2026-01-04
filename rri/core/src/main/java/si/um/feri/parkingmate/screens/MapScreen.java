@@ -1,6 +1,5 @@
 package si.um.feri.parkingmate.screens;
 
-import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
@@ -41,17 +40,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Main map screen displaying parking locations, navigation, and interactive elements.
+ * This screen handles map rendering, marker display, routing, and user interactions.
+ */
 public class MapScreen extends BaseScreen {
 
     private final ParkingMate game;
     private TiledMap tiledMap;
     private TiledMapRenderer tiledMapRenderer;
     private Texture[] mapTiles;
-    private ZoomXY beginTile; // top left tile
+    private ZoomXY beginTile;
     private GestureDetector gestureDetector;
     private ShapeRenderer shapeRenderer;
     private SpriteBatch spriteBatch;
-    private List<Marker> markers; // List of markers to display
+    private List<Marker> markers;
 
     // Marker textures
     private Texture markerFreeTexture;
@@ -64,29 +67,30 @@ public class MapScreen extends BaseScreen {
     private Texture navButtonActiveTexture;
     private Texture carIconTexture;
     private boolean navigationMode = false;
-    private Vector2 carPosition; // Car position on the map
-    private Vector2 cursorWorldPos; // Cursor position in world coordinates
+    private Vector2 carPosition;
+    private Vector2 cursorWorldPos;
     private boolean isCalculatingRoute = false;
 
     // NAVIGATION TARGET VARIABLES
-    private Vector2 navigationTarget = null; // Target parking marker position
-    private Marker selectedParkingMarker = null; // Currently selected parking marker
-    private boolean isMovingToTarget = false; // Whether car is moving to target
+    private Vector2 navigationTarget = null;
+    private Marker selectedParkingMarker = null;
+    private boolean isMovingToTarget = false;
+
     // BUTTON DIMENSIONS AND POSITION
     private float navButtonSize = 48f;
     private float navButtonMargin = 15f;
     private float navButtonX, navButtonY;
 
     // ROUTE VISUALIZATION
-    private List<Vector2> finalRoutePoints = null; // Fiksna ruta koja se prikazuje
-    private List<Vector2> traveledRoutePoints = new ArrayList<>(); // Predjeni deo rute
-    private Texture flagIconTexture; // Zastavica ikonica za cilj
-    private Vector2 flagPosition = null; // Pozicija zastavice
-    private float flagSize = 64f; // Veličina zastavice
+    private List<Vector2> finalRoutePoints = null;
+    private List<Vector2> traveledRoutePoints = new ArrayList<>();
+    private Texture flagIconTexture;
+    private Vector2 flagPosition = null;
+    private float flagSize = 64f;
 
     // ROUTE COLORS
-    private static final Color FUTURE_ROUTE_COLOR = new Color(0f, 0.5f, 1f, 0.6f); // Plava za budući deo
-    private static final Color TRAVELED_ROUTE_COLOR = new Color(0f, 0.8f, 0.2f, 0.8f); // Zelena za pređeni deo
+    private static final Color FUTURE_ROUTE_COLOR = new Color(0f, 0.5f, 1f, 0.6f);
+    private static final Color TRAVELED_ROUTE_COLOR = new Color(0f, 0.8f, 0.2f, 0.8f);
 
     // DASHED LINE PROPERTIES
     private float dashedLinePhase = 0f;
@@ -114,10 +118,8 @@ public class MapScreen extends BaseScreen {
     // ARRIVAL EFFECTS
     private boolean arrivalPause = false;
     private static final float ARRIVAL_PAUSE_TIME = 0.25f;
-
-    // ARRIVAL ZOOM EFFECT
     private float arrivalZoomTimer = 0f;
-    private float arrivalZoomHoldTime = 1.2f; // koliko sekundi drži zoom
+    private float arrivalZoomHoldTime = 1.2f;
     private float arrivalZoomTarget = 1.4f;
     private float arrivalZoomOriginal = -1f;
 
@@ -125,6 +127,10 @@ public class MapScreen extends BaseScreen {
     // Backend API base URL (backend runs on port 3002)
     private static final String API_BASE_URL = "http://localhost:3002";
 
+    /**
+     * Constructor for MapScreen.
+     * @param game The main game instance.
+     */
     public MapScreen(ParkingMate game) {
         this.game = game;
         this.markers = new ArrayList<>();
@@ -132,11 +138,19 @@ public class MapScreen extends BaseScreen {
         this.infoPanel = new InfoPanel();
     }
 
+    /**
+     * Called when this screen becomes the current screen.
+     * Initializes the map and all related components.
+     */
     @Override
     public void show() {
         initializeMap();
     }
 
+    /**
+     * Initializes the map, tiles, markers, and navigation system.
+     * Loads map tiles from the Geoapify API and sets up the display.
+     */
     private void initializeMap() {
         // Check if API key is set
         if (Keys.GEOAPIFY == null || Keys.GEOAPIFY.isEmpty()) {
@@ -274,7 +288,6 @@ public class MapScreen extends BaseScreen {
             createDefaultCarIcon();
         }
 
-        // Load flag icon texture
         try {
             flagIconTexture = new Texture(Gdx.files.internal("markers/flag.png"));
         } catch (Exception e) {
@@ -286,8 +299,10 @@ public class MapScreen extends BaseScreen {
 
         Gdx.app.log("MapScreen", "Nav button (TOP-LEFT) at: " + navButtonX + ", " + navButtonY);
     }
+
+
     /**
-     * Create default flag icon (checkered flag).
+     * Create default flag icon
      */
     private void createDefaultFlagIcon() {
         Pixmap pixmap = new Pixmap((int)flagSize, (int)flagSize, Pixmap.Format.RGBA8888);
@@ -312,6 +327,7 @@ public class MapScreen extends BaseScreen {
         flagIconTexture = new Texture(pixmap);
         pixmap.dispose();
     }
+
     /**
      * Create default navigation button (red circle).
      */
@@ -333,13 +349,10 @@ public class MapScreen extends BaseScreen {
     }
 
     /**
-     * Create default car icon (blue rectangle).
-     */
-    /**
-     * Create default car icon for 48px.
+     * Create default car icon
      */
     private void createDefaultCarIcon() {
-        int size = 48; // Changed from 32 to 48
+        int size = 48;
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
         pixmap.setColor(Color.BLUE);
 
@@ -565,19 +578,8 @@ public class MapScreen extends BaseScreen {
     }
 
     /**
-     * Sets the size of markers in pixels.
+     * Sets up the camera with initial position and zoom settings.
      */
-    public void setMarkerSize(float size) {
-        this.markerSize = Math.max(8f, Math.min(128f, size)); // Clamp between 8 and 64 pixels
-    }
-
-    /**
-     * Gets the current marker size.
-     */
-    public float getMarkerSize() {
-        return markerSize;
-    }
-
     private void setupCamera() {
         camera.setToOrtho(false, MapConstants.MAP_WIDTH, MapConstants.MAP_HEIGHT);
         camera.position.set(MapConstants.MAP_WIDTH / 2f, MapConstants.MAP_HEIGHT / 2f, 0);
@@ -587,6 +589,9 @@ public class MapScreen extends BaseScreen {
         camera.update();
     }
 
+    /**
+     * Sets up input handlers for gestures, clicks, and keyboard input.
+     */
     private void setupInputHandlers() {
         gestureDetector = new GestureDetector(new MapGestureListener());
 
@@ -604,6 +609,11 @@ public class MapScreen extends BaseScreen {
 
                 // CHECK CLICK ON NAVIGATION BUTTON
                 if (isNavButtonClicked(screenX, gdxY)) {
+                    if (infoPanel.isVisible()) {
+                        Gdx.app.log("MapScreen", "Cannot turn on navigation while info panel is open");
+                        return true;
+                    }
+
                     navigationMode = !navigationMode;
                     Gdx.app.log("MapScreen", "Navigation mode: " + navigationMode);
 
@@ -631,6 +641,13 @@ public class MapScreen extends BaseScreen {
                     return true;
                 }
 
+                // If info panel is clicked, turn off navigation
+                if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
+                    infoPanel.hide();
+                    // Do not reset navigation here, just hide the panel
+                    return true;
+                }
+
                 if (infoPanel.isTariffPopupCloseButtonClicked(screenX, gdxY)) {
                     infoPanel.closeTariffPopup();
                     return true;
@@ -645,12 +662,12 @@ public class MapScreen extends BaseScreen {
                     return true;
                 }
 
-                if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
-                    infoPanel.hide();
-                    return true;
-                }
-
                 if (infoPanel.contains(screenX, gdxY)) {
+                    // If click is inside info panel, turn off navigation
+                    if (navigationMode) {
+                        navigationMode = false;
+                        resetNavigation();
+                    }
                     return true;
                 }
 
@@ -704,7 +721,7 @@ public class MapScreen extends BaseScreen {
 
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0f, 0f, 0f, 0.8f);
+        shapeRenderer.setColor(0f, 0f, 0f, 0.8f); // Black dashed line
 
         float distance = start.dst(end);
         Vector2 direction = new Vector2(end).sub(start).nor();
@@ -722,7 +739,7 @@ public class MapScreen extends BaseScreen {
             if (draw) {
                 Vector2 s = new Vector2(start).add(new Vector2(direction).scl(drawn));
                 Vector2 e = new Vector2(start).add(new Vector2(direction).scl(segmentEnd));
-                shapeRenderer.rectLine(s, e, 6f);
+                shapeRenderer.rectLine(s, e, 4f); // Thinner dashed line
             }
 
             drawn = segmentEnd;
@@ -731,6 +748,11 @@ public class MapScreen extends BaseScreen {
 
         shapeRenderer.end();
     }
+
+    /**
+     * Main render method called every frame.
+     * @param delta Time elapsed since last frame.
+     */
     @Override
     public void render(float delta) {
         handleKeyboardInput();
@@ -761,30 +783,29 @@ public class MapScreen extends BaseScreen {
             tiledMapRenderer.setView(camera);
             tiledMapRenderer.render();
 
-            // Draw markers on top of the map
+            // Draw markers on top of the map (ALWAYS)
             drawMarkers();
 
             // DRAW NAVIGATION IF ACTIVE
-            if (navigationMode) {
-                drawNavigation();
-            }
+            drawNavigation();
 
             // Draw info panel if visible
             infoPanel.render();
             drawNavigationButton();
         }
+
         if (isArriving) {
             arrivalTimer += delta;
             if (arrivalTimer >= ARRIVAL_DURATION) {
                 isArriving = false;
             }
         }
+
         if (isArriving) {
             camera.zoom = MathUtils.lerp(camera.zoom, 1.4f, 0.06f);
         }
-
-
     }
+
     /**
      * Update car movement - follows route
      */
@@ -797,7 +818,7 @@ public class MapScreen extends BaseScreen {
             return;
         }
 
-        // PROMENJENO: Proverava finalRoutePoints umesto currentRoute
+        // CHANGED: Checks finalRoutePoints instead of currentRoute
         if (finalRoutePoints != null && navigationTarget != null && isMovingToTarget) {
             followRoute(delta);
         }
@@ -812,13 +833,13 @@ public class MapScreen extends BaseScreen {
         float speed = 150f;
         float distanceToTarget = carPosition.dst(navigationTarget);
 
-        // Proveri dolazak
+        // Check arrival
         if (distanceToTarget < 15f) {
             handleArrival();
             return;
         }
 
-        // Pronađi trenutni segment
+        // Find current segment
         int segmentIndex = -1;
         float closestDistance = Float.MAX_VALUE;
 
@@ -837,53 +858,57 @@ public class MapScreen extends BaseScreen {
             Vector2 segmentStart = finalRoutePoints.get(segmentIndex);
             Vector2 segmentEnd = finalRoutePoints.get(segmentIndex + 1);
 
-            // Kreći se duž segmenta
+            // Move along segment
             Vector2 segmentDir = new Vector2(segmentEnd).sub(segmentStart).nor();
 
-            // Projekcija trenutne pozicije na segment
+            // Projection of current position on segment
             Vector2 toStart = new Vector2(carPosition).sub(segmentStart);
             float projection = toStart.dot(segmentDir);
 
-            // Nova pozicija je projekcija + pomeraj duž segmenta
+            // New position is projection + movement along segment
             float moveDistance = speed * delta;
             float newProjection = projection + moveDistance;
             float segmentLength = segmentStart.dst(segmentEnd);
 
             if (newProjection <= segmentLength) {
-                // Ostani na ovom segmentu
+                // Stay on this segment
                 carPosition.set(segmentStart).add(segmentDir.scl(newProjection));
             } else {
-                // Pređi na sledeći segment
+                // Move to next segment
                 float remaining = newProjection - segmentLength;
 
                 if (segmentIndex + 2 < finalRoutePoints.size()) {
-                    // Ima još segmenata
+                    // There are more segments
                     Vector2 nextSegmentStart = segmentEnd;
                     Vector2 nextSegmentEnd = finalRoutePoints.get(segmentIndex + 2);
                     Vector2 nextSegmentDir = new Vector2(nextSegmentEnd).sub(nextSegmentStart).nor();
 
                     carPosition.set(nextSegmentStart).add(nextSegmentDir.scl(remaining));
                 } else {
-                    // Ovo je poslednji segment, idi ka cilju
+                    // This is the last segment, go towards target
                     Vector2 toTarget = new Vector2(navigationTarget).sub(segmentEnd).nor();
                     carPosition.set(segmentEnd).add(toTarget.scl(remaining));
                 }
             }
         }
 
-        // Ažuriraj pređeni put
+        // Update traveled route
         updateTraveledRoute();
 
-        // Kamera prati auto
+        // Camera follows car
         camera.position.lerp(new Vector3(carPosition.x, carPosition.y, 0), 0.08f);
         camera.update();
     }
+
     /**
      * Handle arrival at destination
      */
     private void handleArrival() {
         carPosition.set(navigationTarget);
         isMovingToTarget = false;
+
+        // TURN OFF NAVIGATION MODE WHEN CAR ARRIVES
+        navigationMode = false;
 
         isArriving = true;
         arrivalPause = true;
@@ -900,29 +925,7 @@ public class MapScreen extends BaseScreen {
         finalRoutePoints = null;
         traveledRoutePoints.clear();
 
-        Gdx.app.log("MapScreen", "Arrived at parking");
-    }
-    /**
-     * Find current segment index on route
-     */
-    private int findCurrentSegmentIndex(Vector2 position, List<Vector2> routePoints) {
-        if (routePoints == null || routePoints.size() < 2) return -1;
-
-        float minDistance = Float.MAX_VALUE;
-        int closestSegment = 0;
-
-        for (int i = 0; i < routePoints.size() - 1; i++) {
-            Vector2 start = routePoints.get(i);
-            Vector2 end = routePoints.get(i + 1);
-
-            float distance = pointToSegmentDistance(position, start, end);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestSegment = i;
-            }
-        }
-
-        return closestSegment;
+        Gdx.app.log("MapScreen", "Arrived at parking - Navigation mode turned OFF");
     }
 
     /**
@@ -944,18 +947,6 @@ public class MapScreen extends BaseScreen {
     }
 
     /**
-     * Get progress along segment
-     */
-    private float getProjectedProgress(Vector2 point, Vector2 segmentStart, Vector2 segmentEnd) {
-        Vector2 line = new Vector2(segmentEnd).sub(segmentStart);
-        float lineLength = line.len();
-        line.nor();
-
-        Vector2 v = new Vector2(point).sub(segmentStart);
-        return v.dot(line);
-    }
-
-    /**
      * Update traveled route points - SIMPLE VERSION
      */
     private void updateTraveledRoute() {
@@ -963,15 +954,15 @@ public class MapScreen extends BaseScreen {
 
         traveledRoutePoints.clear();
 
-        // Prođi kroz sve tačke rute i dodaj one koje je auto već prošao
+        // Go through all route points and add those that the car has already passed
         for (int i = 0; i < finalRoutePoints.size(); i++) {
             Vector2 routePoint = finalRoutePoints.get(i);
 
-            // Ako je auto prošao ovu tačku (ili je blizu nje)
+            // If car has passed this point (or is close to it)
             if (carPosition.dst(routePoint) < 50f) {
                 traveledRoutePoints.add(new Vector2(routePoint));
             } else {
-                // Dodaj trenutnu poziciju auta kao poslednju tačku
+                // Add current car position as last point
                 if (i > 0) {
                     traveledRoutePoints.add(new Vector2(carPosition));
                 }
@@ -995,6 +986,7 @@ public class MapScreen extends BaseScreen {
 
         return MathUtils.clamp(dot / segmentLength, 0f, 1f);
     }
+
     /**
      * Simplify route points
      */
@@ -1015,65 +1007,64 @@ public class MapScreen extends BaseScreen {
         simplified.add(points.get(points.size() - 1));
         return simplified;
     }
+
     /**
-     * Draw navigation
+     * Draw navigation elements
      */
     private void drawNavigation() {
+        // DO NOT draw navigation if navigation mode is NOT enabled
+        if (!navigationMode) {
+            return;
+        }
+
         if (shapeRenderer == null || spriteBatch == null || carPosition == null) return;
 
-        // Draw flag at target if set
+        // 1. FIRST: Draw dashed line (if no target and car is not moving)
+        if (navigationTarget == null && !isMovingToTarget && cursorWorldPos != null &&
+            carPosition.dst(cursorWorldPos) > 5f) {
+            drawDashedLine(shapeRenderer, carPosition, cursorWorldPos);
+        }
+
+        // 2. SECOND: Draw route (if exists)
+        if (!infoPanel.isVisible()) {
+            // Draw complete route (future part)
+            if (finalRoutePoints != null && finalRoutePoints.size() > 1) {
+                drawRouteWithColors();
+            }
+
+            // Draw arrival effect only if info panel is not open
+            drawParkingArrivalEffect();
+        }
+
+        // 3. THIRD: Draw flag (ABOVE route)
         if (flagPosition != null) {
             drawFlag();
         }
 
-        // Draw complete route (future part)
-        if (finalRoutePoints != null && finalRoutePoints.size() > 1) {
-            drawRouteWithColors();
-        }
-
-        // Draw car
+        // 4. FOURTH: Draw car (ABOVE everything)
         drawCar();
-        drawParkingArrivalEffect();
     }
-    /**
-     * Update traveled route - ALTERNATIVE VERSION (još jednostavnije)
-     */
-    private void updateTraveledRouteSimple() {
-        if (finalRoutePoints == null) return;
 
-        traveledRoutePoints.clear();
-
-        // Dodaj sve tačke od početka do trenutne pozicije auta
-        for (int i = 0; i < finalRoutePoints.size(); i++) {
-            Vector2 point = finalRoutePoints.get(i);
-
-            // Dodaj tačku ako je auto prošao pored nje
-            if (i < finalRoutePoints.size() - 1) {
-                // Proveri da li je auto prošao segment
-                Vector2 nextPoint = finalRoutePoints.get(i + 1);
-                float segmentProgress = getProgressOnSegment(carPosition, point, nextPoint);
-
-                if (segmentProgress >= 0) {
-                    traveledRoutePoints.add(new Vector2(point));
-
-                    // Ako je auto na ovom segmentu, dodaj i trenutnu poziciju
-                    if (segmentProgress > 0 && segmentProgress < 1) {
-                        traveledRoutePoints.add(new Vector2(carPosition));
-                    }
-                }
-            }
-        }
-    }
     /**
      * Draw flag at target position
      */
     private void drawFlag() {
+        // Add check if navigation mode is enabled
+        if (!navigationMode) {
+            return;
+        }
+
         if (flagIconTexture == null || flagPosition == null) return;
 
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
 
         float size = flagSize * (1f / camera.zoom); // Scale with zoom
+
+        // Reduce flag size slightly when info panel is open
+        if (infoPanel.isVisible()) {
+            size *= 0.8f;
+        }
 
         // Draw flag with slight bounce animation if arriving
         float yOffset = 0;
@@ -1093,27 +1084,33 @@ public class MapScreen extends BaseScreen {
 
         spriteBatch.end();
     }
+
     /**
      * Draw route with different colors for traveled and future parts
      */
     private void drawRouteWithColors() {
+        // Add check if navigation mode is enabled
+        if (!navigationMode) {
+            return;
+        }
+
         if (shapeRenderer == null || finalRoutePoints == null || finalRoutePoints.size() < 2) return;
 
         shapeRenderer.setProjectionMatrix(camera.combined);
 
-        // Prvo nacrtaj celu rutu u plavoj boji (budući deo)
+        // First draw entire route in blue color (future part) - THINNER LINE
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(FUTURE_ROUTE_COLOR);
 
         for (int i = 0; i < finalRoutePoints.size() - 1; i++) {
             Vector2 start = finalRoutePoints.get(i);
             Vector2 end = finalRoutePoints.get(i + 1);
-            shapeRenderer.rectLine(start, end, 6f);
+            shapeRenderer.rectLine(start, end, 4f); // Reduced from 6f to 4f
         }
 
         shapeRenderer.end();
 
-        // Zatim nacrtaj pređeni deo u zelenoj boji (preko plave)
+        // Then draw traveled part in green color (over blue) - THINNER LINE
         if (!traveledRoutePoints.isEmpty() && traveledRoutePoints.size() > 1) {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             shapeRenderer.setColor(TRAVELED_ROUTE_COLOR);
@@ -1121,47 +1118,41 @@ public class MapScreen extends BaseScreen {
             for (int i = 0; i < traveledRoutePoints.size() - 1; i++) {
                 Vector2 start = traveledRoutePoints.get(i);
                 Vector2 end = traveledRoutePoints.get(i + 1);
-                shapeRenderer.rectLine(start, end, 6f);
+                shapeRenderer.rectLine(start, end, 4f); // Reduced from 6f to 4f
             }
 
-            // Dodaj liniju od poslednje tačke do auta
+            // Add line from last point to car
             if (!traveledRoutePoints.isEmpty()) {
                 Vector2 lastPoint = traveledRoutePoints.get(traveledRoutePoints.size() - 1);
-                shapeRenderer.rectLine(lastPoint, carPosition, 6f);
+                shapeRenderer.rectLine(lastPoint, carPosition, 4f); // Reduced from 6f to 4f
             }
 
             shapeRenderer.end();
         }
     }
-   /**
-     * Pronalazi indeks najbliže tačke u ruti
-     */
-    private int findClosestWaypointIndex(Vector2 position, List<Vector2> waypoints) {
-        if (waypoints.isEmpty()) return 0;
 
-        int closestIndex = 0;
-        float minDistance = position.dst(waypoints.get(0));
 
-        for (int i = 1; i < waypoints.size(); i++) {
-            float distance = position.dst(waypoints.get(i));
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestIndex = i;
-            }
-        }
-
-        return closestIndex;
-    }
     /**
-     * Draw car separately for reuse
+     * Draw car separately for reuse - drawn LAST to be ABOVE everything
      */
     private void drawCar() {
+        // Add check if navigation mode is enabled
+        if (!navigationMode) {
+            return;
+        }
+
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
 
         float baseSize = 150f;
         float scale = 1f;
         float alpha = 1f;
+
+        // Reduce car size slightly when info panel is open
+        if (infoPanel.isVisible()) {
+            baseSize = 120f; // Smaller car when info panel is open
+            alpha = 0.9f;    // Slightly transparent
+        }
 
         if (isArriving) {
             float t = arrivalTimer / ARRIVAL_DURATION;
@@ -1185,7 +1176,21 @@ public class MapScreen extends BaseScreen {
 
         spriteBatch.end();
     }
+
+    /**
+     * Draw arrival effect for parking
+     */
     private void drawParkingArrivalEffect() {
+        // Add check if navigation mode is enabled
+        if (!navigationMode) {
+            return;
+        }
+
+        // Do not draw arrival effect when info panel is open
+        if (infoPanel.isVisible()) {
+            return;
+        }
+
         if (!isArriving || originalCarPosition == null) return;
 
         float t = arrivalTimer / ARRIVAL_DURATION;
@@ -1200,7 +1205,6 @@ public class MapScreen extends BaseScreen {
         shapeRenderer.circle(carPosition.x, carPosition.y, radius);
         shapeRenderer.end();
     }
-
 
     /**
      * Draw navigation button (always on top of everything).
@@ -1228,22 +1232,27 @@ public class MapScreen extends BaseScreen {
         spriteBatch.end();
     }
 
-    // Set initial car position
+    /**
+     * Set initial car position at camera center
+     */
     private void setupInitialCarPosition() {
         // Place car at screen center (camera) instead of map center
         carPosition = new Vector2(camera.position.x, camera.position.y);
-        cursorWorldPos = new Vector2(carPosition);
+        cursorWorldPos = new Vector2(carPosition); // Initialize cursorWorldPos
 
         Gdx.app.log("MapScreen", "Initial car position (camera center): " + carPosition);
     }
 
     /**
-     * Handles click on marker for navigation purposes.
-     */
-    /**
      * Handle marker click for navigation with route calculation
      */
     private boolean handleMarkerClickForNavigation(float screenX, float screenY) {
+        // If info panel is open, DO NOT ALLOW NAVIGATION
+        if (infoPanel.isVisible()) {
+            Gdx.app.log("MapScreen", "Cannot start navigation while info panel is open");
+            return false;
+        }
+
         if (beginTile == null || markers == null || isCalculatingRoute) {
             return false;
         }
@@ -1326,7 +1335,7 @@ public class MapScreen extends BaseScreen {
                             finalRoutePoints = simplifyRoutePoints(finalRoutePoints, 20);
                         }
 
-                        // Dodaj početnu tačku (trenutnu poziciju auta)
+                        // Add starting point (current car position)
                         finalRoutePoints.add(0, new Vector2(carPosition));
 
                         // Set navigation target
@@ -1338,7 +1347,7 @@ public class MapScreen extends BaseScreen {
                             beginTile.y
                         );
 
-                        // Postavi zastavicu na cilj
+                        // Set flag at target
                         flagPosition = new Vector2(navigationTarget);
 
                         // Start moving immediately
@@ -1358,12 +1367,12 @@ public class MapScreen extends BaseScreen {
                             beginTile.y
                         );
 
-                        // Kreiraj jednostavnu rutu
+                        // Create simple route
                         finalRoutePoints = new ArrayList<>();
                         finalRoutePoints.add(new Vector2(carPosition));
                         finalRoutePoints.add(new Vector2(navigationTarget));
 
-                        // Postavi zastavicu
+                        // Set flag
                         flagPosition = new Vector2(navigationTarget);
 
                         // Start moving immediately
@@ -1397,52 +1406,6 @@ public class MapScreen extends BaseScreen {
             }
         }).start();
     }
-    /**
-     * Create Route object from array of geolocations
-     */
-    private Route createRouteFromGeolocations(Geolocation[] geolocations) {
-        if (geolocations == null || geolocations.length < 2) {
-            return null;
-        }
-
-        Route route = new Route();
-        for (Geolocation geo : geolocations) {
-            Vector2 pixelPos = MapRasterTiles.getPixelPosition(
-                geo.lat,
-                geo.lng,
-                beginTile.x,
-                beginTile.y
-            );
-            route.addWaypoint(pixelPos);
-        }
-
-        // Simplify route if too many points (for performance)
-        return simplifyRoute(route, 20); // Keep max 20 points
-    }
-
-    /**
-     * Simplify route by removing unnecessary points
-     */
-    private Route simplifyRoute(Route original, int maxPoints) {
-        if (original.getTotalWaypoints() <= maxPoints) {
-            return original;
-        }
-
-        Route simplified = new Route();
-        List<Vector2> points = original.getWaypoints();
-
-        // Always keep first and last points
-        simplified.addWaypoint(points.get(0));
-
-        // Sample points evenly
-        int step = points.size() / (maxPoints - 1);
-        for (int i = step; i < points.size() - step; i += step) {
-            simplified.addWaypoint(points.get(i));
-        }
-
-        simplified.addWaypoint(points.get(points.size() - 1));
-        return simplified;
-    }
 
     /**
      * Convert pixel position to geolocation using tile calculations
@@ -1452,7 +1415,7 @@ public class MapScreen extends BaseScreen {
 
         double n = Math.pow(2.0, MapConstants.ZOOM);
 
-        // MapRasterTiles.TILE_SIZE je u px
+        // MapRasterTiles.TILE_SIZE is in px
         double lon = (beginTile.x + pixelPos.x / MapRasterTiles.TILE_SIZE) / n * 360.0 - 180.0;
         double latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (beginTile.y + pixelPos.y / MapRasterTiles.TILE_SIZE) / n)));
         double lat = Math.toDegrees(latRad);
@@ -1512,6 +1475,9 @@ public class MapScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Resets navigation state to initial values.
+     */
     private void resetNavigation() {
         // Reset navigation state
         selectedParkingMarker = null;
@@ -1520,25 +1486,27 @@ public class MapScreen extends BaseScreen {
         flagPosition = null;
         finalRoutePoints = null;
         traveledRoutePoints.clear();
-        cursorWorldPos = new Vector2(carPosition);
+        // DO NOT reset cursorWorldPos - leave it where it is
+        // cursorWorldPos = new Vector2(carPosition); // THIS LINE IS NOT NEEDED
         isCalculatingRoute = false;
+
+        // TURN OFF NAVIGATION MODE
+        navigationMode = false;
 
         // Hide info panel if it was showing the target
         infoPanel.hide();
+
+        Gdx.app.log("MapScreen", "Navigation reset - Navigation mode turned OFF");
     }
+
     /**
-     * Draws all markers on the map.
-     * Uses PNG textures if available, otherwise falls back to colored circles.
-     * Markers are colored/textured based on their state:
-     * - FREE: Green
-     * - PARTIAL: Yellow
-     * - FULL: Red
-     * - UNKNOWN: Gray
+     * Draws all parking markers on the map.
      */
     private void drawMarkers() {
         if (beginTile == null || markers == null) {
             return;
         }
+
         // Check if we have any textures loaded
         boolean useTextures = markerFreeTexture != null || markerPartialTexture != null
             || markerFullTexture != null || markerUnknownTexture != null;
@@ -1558,9 +1526,10 @@ public class MapScreen extends BaseScreen {
         spriteBatch.begin();
 
         for (Marker marker : markers) {
-            if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
-                continue;
-            }
+            // If info panel is open for this marker, still show it
+            // but with slightly different style
+            boolean isSelectedInInfoPanel = infoPanel.isVisible() &&
+                infoPanel.getSelectedMarker() == marker;
 
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
                 marker.getPosition().lat,
@@ -1572,13 +1541,24 @@ public class MapScreen extends BaseScreen {
             Texture markerTexture = getTextureForState(marker.getState());
 
             if (markerTexture != null) {
+                float currentMarkerSize = markerSize;
+                float alpha = 1f;
+
+                // If this is marker displayed in info panel
+                if (isSelectedInInfoPanel) {
+                    currentMarkerSize = markerSize * 1.2f; // Larger marker
+                    alpha = 0.9f; // Slightly transparent
+                }
+
+                spriteBatch.setColor(1f, 1f, 1f, alpha);
                 spriteBatch.draw(
                     markerTexture,
-                    pixelPos.x - markerSize / 2f,
-                    pixelPos.y - markerSize / 2f,
-                    markerSize,
-                    markerSize
+                    pixelPos.x - currentMarkerSize / 2f,
+                    pixelPos.y - currentMarkerSize / 2f,
+                    currentMarkerSize,
+                    currentMarkerSize
                 );
+                spriteBatch.setColor(Color.WHITE);
             }
         }
 
@@ -1586,7 +1566,7 @@ public class MapScreen extends BaseScreen {
     }
 
     /**
-     * Draws markers using colored circles (fallback when textures not available).
+     * Draws markers using simple shapes as fallback.
      */
     private void drawMarkersWithShapes() {
         if (shapeRenderer == null) {
@@ -1597,9 +1577,9 @@ public class MapScreen extends BaseScreen {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
         for (Marker marker : markers) {
-            if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
-                continue;
-            }
+            // If info panel is open for this marker, still show it
+            boolean isSelectedInInfoPanel = infoPanel.isVisible() &&
+                infoPanel.getSelectedMarker() == marker;
 
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
                 marker.getPosition().lat,
@@ -1609,9 +1589,24 @@ public class MapScreen extends BaseScreen {
             );
 
             Color markerColor = getColorForState(marker.getState());
+
+            // If marker is selected in info panel, make it brighter color
+            if (isSelectedInInfoPanel) {
+                markerColor = new Color(
+                    markerColor.r * 1.2f,
+                    markerColor.g * 1.2f,
+                    markerColor.b * 1.2f,
+                    0.9f
+                );
+            }
+
             shapeRenderer.setColor(markerColor);
 
             float markerRadius = markerSize / 2f;
+            if (isSelectedInInfoPanel) {
+                markerRadius *= 1.2f; // Larger marker when selected
+            }
+
             shapeRenderer.circle(pixelPos.x, pixelPos.y, markerRadius);
         }
 
@@ -1652,6 +1647,9 @@ public class MapScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Handles keyboard input for map navigation and controls.
+     */
     private void handleKeyboardInput() {
         // Keyboard zoom controls: Q for zoom in, A for zoom out
         if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
@@ -1689,12 +1687,23 @@ public class MapScreen extends BaseScreen {
             infoPanel.hide();
         }
 
-        // Reset navigation with R key
-        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+        // Reset navigation with R key (only if info panel is not open)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R) && !infoPanel.isVisible()) {
             resetNavigation();
+        }
+
+        // T key for test - turn off navigation if info panel is open
+        if (Gdx.input.isKeyJustPressed(Input.Keys.T)) {
+            if (infoPanel.isVisible() && navigationMode) {
+                navigationMode = false;
+                Gdx.app.log("MapScreen", "Navigation turned OFF because info panel is open");
+            }
         }
     }
 
+    /**
+     * Clamps camera position to stay within map bounds.
+     */
     private void clampCameraPosition() {
         float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
         float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
@@ -1723,6 +1732,9 @@ public class MapScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Cleans up resources when screen is disposed.
+     */
     @Override
     public void dispose() {
         if (tiledMap != null) {
