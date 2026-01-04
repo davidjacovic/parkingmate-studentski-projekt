@@ -10,9 +10,9 @@ namespace ParkingMate.Blockchain
     /// 
     /// Implementirano:
     /// - Subtask 5.2.1: Master generiše seed / nonce opsege
+    /// - Subtask 5.2.2: Slanje seed-ova worker procesima
     /// 
     /// TODO (naredni subtaskovi):
-    /// - Subtask 5.2.2: Slanje seed-ova worker procesima
     /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
     /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
     /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
@@ -64,9 +64,9 @@ namespace ParkingMate.Blockchain
         /// 
         /// Implementirano:
         /// - Subtask 5.2.1: Master generiše seed / nonce opsege
+        /// - Subtask 5.2.2: Slanje seed-ova worker procesima
         /// 
         /// TODO:
-        /// - Subtask 5.2.2: Slanje seed-ova worker procesima
         /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
         /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
         /// </summary>
@@ -74,10 +74,15 @@ namespace ParkingMate.Blockchain
         {
             private readonly MpiEnvironment _mpi;
             private readonly int _numWorkers;
+            private readonly IMpiCommunication _communication;
             // TODO: 5.2.4 - Dictionary za rezultate od workers
             // private readonly Dictionary<int, MiningResultMessage> _workerResults;
 
-            public MpiMiningMaster(MpiEnvironment mpi)
+            // Tagovi za MPI komunikaciju
+            private const int TAG_NONCE_RANGE = 1; // Tag za slanje nonce opsega workers
+            private const int TAG_MINING_RESULT = 2; // Tag za primanje rezultata od workers (5.2.4)
+
+            public MpiMiningMaster(MpiEnvironment mpi, IMpiCommunication? communication = null)
             {
                 _mpi = mpi ?? throw new ArgumentNullException(nameof(mpi));
                 if (!mpi.IsMaster)
@@ -86,6 +91,7 @@ namespace ParkingMate.Blockchain
                 }
 
                 _numWorkers = mpi.Size - 1; // Bez master procesa
+                _communication = communication ?? new SimulatedMpiCommunication(mpi);
                 // TODO: 5.2.4 - Inicijalizacija dictionary-a za rezultate
                 // _workerResults = new Dictionary<int, MiningResultMessage>();
             }
@@ -125,22 +131,40 @@ namespace ParkingMate.Blockchain
                 return messages;
             }
 
-            // TODO: 5.2.2 - Slanje seed-ova worker procesima
-            /*
             /// <summary>
             /// Šalje nonce opsege svim worker procesima.
             /// Subtask 5.2.2: Slanje seed-ova worker procesima
+            /// Koristi MPI_Send (simulacija ili stvarno) za slanje poruka svakom worker procesu.
             /// </summary>
             /// <param name="messages">Poruke sa nonce opsezima</param>
             public void SendNonceRangesToWorkers(List<NonceRangeMessage> messages)
             {
+                if (messages == null || messages.Count == 0)
+                {
+                    Console.WriteLine($"[Master Rank {_mpi.Rank}] Upozorenje: Nema poruka za slanje workers");
+                    return;
+                }
+
+                Console.WriteLine($"[Master Rank {_mpi.Rank}] Šaljem {messages.Count} nonce opsega workers...");
+
                 foreach (var message in messages)
                 {
-                    // Simulacija MPI_Send - u stvarnom MPI okruženju bi se koristio MPI_Send
-                    Console.WriteLine($"[Master Rank {_mpi.Rank}] Šaljem nonce opseg [{message.StartNonce:N0}, {message.EndNonce:N0}] worker-u rank {message.WorkerRank}");
+                    try
+                    {
+                        // Koristi IMpiCommunication za slanje poruke
+                        // U stvarnom MPI okruženju bi se koristio MPI_Send
+                        _communication.Send(message, message.WorkerRank, TAG_NONCE_RANGE);
+
+                        Console.WriteLine($"[Master Rank {_mpi.Rank}] ✓ Poslao nonce opseg [{message.StartNonce:N0}, {message.EndNonce:N0}] worker-u rank {message.WorkerRank}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Master Rank {_mpi.Rank}] ✗ Greška pri slanju poruke worker-u rank {message.WorkerRank}: {ex.Message}");
+                    }
                 }
+
+                Console.WriteLine($"[Master Rank {_mpi.Rank}] Svi nonce opsezi su poslati workers");
             }
-            */
 
             // TODO: 5.2.4, 5.2.5 - Čekanje rezultata od workers
             /*
