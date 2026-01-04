@@ -66,6 +66,12 @@ public class MapScreen extends BaseScreen {
     private Vector2 carPosition; // Car position on the map
     private Vector2 cursorWorldPos; // Cursor position in world coordinates
 
+    // Route navigation variables
+    private Route currentRoute;
+    private float routeUpdateTimer = 0f;
+    private static final float ROUTE_UPDATE_INTERVAL = 5f; // Update route every 5 seconds
+    private boolean isCalculatingRoute = false;
+
     // NAVIGATION TARGET VARIABLES
     private Vector2 navigationTarget = null; // Target parking marker position
     private Marker selectedParkingMarker = null; // Currently selected parking marker
@@ -91,12 +97,14 @@ public class MapScreen extends BaseScreen {
     private float infoPanelHeight;
     private float infoPanelX;
     private float infoPanelY;
+    private Vector2 originalCarPosition = null;
 
     // Font for info panel text
     private BitmapFont font;
 
     // API service for fetching parking data
     private ParkingService parkingService;
+
 
     // Backend API base URL (backend runs on port 3002)
     private static final String API_BASE_URL = "http://localhost:3002";
@@ -692,30 +700,11 @@ public class MapScreen extends BaseScreen {
         shapeRenderer.end();
     }
 
-    /**
-     * Draw animated line that shrinks as car moves.
-     */
-    private void drawAnimatedLine(ShapeRenderer shapeRenderer, Vector2 start, Vector2 end, float progress) {
-        if (shapeRenderer == null) return;
-
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f); // Blue color
-
-        // Calculate current end point based on progress
-        Vector2 currentEnd = new Vector2(end).sub(start).scl(progress).add(start);
-
-        // Draw the line from current car position to current end point
-        shapeRenderer.rectLine(start, currentEnd, 6f);
-        shapeRenderer.end();
-    }
-
     @Override
     public void render(float delta) {
         handleKeyboardInput();
-
-        // Update car movement if moving to target
-        if (isMovingToTarget && navigationTarget != null) {
+        // Update car movement
+        if (isMovingToTarget) {
             updateCarMovement(delta);
         }
 
@@ -754,68 +743,166 @@ public class MapScreen extends BaseScreen {
             drawNavigationButton();
         }
     }
+    private void updateRouteFromCurrentPosition() {
+        if (selectedParkingMarker == null || isCalculatingRoute) return;
+
+        final Geolocation carGeolocation = getGeolocationFromPixel(carPosition);
+        if (carGeolocation == null) return;
+
+        isCalculatingRoute = true;
+
+        new Thread(() -> {
+            try {
+                Geolocation[] newRoutePoints = MapRasterTiles.fetchRoute(
+                    carGeolocation,
+                    selectedParkingMarker.getPosition()
+                );
+
+                Gdx.app.postRunnable(() -> {
+                    if (newRoutePoints != null && newRoutePoints.length > 1) {
+                        Route newRoute = createRouteFromGeolocations(newRoutePoints);
+                        if (newRoute != null) {
+                            currentRoute = newRoute;
+                            Gdx.app.log("MapScreen", "Route updated from current position");
+                        }
+                    }
+                    isCalculatingRoute = false;
+                });
+
+            } catch (Exception e) {
+                Gdx.app.error("MapScreen", "Failed to update route", e);
+                Gdx.app.postRunnable(() -> {
+                    isCalculatingRoute = false;
+                });
+            }
+        }).start();
+    }
 
     /**
-     * Update car movement animation.
+     * Update car movement - follows route
      */
     private void updateCarMovement(float delta) {
-        if (navigationTarget == null) return;
-
-        // Calculate distance to target
-        float distanceToTarget = carPosition.dst(navigationTarget);
-        float totalDistance = carPosition.dst(navigationTarget) / (1 - moveProgress);
-
-        // Calculate movement based on speed and delta time
-        float moveDistance = moveSpeed * 50f * delta; // Adjust speed multiplier as needed
-
-        // Update progress
-        moveProgress += moveDistance / totalDistance;
-
-        // Clamp progress to 1.0
-        if (moveProgress >= 1.0f) {
-            moveProgress = 1.0f;
-            carPosition.set(navigationTarget);
-            isMovingToTarget = false;
-            Gdx.app.log("MapScreen", "Car arrived at parking spot");
-
-            // Optional: Center camera on car when it arrives
-            camera.position.set(carPosition.x, carPosition.y, 0);
-            camera.update();
-        } else {
-            // Interpolate car position
-            Vector2 direction = new Vector2(navigationTarget).sub(carPosition).nor();
-            carPosition.add(direction.scl(moveDistance));
-
-            // Keep camera following the car
-            camera.position.set(carPosition.x, carPosition.y, 0);
-            camera.update();
+        if (currentRoute != null && navigationTarget != null && isMovingToTarget) {
+            followRoute(delta);
         }
     }
 
     /**
-     * Draw navigation (car + dashed line or solid line).
+     * Follow route waypoints
+     */
+    private void followRoute(float delta) {
+        if (currentRoute == null || navigationTarget == null) return;
+
+        Vector2 currentWaypoint = currentRoute.getCurrentWaypoint();
+        if (currentWaypoint == null) return;
+
+        float speed = 150f; // pixels per second
+        float distanceToWaypoint = carPosition.dst(currentWaypoint);
+
+        if (distanceToWaypoint < 10f) {
+            // Reached waypoint, move to next
+            if (!currentRoute.moveToNextWaypoint()) {
+                // Route complete - auto JE STIGAO NA PARKING
+                carPosition.set(navigationTarget); // Postavi tačno na parking
+                isMovingToTarget = false;
+
+                // Resetuj samo neke stvari, ali ostavi auto na parkingu
+                selectedParkingMarker = null;
+                navigationTarget = null;
+                originalCarPosition = null;
+
+                // NE resetuj currentRoute - ostavi ga da bi mogao da crtaš gde je auto bio
+                Gdx.app.log("MapScreen", "Car arrived at parking!");
+                return;
+            }
+            currentWaypoint = currentRoute.getCurrentWaypoint();
+        }
+
+        // Move towards current waypoint
+        Vector2 direction = new Vector2(currentWaypoint).sub(carPosition).nor();
+        carPosition.add(direction.scl(speed * delta));
+
+        // Update camera to follow car
+        camera.position.set(carPosition.x, carPosition.y, 0);
+        camera.update();
+    }
+    /**
+     * Draw navigation
      */
     private void drawNavigation() {
         if (shapeRenderer == null || spriteBatch == null || carPosition == null) return;
 
-        // If moving to target, draw animated line
-        if (isMovingToTarget && navigationTarget != null) {
-            drawAnimatedLine(shapeRenderer, carPosition, navigationTarget, moveProgress);
+        // Draw route from current car position
+        if (currentRoute != null && currentRoute.getWaypoints().size() > 1 && isMovingToTarget) {
+            drawRoute(shapeRenderer);
         }
-        // If we have a selected parking marker, draw solid line to it
-        else if (selectedParkingMarker != null && navigationTarget != null) {
-            drawSolidLine(shapeRenderer, carPosition, navigationTarget, 6f);
-        }
-        // Otherwise, draw dashed line to cursor (only if not too close)
-        else if (cursorWorldPos != null && carPosition.dst(cursorWorldPos) > 5f) {
+        // Draw dashed line to cursor when no target selected
+        else if (navigationTarget == null && cursorWorldPos != null &&
+            carPosition.dst(cursorWorldPos) > 5f) {
             drawDashedLine(shapeRenderer, carPosition, cursorWorldPos);
         }
 
+        // Draw car
+        drawCar();
+    }
+    /**
+     * Draw route from CURRENT CAR POSITION to target
+     */
+    private void drawRoute(ShapeRenderer shapeRenderer) {
+        if (shapeRenderer == null || currentRoute == null) return;
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f); // Blue route
+
+        List<Vector2> waypoints = currentRoute.getWaypoints();
+
+        // Pronađi indeks trenutne tačke (ili najbliže tačke)
+        int startIndex = findClosestWaypointIndex(carPosition, waypoints);
+
+        // Crtaj od trenutne pozicije auta do kraja rute
+        for (int i = startIndex; i < waypoints.size() - 1; i++) {
+            Vector2 start = waypoints.get(i);
+            Vector2 end = waypoints.get(i + 1);
+
+            // Ako je prvi segment, koristi trenutnu poziciju auta umesto početne tačke
+            if (i == startIndex) {
+                start = carPosition;
+            }
+
+            shapeRenderer.rectLine(start, end, 6f);
+        }
+
+        shapeRenderer.end();
+    }
+
+    /**
+     * Pronalazi indeks najbliže tačke u ruti
+     */
+    private int findClosestWaypointIndex(Vector2 position, List<Vector2> waypoints) {
+        if (waypoints.isEmpty()) return 0;
+
+        int closestIndex = 0;
+        float minDistance = position.dst(waypoints.get(0));
+
+        for (int i = 1; i < waypoints.size(); i++) {
+            float distance = position.dst(waypoints.get(i));
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = i;
+            }
+        }
+
+        return closestIndex;
+    }
+    /**
+     * Draw car separately for reuse
+     */
+    private void drawCar() {
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
 
         float carIconSize = 150f;
-
         spriteBatch.draw(
             carIconTexture,
             carPosition.x - carIconSize / 2f,
@@ -865,8 +952,11 @@ public class MapScreen extends BaseScreen {
     /**
      * Handles click on marker for navigation purposes.
      */
+    /**
+     * Handle marker click for navigation with route calculation
+     */
     private boolean handleMarkerClickForNavigation(float screenX, float screenY) {
-        if (beginTile == null || markers == null) {
+        if (beginTile == null || markers == null || isCalculatingRoute) {
             return false;
         }
 
@@ -874,7 +964,7 @@ public class MapScreen extends BaseScreen {
         Vector3 worldPos = new Vector3(screenX, screenY, 0);
         camera.unproject(worldPos);
 
-        // Check each marker to see if click is within marker bounds
+        // Check each marker
         float clickRadius = markerSize / 2f + 10f;
 
         for (Marker marker : markers) {
@@ -885,32 +975,177 @@ public class MapScreen extends BaseScreen {
                 beginTile.y
             );
 
-            // Calculate distance from click to marker
             float distance = Vector2.dst(
                 worldPos.x, worldPos.y,
                 markerPixelPos.x, markerPixelPos.y
             );
 
             if (distance <= clickRadius) {
-                // Marker clicked - set as navigation target
-                selectedParkingMarker = marker;
-                navigationTarget = new Vector2(markerPixelPos);
-                isMovingToTarget = true;
-                moveProgress = 0f;
-
-                Gdx.app.log("MapScreen", "Navigation target set to: " + marker.getName());
-                Gdx.app.log("MapScreen", "Starting car movement from " + carPosition + " to " + navigationTarget);
-
-                // Hide the info panel if it's showing the same marker
-                if (infoPanel.getSelectedMarker() == marker) {
-                    infoPanel.hide();
-                }
-
+                // Start route calculation
+                calculateRouteToMarker(marker);
                 return true;
             }
         }
-
         return false;
+    }
+    /**
+     * Calculate route from car position to marker using Geoapify API
+     */
+    private void calculateRouteToMarker(final Marker marker) {
+        if (isCalculatingRoute) return;
+
+        isCalculatingRoute = true;
+
+        // Get current car geolocation
+        final Geolocation carGeolocation = getGeolocationFromPixel(carPosition);
+        if (carGeolocation == null) {
+            isCalculatingRoute = false;
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                Gdx.app.log("MapScreen", "Calculating route from car to marker...");
+
+                // Use existing Geoapify routing API
+                Geolocation[] routePoints = MapRasterTiles.fetchRoute(
+                    carGeolocation,
+                    marker.getPosition()
+                );
+
+                Gdx.app.postRunnable(() -> {
+                    if (routePoints != null && routePoints.length > 1) {
+                        // Create route from geolocations
+                        currentRoute = createRouteFromGeolocations(routePoints);
+
+                        // Set navigation target
+                        selectedParkingMarker = marker;
+                        navigationTarget = MapRasterTiles.getPixelPosition(
+                            marker.getPosition().lat,
+                            marker.getPosition().lng,
+                            beginTile.x,
+                            beginTile.y
+                        );
+                        originalCarPosition = new Vector2(carPosition);
+
+                        // Reset route index na početak
+                        currentRoute.reset();
+
+                        // Start moving immediately
+                        isMovingToTarget = true;
+
+                        Gdx.app.log("MapScreen", "Route calculated with " +
+                            routePoints.length + " points. Starting navigation.");
+
+                    } else {
+                        // Fallback: create simple route
+                        Gdx.app.log("MapScreen", "Route calculation failed, creating simple route");
+                        selectedParkingMarker = marker;
+                        navigationTarget = MapRasterTiles.getPixelPosition(
+                            marker.getPosition().lat,
+                            marker.getPosition().lng,
+                            beginTile.x,
+                            beginTile.y
+                        );
+                        originalCarPosition = new Vector2(carPosition);
+
+                        // Kreiraj jednostavnu rutu
+                        currentRoute = new Route();
+                        currentRoute.addWaypoint(carPosition);
+                        currentRoute.addWaypoint(navigationTarget);
+
+                        // Start moving immediately
+                        isMovingToTarget = true;
+                    }
+                    isCalculatingRoute = false;
+                });
+
+            } catch (Exception e) {
+                Gdx.app.error("MapScreen", "Route calculation error", e);
+                Gdx.app.postRunnable(() -> {
+                    // Fallback: create simple route
+                    selectedParkingMarker = marker;
+                    navigationTarget = MapRasterTiles.getPixelPosition(
+                        marker.getPosition().lat,
+                        marker.getPosition().lng,
+                        beginTile.x,
+                        beginTile.y
+                    );
+                    originalCarPosition = new Vector2(carPosition);
+
+                    // Kreiraj jednostavnu rutu
+                    currentRoute = new Route();
+                    currentRoute.addWaypoint(carPosition);
+                    currentRoute.addWaypoint(navigationTarget);
+
+                    // Start moving immediately
+                    isMovingToTarget = true;
+                    isCalculatingRoute = false;
+                });
+            }
+        }).start();
+    }
+    /**
+     * Create Route object from array of geolocations
+     */
+    private Route createRouteFromGeolocations(Geolocation[] geolocations) {
+        if (geolocations == null || geolocations.length < 2) {
+            return null;
+        }
+
+        Route route = new Route();
+        for (Geolocation geo : geolocations) {
+            Vector2 pixelPos = MapRasterTiles.getPixelPosition(
+                geo.lat,
+                geo.lng,
+                beginTile.x,
+                beginTile.y
+            );
+            route.addWaypoint(pixelPos);
+        }
+
+        // Simplify route if too many points (for performance)
+        return simplifyRoute(route, 20); // Keep max 20 points
+    }
+
+    /**
+     * Simplify route by removing unnecessary points
+     */
+    private Route simplifyRoute(Route original, int maxPoints) {
+        if (original.getTotalWaypoints() <= maxPoints) {
+            return original;
+        }
+
+        Route simplified = new Route();
+        List<Vector2> points = original.getWaypoints();
+
+        // Always keep first and last points
+        simplified.addWaypoint(points.get(0));
+
+        // Sample points evenly
+        int step = points.size() / (maxPoints - 1);
+        for (int i = step; i < points.size() - step; i += step) {
+            simplified.addWaypoint(points.get(i));
+        }
+
+        simplified.addWaypoint(points.get(points.size() - 1));
+        return simplified;
+    }
+
+    /**
+     * Convert pixel position to geolocation using tile calculations
+     */
+    private Geolocation getGeolocationFromPixel(Vector2 pixelPos) {
+        if (beginTile == null) return null;
+
+        double n = Math.pow(2.0, MapConstants.ZOOM);
+
+        // MapRasterTiles.TILE_SIZE je u px
+        double lon = (beginTile.x + pixelPos.x / MapRasterTiles.TILE_SIZE) / n * 360.0 - 180.0;
+        double latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (beginTile.y + pixelPos.y / MapRasterTiles.TILE_SIZE) / n)));
+        double lat = Math.toDegrees(latRad);
+
+        return new Geolocation(lat, lon);
     }
 
     /**
@@ -968,12 +1203,33 @@ public class MapScreen extends BaseScreen {
     /**
      * Resets navigation state.
      */
+    /**
+     * Resets navigation state
+     */
+    /**
+     * Resets navigation state
+     */
+    /**
+     * Draw simple line between two points (za fallback)
+     */
+    private void drawSimpleLine(Vector2 start, Vector2 end) {
+        if (shapeRenderer == null) return;
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f);
+        shapeRenderer.rectLine(start, end, 6f);
+        shapeRenderer.end();
+    }
     private void resetNavigation() {
+        // Samo resetuj navigaciju, ali ostavi auto gde jeste
         selectedParkingMarker = null;
         navigationTarget = null;
         isMovingToTarget = false;
-        moveProgress = 0f;
+        originalCarPosition = null;
+        currentRoute = null;
         cursorWorldPos = new Vector2(carPosition);
+        isCalculatingRoute = false;
     }
 
     /**

@@ -13,6 +13,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Utility class for fetching and managing raster map tiles.
@@ -119,7 +121,7 @@ public class MapRasterTiles {
             is.close();
             return bis;
         } catch (java.net.HttpRetryException | java.io.FileNotFoundException e) {
-            throw new IOException("Failed to fetch tile from: " + url + ". Error: " + e.getMessage() + 
+            throw new IOException("Failed to fetch tile from: " + url + ". Error: " + e.getMessage() +
                     ". Make sure your API key is set correctly in Keys.GEOAPIFY", e);
         }
     }
@@ -316,6 +318,55 @@ public class MapRasterTiles {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Fetches a route between two points using Geoapify routing API.
+     * Simplified version for two points.
+     */
+    public static Geolocation[] fetchRoute(Geolocation start, Geolocation end) {
+        Geolocation[] waypoints = {start, end};
+        return fetchRoute(waypoints);
+    }
+
+    /**
+     * Fetches a route through multiple waypoints.
+     */
+    public static Geolocation[] fetchRoute(Geolocation... waypoints) {
+        try {
+            Geolocation[][] result = fetchPath(waypoints);
+            if (result != null && result.length > 0) {
+                // Convert 2D array to 1D array
+                List<Geolocation> routePoints = new ArrayList<>();
+                for (Geolocation[] segment : result) {
+                    for (Geolocation point : segment) {
+                        routePoints.add(point);
+                    }
+                }
+                return routePoints.toArray(new Geolocation[0]);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * Converts geolocation array to Vector2 pixel positions.
+     */
+    public static Vector2[] convertToPixelPositions(Geolocation[] geolocations, int beginTileX, int beginTileY) {
+        if (geolocations == null) return null;
+
+        Vector2[] pixels = new Vector2[geolocations.length];
+        for (int i = 0; i < geolocations.length; i++) {
+            pixels[i] = getPixelPosition(
+                geolocations[i].lat,
+                geolocations[i].lng,
+                beginTileX,
+                beginTileY
+            );
+        }
+        return pixels;
     }
 }
 
