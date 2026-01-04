@@ -12,6 +12,9 @@ namespace ParkingMate.Blockchain
         public bool ShowHelp { get; set; }
         public uint? Difficulty { get; set; }
         public int? BlocksToMine { get; set; }
+        public bool UseMpi { get; set; }
+        public int? MpiSize { get; set; }
+        public int? MpiRank { get; set; }
 
         /// <summary>
         /// Parsira command-line argumente
@@ -88,6 +91,54 @@ namespace ParkingMate.Blockchain
                         }
                         break;
 
+                    case "--mpi":
+                    case "-m":
+                    case "--use-mpi":
+                        result.UseMpi = true;
+                        break;
+
+                    case "--mpi-size":
+                    case "-ms":
+                        if (i + 1 < args.Length)
+                        {
+                            if (int.TryParse(args[i + 1], out int mpiSize) && mpiSize > 0)
+                            {
+                                result.MpiSize = mpiSize;
+                                result.UseMpi = true; // Automatski uključi MPI ako je size naveden
+                                i++;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Greška: '{args[i + 1]}' nije validan MPI size. Koristi pozitivan ceo broj.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Greška: '{arg}' zahteva vrednost (MPI size).");
+                        }
+                        break;
+
+                    case "--mpi-rank":
+                    case "-mr":
+                        if (i + 1 < args.Length)
+                        {
+                            if (int.TryParse(args[i + 1], out int mpiRank) && mpiRank >= 0)
+                            {
+                                result.MpiRank = mpiRank;
+                                result.UseMpi = true; // Automatski uključi MPI ako je rank naveden
+                                i++;
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Greška: '{args[i + 1]}' nije validan MPI rank. Koristi nenegativan ceo broj.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Greška: '{arg}' zahteva vrednost (MPI rank).");
+                        }
+                        break;
+
                     case "--help":
                     case "-h":
                     case "/?":
@@ -128,11 +179,24 @@ namespace ParkingMate.Blockchain
             Console.WriteLine();
             Console.WriteLine("  -h, --help              Prikaži ovu help poruku");
             Console.WriteLine();
+            Console.WriteLine("MPI opcije (Distribuirana paralelizacija):");
+            Console.WriteLine("  -m, --mpi               Koristi MPI za distribuirano rudarjenje");
+            Console.WriteLine("                         Subtask 5.1.1: MPI inicijalizacija");
+            Console.WriteLine("                         Primer: --mpi");
+            Console.WriteLine();
+            Console.WriteLine("  -ms, --mpi-size <broj>  Ukupan broj MPI procesa (size)");
+            Console.WriteLine("                         Primer: --mpi-size 4");
+            Console.WriteLine();
+            Console.WriteLine("  -mr, --mpi-rank <broj>  ID trenutnog MPI procesa (rank)");
+            Console.WriteLine("                         Primer: --mpi-rank 1");
+            Console.WriteLine();
             Console.WriteLine("Primeri:");
             Console.WriteLine("  dotnet run                          # Automatska detekcija optimalnog broja niti");
             Console.WriteLine("  dotnet run --threads 8              # Koristi 8 niti");
             Console.WriteLine("  dotnet run -t 4 -d 4                # 4 niti, difficulty 4");
             Console.WriteLine("  dotnet run --threads 16 --blocks 10 # 16 niti, rudari 10 blokova");
+            Console.WriteLine("  dotnet run --mpi --mpi-size 4       # MPI mod sa 4 procesa");
+            Console.WriteLine("  dotnet run --mpi -ms 8 -mr 2        # MPI mod, size 8, rank 2");
             Console.WriteLine();
             Console.WriteLine("Informacije o CPU:");
             int logicalCores = ThreadedMiner.GetAvailableProcessorCount();
