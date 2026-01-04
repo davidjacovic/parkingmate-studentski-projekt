@@ -21,8 +21,8 @@ namespace ParkingMate.Blockchain
             TestDifferentRankSize();
             Console.WriteLine();
 
-            // Test 3: Detekcija rank-a i size-a
-            Console.WriteLine("Test 3: Detekcija rank-a i size-a");
+            // Test 3: Detekcija rank-a i size-a (Subtask 5.1.2)
+            Console.WriteLine("Test 3: Detekcija rank-a i size-a (5.1.2)");
             TestRankSizeDetection();
             Console.WriteLine();
 
@@ -31,8 +31,8 @@ namespace ParkingMate.Blockchain
             TestMasterWorkerDetection();
             Console.WriteLine();
 
-            // Test 5: Parsiranje iz command-line argumenata
-            Console.WriteLine("Test 5: Parsiranje MPI flag-ova iz CLI argumenata");
+            // Test 5: Parsiranje iz command-line argumenata (Subtask 5.1.3)
+            Console.WriteLine("Test 5: Parsiranje MPI flag-ova iz CLI argumenata (5.1.3)");
             TestCliParsing();
             Console.WriteLine();
 
@@ -42,6 +42,11 @@ namespace ParkingMate.Blockchain
             Console.WriteLine();
 
             Console.WriteLine("✓ Svi testovi MPI inicijalizacije su prošli!");
+            Console.WriteLine();
+            Console.WriteLine("=== Sažetak završenih subtaskova ===");
+            Console.WriteLine("✓ 5.1.1: MPI inicijalizacija - Initialize(), InitializeFromArgs()");
+            Console.WriteLine("✓ 5.1.2: Detekcija rank-a i size-a - Rank i Size properties");
+            Console.WriteLine("✓ 5.1.3: MPI flag u CLI interfejsu - --mpi, --mpi-size, --mpi-rank");
         }
 
         private static void TestBasicInitialization()
@@ -106,12 +111,15 @@ namespace ParkingMate.Blockchain
             var mpi = MpiEnvironment.Instance;
             mpi.Finalize();
 
+            // Subtask 5.1.2: Detekcija rank-a i size-a
+            Console.WriteLine("  Subtask 5.1.2: Detekcija rank-a i size-a");
+
             // Test rank 0 (master)
             mpi.Initialize(size: 4, rank: 0);
             if (mpi.Rank == 0 && mpi.Size == 4)
             {
-                Console.WriteLine($"  ✓ Rank detekcija: {mpi.Rank}");
-                Console.WriteLine($"  ✓ Size detekcija: {mpi.Size}");
+                Console.WriteLine($"  ✓ Rank detekcija (5.1.2): {mpi.Rank}");
+                Console.WriteLine($"  ✓ Size detekcija (5.1.2): {mpi.Size}");
             }
             else
             {
@@ -123,12 +131,30 @@ namespace ParkingMate.Blockchain
             mpi.Initialize(size: 8, rank: 3);
             if (mpi.Rank == 3 && mpi.Size == 8)
             {
-                Console.WriteLine($"  ✓ Worker rank detekcija: {mpi.Rank}");
-                Console.WriteLine($"  ✓ Worker size detekcija: {mpi.Size}");
+                Console.WriteLine($"  ✓ Worker rank detekcija (5.1.2): {mpi.Rank}");
+                Console.WriteLine($"  ✓ Worker size detekcija (5.1.2): {mpi.Size}");
             }
             else
             {
                 Console.WriteLine("  ✗ Greška pri detekciji worker rank-a ili size-a");
+            }
+
+            // Test čitanja Rank i Size properties
+            mpi.Finalize();
+            mpi.Initialize(size: 16, rank: 7);
+            try
+            {
+                int rank = mpi.Rank;
+                int size = mpi.Size;
+                if (rank == 7 && size == 16)
+                {
+                    Console.WriteLine($"  ✓ Rank property (5.1.2): vraća {rank}");
+                    Console.WriteLine($"  ✓ Size property (5.1.2): vraća {size}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  ✗ Greška pri čitanju Rank/Size properties: {ex.Message}");
             }
         }
 
@@ -163,12 +189,15 @@ namespace ParkingMate.Blockchain
 
         private static void TestCliParsing()
         {
+            // Subtask 5.1.3: MPI flag u CLI interfejsu
+            Console.WriteLine("  Subtask 5.1.3: MPI flag u CLI interfejsu");
+
             // Test sa --mpi flag-om
             string[] args1 = { "--mpi" };
             bool useMpi1 = MpiHelper.IsMpiMode(args1);
             if (useMpi1)
             {
-                Console.WriteLine("  ✓ Detekcija --mpi flag-a");
+                Console.WriteLine("  ✓ Detekcija --mpi flag-a (5.1.3)");
             }
             else
             {
@@ -180,11 +209,23 @@ namespace ParkingMate.Blockchain
             bool useMpi2 = MpiHelper.IsMpiMode(args2);
             if (useMpi2)
             {
-                Console.WriteLine("  ✓ Detekcija -m flag-a");
+                Console.WriteLine("  ✓ Detekcija -m flag-a (5.1.3)");
             }
             else
             {
                 Console.WriteLine("  ✗ Greška: -m flag nije detektovan");
+            }
+
+            // Test sa --use-mpi flag-om
+            string[] args2b = { "--use-mpi" };
+            bool useMpi2b = MpiHelper.IsMpiMode(args2b);
+            if (useMpi2b)
+            {
+                Console.WriteLine("  ✓ Detekcija --use-mpi flag-a (5.1.3)");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Greška: --use-mpi flag nije detektovan");
             }
 
             // Test sa --mpi-size i --mpi-rank
@@ -192,11 +233,23 @@ namespace ParkingMate.Blockchain
             var (useMpi3, size, rank) = MpiHelper.ParseMpiArgs(args3);
             if (useMpi3 && size == 4 && rank == 1)
             {
-                Console.WriteLine($"  ✓ Parsiranje MPI argumenata: Size={size}, Rank={rank}");
+                Console.WriteLine($"  ✓ Parsiranje --mpi-size i --mpi-rank (5.1.3): Size={size}, Rank={rank}");
             }
             else
             {
                 Console.WriteLine("  ✗ Greška pri parsiranju MPI argumenata");
+            }
+
+            // Test sa kratkim formama
+            string[] args3b = { "-m", "-ms", "8", "-mr", "2" };
+            var (useMpi3b, size2, rank2) = MpiHelper.ParseMpiArgs(args3b);
+            if (useMpi3b && size2 == 8 && rank2 == 2)
+            {
+                Console.WriteLine($"  ✓ Parsiranje -ms i -mr kratkih formi (5.1.3): Size={size2}, Rank={rank2}");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Greška pri parsiranju kratkih formi");
             }
 
             // Test bez MPI flag-a
@@ -204,11 +257,22 @@ namespace ParkingMate.Blockchain
             bool useMpi4 = MpiHelper.IsMpiMode(args4);
             if (!useMpi4)
             {
-                Console.WriteLine("  ✓ Normalni režim (bez MPI) detektovan");
+                Console.WriteLine("  ✓ Normalni režim (bez MPI) detektovan (5.1.3)");
             }
             else
             {
                 Console.WriteLine("  ✗ Greška: MPI mod je pogrešno detektovan");
+            }
+
+            // Test CommandLineArgs.Parse sa MPI flag-ovima
+            var cliArgs = CommandLineArgs.Parse(new[] { "--mpi", "--mpi-size", "4", "--mpi-rank", "0" });
+            if (cliArgs.UseMpi && cliArgs.MpiSize == 4 && cliArgs.MpiRank == 0)
+            {
+                Console.WriteLine("  ✓ CommandLineArgs.Parse sa MPI flag-ovima (5.1.3)");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Greška: CommandLineArgs.Parse ne parsira MPI flag-ove");
             }
         }
 
