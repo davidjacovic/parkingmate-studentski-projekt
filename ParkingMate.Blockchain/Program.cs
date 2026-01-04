@@ -6,9 +6,14 @@ namespace ParkingMate.Blockchain
     {
         static void Main()
         {
-            // Test ThreadPool implementacije
+            // Test ThreadPool implementacije (4.1.2, 4.1.3, 4.1.4)
             // Otkomentariši sledeću liniju da testiraš ThreadPool:
-            TestThreadPool.RunTest();
+            // TestThreadPool.RunTest();
+            // return;
+
+            // Test skaliranja (4.1.5)
+            // Otkomentariši sledeću liniju da testiraš skaliranje sa različitim brojevima niti:
+            TestScaling.RunTest();
             return;
 
             var blockchain = new Blockchain();

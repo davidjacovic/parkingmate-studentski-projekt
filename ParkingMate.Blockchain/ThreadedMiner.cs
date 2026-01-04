@@ -463,6 +463,83 @@ namespace ParkingMate.Blockchain
             /// </summary>
             public abstract void Execute();
         }
+
+        /// <summary>
+        /// Konkretna implementacija MiningWorker-a za rudarjenje blokova.
+        /// Traži validan nonce u dodeljenom opsegu.
+        /// </summary>
+        public class BlockMiningWorker : MiningWorker
+        {
+            private readonly Block _blockToMine;
+            private readonly ulong _startNonce;
+            private readonly ulong _endNonce;
+            private readonly string _targetPrefix;
+
+            /// <summary>
+            /// Kreira novi BlockMiningWorker
+            /// </summary>
+            /// <param name="threadId">ID niti</param>
+            /// <param name="sharedState">Deljeni state</param>
+            /// <param name="blockToMine">Blok koji se rudari</param>
+            /// <param name="startNonce">Početni nonce za ovu nit</param>
+            /// <param name="endNonce">Završni nonce za ovu nit</param>
+            public BlockMiningWorker(
+                int threadId,
+                SharedMiningState sharedState,
+                Block blockToMine,
+                ulong startNonce,
+                ulong endNonce) : base(threadId, sharedState)
+            {
+                _blockToMine = blockToMine ?? throw new ArgumentNullException(nameof(blockToMine));
+                _startNonce = startNonce;
+                _endNonce = endNonce;
+                _targetPrefix = new string('0', (int)blockToMine.Difficulty);
+            }
+
+            /// <summary>
+            /// Izvršava rudarjenje - traži validan nonce u dodeljenom opsegu
+            /// </summary>
+            public override void Execute()
+            {
+                ulong currentNonce = _startNonce;
+
+                // Rudari dok ne nađeš validan nonce ili dok ne završiš opseg ili dok ne bude signalizirano da se zaustavi
+                while (currentNonce <= _endNonce && !ShouldStop())
+                {
+                    // Ažuriraj nonce u bloku
+                    _blockToMine.Nonce = currentNonce;
+
+                    // Izračunaj hash
+                    string hash = _blockToMine.CalculateHash();
+
+                    // Inkrementiraj brojač pokušaja
+                    _sharedState.IncrementAttempts();
+
+                    // Proveri da li je hash validan (ima dovoljno nula na početku)
+                    if (hash.StartsWith(_targetPrefix))
+                    {
+                        // Validan hash pronađen!
+                        // Ažuriraj hash u bloku
+                        _blockToMine.Hash = hash;
+                        
+                        // Pokušaj postaviti flag i sačuvati blok
+                        if (_sharedState.TrySetFoundBlock(_blockToMine, _threadId))
+                        {
+                            // Ovaj worker je prvi pronašao rešenje
+                            // Blok je već sačuvan u shared state-u
+                            return;
+                        }
+                        else
+                        {
+                            // Drugi worker je već pronašao rešenje
+                            return;
+                        }
+                    }
+
+                    currentNonce++;
+                }
+            }
+        }
     }
 }
 
