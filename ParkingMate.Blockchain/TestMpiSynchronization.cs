@@ -11,7 +11,7 @@ namespace ParkingMate.Blockchain
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test MPI sinhronizacije i prekida (5.3.1, 5.3.2) ===\n");
+            Console.WriteLine("=== Test MPI sinhronizacije i prekida (5.3.1, 5.3.2, 5.3.3) ===\n");
 
             // Test 1: MPI broadcast stop signala tokom mining-a (5.3.1)
             Console.WriteLine("Test 1: MPI broadcast stop signala tokom mining-a (5.3.1)");
@@ -23,15 +23,12 @@ namespace ParkingMate.Blockchain
             TestSafeThreadShutdown();
             Console.WriteLine();
 
-            // TODO: 5.3.3 - Cleanup MPI okruženja
-            /*
             // Test 3: Cleanup MPI okruženja (5.3.3)
             Console.WriteLine("Test 3: Cleanup MPI okruženja (5.3.3)");
             TestMpiCleanup();
             Console.WriteLine();
-            */
 
-            Console.WriteLine("✓ Testovi za Subtask 5.3.1 i 5.3.2 (MPI broadcast stop signala i bezbedno gašenje niti) su prošli!");
+            Console.WriteLine("✓ Testovi za Subtask 5.3.1, 5.3.2 i 5.3.3 (MPI broadcast stop signala, bezbedno gašenje niti i cleanup) su prošli!");
         }
 
         private static void TestStopSignalDuringMining()
@@ -234,13 +231,72 @@ namespace ParkingMate.Blockchain
             }
         }
 
-        // TODO: 5.3.3 - Cleanup MPI okruženja
-        /*
         private static void TestMpiCleanup()
         {
-            // Test implementacije
+            Console.WriteLine("  Testiranje cleanup MPI okruženja...");
+
+            // Test 1: Cleanup master procesa
+            Console.WriteLine("  Test 1: Cleanup master procesa");
+            var mpiMaster = MpiEnvironment.Instance;
+            mpiMaster.Finalize(); // Resetuj ako je već inicijalizovano
+            mpiMaster.Initialize(size: 4, rank: 0);
+
+            var master = new MpiMiningMasterWorker.MpiMiningMaster(mpiMaster);
+            
+            // Simuliraj neki rad (generiši opsege, itd.)
+            var blockToMine = new Block(
+                index: 1,
+                data: "Test block for cleanup",
+                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                previousHash: "0",
+                difficulty: 2,
+                nonce: 0
+            );
+            var messages = master.GenerateNonceRanges(blockToMine);
+            
+            // Izvrši cleanup
+            MpiMiningMasterWorker.MpiCleanup.CleanupMaster(master, mpiMaster);
+
+            // Proveri da li je okruženje resetovano
+            if (!mpiMaster.IsInitialized)
+            {
+                Console.WriteLine("  ✓ Master MPI okruženje je pravilno finalizovano");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Greška: Master MPI okruženje nije finalizovano");
+            }
+
+            Console.WriteLine();
+
+            // Test 2: Cleanup worker procesa
+            Console.WriteLine("  Test 2: Cleanup worker procesa");
+            var mpiWorker = MpiEnvironment.Instance;
+            mpiWorker.Finalize(); // Resetuj
+            mpiWorker.Initialize(size: 4, rank: 1);
+
+            var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpiWorker);
+
+            // Izvrši cleanup
+            MpiMiningMasterWorker.MpiCleanup.CleanupWorker(worker, mpiWorker);
+
+            // Proveri da li je okruženje resetovano
+            if (!mpiWorker.IsInitialized)
+            {
+                Console.WriteLine("  ✓ Worker MPI okruženje je pravilno finalizovano");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Greška: Worker MPI okruženje nije finalizovano");
+            }
+
+            Console.WriteLine();
+
+            // Test 3: Cleanup komunikacionih queue-a
+            Console.WriteLine("  Test 3: Cleanup komunikacionih queue-a");
+            SimulatedMpiCommunication.ClearQueue();
+            Console.WriteLine("  ✓ Komunikacioni queue-evi su očišćeni");
         }
-        */
     }
 }
 

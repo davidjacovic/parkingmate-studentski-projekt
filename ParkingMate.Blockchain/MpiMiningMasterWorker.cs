@@ -15,6 +15,7 @@ namespace ParkingMate.Blockchain
     /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
     /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
     /// - Subtask 5.3.1: MPI broadcast stop signala - integracija sa mining procesom
+    /// - Subtask 5.3.3: Cleanup MPI okruženja
     /// </summary>
     public class MpiMiningMasterWorker
     {
@@ -283,6 +284,32 @@ namespace ParkingMate.Blockchain
                     Console.WriteLine($"[Master Rank {_mpi.Rank}] ✗ Greška pri obaveštavanju workers: {ex.Message}");
                 }
             }
+
+            /// <summary>
+            /// Očisti resurse master procesa.
+            /// Subtask 5.3.3: Cleanup MPI okruženja
+            /// Oslobađa sve resurse povezane sa master procesom.
+            /// </summary>
+            public void Cleanup()
+            {
+                Console.WriteLine($"[Master Rank {_mpi.Rank}] Pokretanje cleanup master procesa...");
+
+                try
+                {
+                    // Korak 1: Očisti worker results dictionary
+                    _workerResults.Clear();
+                    Console.WriteLine($"[Master Rank {_mpi.Rank}] ✓ Očišćeni worker results");
+
+                    // Korak 2: U stvarnom MPI, ovo bi čekalo završetak svih pending MPI operacija
+                    // U simulaciji, ovo je već završeno
+
+                    Console.WriteLine($"[Master Rank {_mpi.Rank}] ✓ Master cleanup završen");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Master Rank {_mpi.Rank}] ⚠ Greška pri cleanup-u master procesa: {ex.Message}");
+                }
+            }
         }
 
         /// <summary>
@@ -293,6 +320,7 @@ namespace ParkingMate.Blockchain
         /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
         /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku (primanje stop signala)
         /// - Subtask 5.3.1: MPI broadcast stop signala - integracija sa mining procesom
+        /// - Subtask 5.3.3: Cleanup MPI okruženja
         /// </summary>
         public class MpiMiningWorker
         {
@@ -434,11 +462,11 @@ namespace ParkingMate.Blockchain
                                 break;
                             }
                         }
-                        catch (Exception ex)
-                        {
-                            // Ignoriši greške pri proveri stop signala - mining se nastavlja
-                            // Console.WriteLine($"[Worker Rank {_mpi.Rank}] Greška pri proveri stop signala: {ex.Message}");
-                        }
+                catch
+                {
+                    // Ignoriši greške pri proveri stop signala - mining se nastavlja
+                    // Console.WriteLine($"[Worker Rank {_mpi.Rank}] Greška pri proveri stop signala");
+                }
                     }
                 });
 
@@ -537,10 +565,10 @@ namespace ParkingMate.Blockchain
                     // Nema stop signala (mining se nastavlja)
                     return null;
                 }
-                catch (Exception ex)
+                catch
                 {
                     // Ignoriši greške - mining se nastavlja
-                    // Console.WriteLine($"[Worker Rank {_mpi.Rank}] Greška pri proveri stop signala: {ex.Message}");
+                    // Console.WriteLine($"[Worker Rank {_mpi.Rank}] Greška pri proveri stop signala");
                     return null;
                 }
             }
@@ -575,6 +603,91 @@ namespace ParkingMate.Blockchain
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✗ Greška pri slanju rezultata masteru: {ex.Message}");
+                }
+            }
+
+            /// <summary>
+            /// Očisti resurse worker procesa.
+            /// Subtask 5.3.3: Cleanup MPI okruženja
+            /// Oslobađa sve resurse povezane sa worker procesom.
+            /// </summary>
+            public void Cleanup()
+            {
+                Console.WriteLine($"[Worker Rank {_mpi.Rank}] Pokretanje cleanup worker procesa...");
+
+                try
+                {
+                    // Korak 1: U stvarnom MPI, ovo bi čekalo završetak svih pending MPI operacija
+                    // (kao što su MPI_Send, MPI_Recv, MPI_Bcast)
+                    // U simulaciji, ovo je već završeno
+
+                    // Korak 2: Očisti sve lokalne resurse (ako postoje)
+                    // Trenutno nema dodatnih resursa za cleanup, ali metoda je pripremljena za buduće
+
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✓ Worker cleanup završen");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ⚠ Greška pri cleanup-u worker procesa: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Statička klasa za integrisan cleanup MPI okruženja.
+        /// Subtask 5.3.3: Cleanup MPI okruženja
+        /// </summary>
+        public static class MpiCleanup
+        {
+            /// <summary>
+            /// Izvršava kompletan cleanup MPI okruženja za master proces.
+            /// Subtask 5.3.3: Cleanup MPI okruženja
+            /// </summary>
+            /// <param name="master">Master proces koji treba da se očisti</param>
+            /// <param name="mpi">MPI okruženje</param>
+            public static void CleanupMaster(MpiMiningMaster master, MpiEnvironment mpi)
+            {
+                Console.WriteLine($"[Cleanup] Pokretanje kompletnog cleanup-a za master proces...");
+                
+                try
+                {
+                    // Korak 1: Cleanup master procesa
+                    master.Cleanup();
+                    
+                    // Korak 2: Finalizuj MPI okruženje
+                    mpi.Finalize();
+                    
+                    Console.WriteLine($"[Cleanup] ✓ Kompletan cleanup master procesa završen");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Cleanup] ✗ Greška pri cleanup-u master procesa: {ex.Message}");
+                }
+            }
+
+            /// <summary>
+            /// Izvršava kompletan cleanup MPI okruženja za worker proces.
+            /// Subtask 5.3.3: Cleanup MPI okruženja
+            /// </summary>
+            /// <param name="worker">Worker proces koji treba da se očisti</param>
+            /// <param name="mpi">MPI okruženje</param>
+            public static void CleanupWorker(MpiMiningWorker worker, MpiEnvironment mpi)
+            {
+                Console.WriteLine($"[Cleanup] Pokretanje kompletnog cleanup-a za worker proces...");
+                
+                try
+                {
+                    // Korak 1: Cleanup worker procesa
+                    worker.Cleanup();
+                    
+                    // Korak 2: Finalizuj MPI okruženje
+                    mpi.Finalize();
+                    
+                    Console.WriteLine($"[Cleanup] ✓ Kompletan cleanup worker procesa završen");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Cleanup] ✗ Greška pri cleanup-u worker procesa: {ex.Message}");
                 }
             }
         }

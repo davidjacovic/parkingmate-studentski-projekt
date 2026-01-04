@@ -6,6 +6,7 @@ namespace ParkingMate.Blockchain
     /// <summary>
     /// MPI (Message Passing Interface) okruženje za distribuirano rudarjenje blokova.
     /// Subtask 5.1.1: MPI inicijalizacija - detekcija rank-a i size-a
+    /// Subtask 5.3.3: Cleanup MPI okruženja
     /// </summary>
     public class MpiEnvironment
     {
@@ -187,17 +188,43 @@ namespace ParkingMate.Blockchain
         public bool IsWorker => _initialized && !_isMaster;
 
         /// <summary>
-        /// Finalizuje MPI okruženje (cleanup)
+        /// Finalizuje MPI okruženje (cleanup).
+        /// Subtask 5.3.3: Cleanup MPI okruženja
+        /// Oslobađa sve resurse i vraća okruženje u inicijalno stanje.
         /// </summary>
         public void Finalize()
         {
-            if (_initialized)
+            if (!_initialized)
             {
-                _initialized = false;
-                _rank = 0;
-                _size = 1;
-                _isMaster = true;
+                return; // Već finalizovano
             }
+
+            Console.WriteLine($"[MPI Rank {_rank}] Pokretanje cleanup MPI okruženja...");
+
+            // Korak 1: Očisti sve pending MPI komunikacije
+            try
+            {
+                // Očisti message queue i broadcast queue
+                SimulatedMpiCommunication.ClearQueue();
+                Console.WriteLine($"[MPI Rank {_rank}] ✓ Očišćene MPI komunikacione queue-e");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MPI Rank {_rank}] ⚠ Greška pri čišćenju komunikacionih queue-a: {ex.Message}");
+            }
+
+            // Korak 2: Sačekaj da se sve asinhrone operacije završe (ako postoje)
+            // U stvarnom MPI, ovo bi čekalo MPI_Wait za sve pending operacije
+            Thread.Sleep(100); // Kratka pauza za oslobađanje resursa
+
+            // Korak 3: Resetuj stanje okruženja
+            int oldRank = _rank;
+            _initialized = false;
+            _rank = 0;
+            _size = 1;
+            _isMaster = true;
+
+            Console.WriteLine($"[MPI Rank {oldRank}] ✓ MPI okruženje je finalizovano i resursi oslobođeni");
         }
 
         /// <summary>
