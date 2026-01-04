@@ -31,10 +31,15 @@ namespace ParkingMate.Blockchain
             // TestCpuDetection.RunTest();
             // return;
 
-            // Test MPI inicijalizacije (5.1.1)
+            // Test MPI inicijalizacije (5.1.1, 5.1.2, 5.1.3)
             // Otkomentariši sledeću liniju da testiraš MPI inicijalizaciju:
             // TestMpiInitialization.RunTest();
-            //return;
+            // return;
+
+            // Test MPI Master-Worker arhitekture (5.2.1)
+            // Otkomentariši sledeću liniju da testiraš Master-Worker arhitekturu:
+            TestMpiMasterWorker.RunTest();
+            return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
             var mpi = MpiEnvironment.Instance;
