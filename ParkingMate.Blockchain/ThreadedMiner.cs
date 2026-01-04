@@ -50,14 +50,63 @@ namespace ParkingMate.Blockchain
         }
 
         /// <summary>
+        /// Thread-safe shared state za koordinaciju rudarjenja između niti.
+        /// Subtask 4.1.3: Deljeni flag za prekid rada kada se rešenje nađe
+        /// </summary>
+        public class SharedMiningState
+        {
+            // Thread-safe flag za signalizaciju da je rešenje pronađeno
+            // Koristimo Interlocked.CompareExchange za atomic operacije
+            private int _solutionFound = 0; // 0 = nije pronađeno, 1 = pronađeno
+
+            /// <summary>
+            /// Proverava da li je rešenje već pronađeno
+            /// </summary>
+            public bool IsSolutionFound()
+            {
+                return Thread.VolatileRead(ref _solutionFound) == 1;
+            }
+
+            /// <summary>
+            /// Postavlja flag da je rešenje pronađeno.
+            /// Vraća true ako je ovaj thread prvi postavio flag (pronašao rešenje),
+            /// false ako je neki drugi thread već postavio flag.
+            /// </summary>
+            public bool TrySetSolutionFound()
+            {
+                // Atomic operacija: postavi na 1 samo ako je trenutna vrednost 0
+                int originalValue = Interlocked.CompareExchange(ref _solutionFound, 1, 0);
+                return originalValue == 0; // True ako je ovaj thread postavio flag
+            }
+
+            /// <summary>
+            /// Resetuje flag (korisno za ponovno pokretanje rudarjenja)
+            /// </summary>
+            public void Reset()
+            {
+                Interlocked.Exchange(ref _solutionFound, 0);
+            }
+
+            /// <summary>
+            /// Thread-safe provera i postavljanje - koristi se za optimizaciju
+            /// </summary>
+            public bool CheckAndStopIfFound()
+            {
+                return IsSolutionFound();
+            }
+        }
+
+        /// <summary>
         /// ThreadPool za paralelno rudarjenje blokova.
         /// Subtask 4.1.2: Implementacija ThreadPool
+        /// Subtask 4.1.3: Integracija sa deljenim flag-om
         /// </summary>
         public class MiningThreadPool
         {
             private readonly int _numThreads;
             private readonly List<Thread> _threads;
             private readonly List<MiningWorker> _workers;
+            private SharedMiningState _sharedState;
 
             /// <summary>
             /// Kreira novi ThreadPool sa određenim brojem niti
@@ -71,12 +120,19 @@ namespace ParkingMate.Blockchain
                 _numThreads = numThreads;
                 _threads = new List<Thread>(numThreads);
                 _workers = new List<MiningWorker>(numThreads);
+                _sharedState = new SharedMiningState();
             }
 
             /// <summary>
             /// Broj niti u pool-u
             /// </summary>
             public int ThreadCount => _numThreads;
+
+            /// <summary>
+            /// Deljeni state za koordinaciju niti
+            /// Subtask 4.1.3: Pristup deljenom flag-u
+            /// </summary>
+            public SharedMiningState SharedState => _sharedState;
 
             /// <summary>
             /// Kreira i pokreće sve niti u pool-u sa određenim radnim zadatkom
@@ -89,6 +145,9 @@ namespace ParkingMate.Blockchain
 
                 // Očisti postojeće niti ako postoje
                 Stop();
+
+                // Resetuj shared state za novi ciklus rudarjenja
+                _sharedState.Reset();
 
                 // Kreiraj i pokreni nove niti
                 for (int i = 0; i < _numThreads; i++)
@@ -106,6 +165,7 @@ namespace ParkingMate.Blockchain
 
             /// <summary>
             /// Kreira i pokreće sve niti sa worker objektima
+            /// Subtask 4.1.3: Workers moraju imati isti SharedMiningState
             /// </summary>
             /// <param name="workers">Lista worker objekata - jedan po niti</param>
             public void StartWithWorkers(List<MiningWorker> workers)
@@ -115,6 +175,18 @@ namespace ParkingMate.Blockchain
 
                 // Očisti postojeće niti ako postoje
                 Stop();
+
+                // Resetuj shared state za novi ciklus rudarjenja
+                _sharedState.Reset();
+
+                // Proveri da svi workers dele isti shared state
+                foreach (var worker in workers)
+                {
+                    if (worker.SharedState != _sharedState)
+                    {
+                        throw new ArgumentException("Svi workers moraju imati isti SharedMiningState", nameof(workers));
+                    }
+                }
 
                 _workers.Clear();
                 _workers.AddRange(workers);
@@ -170,10 +242,14 @@ namespace ParkingMate.Blockchain
             }
 
             /// <summary>
-            /// Zaustavlja sve niti (preko cancellation token-a u workers)
+            /// Zaustavlja sve niti (preko cancellation token-a u workers i shared flag-a)
+            /// Subtask 4.1.3: Koristi shared flag za signalizaciju
             /// </summary>
             public void Stop()
             {
+                // Postavi shared flag da signalizira zaustavljanje
+                _sharedState.TrySetSolutionFound();
+
                 // Signaliziraj svim workers da se zaustave
                 foreach (var worker in _workers)
                 {
@@ -223,21 +299,34 @@ namespace ParkingMate.Blockchain
         /// <summary>
         /// Worker klasa za rudarjenje u jednoj niti.
         /// Svaki worker dobija svoj opseg nonce vrednosti i traži validan nonce.
+        /// Subtask 4.1.3: Integracija sa deljenim flag-om za prekid rada
         /// </summary>
         public abstract class MiningWorker
         {
             protected volatile bool _cancelled = false;
             protected readonly int _threadId;
+            protected readonly SharedMiningState _sharedState;
 
-            public MiningWorker(int threadId)
+            /// <summary>
+            /// Kreira novi MiningWorker
+            /// </summary>
+            /// <param name="threadId">ID niti</param>
+            /// <param name="sharedState">Deljeni state za koordinaciju sa drugim nitima</param>
+            public MiningWorker(int threadId, SharedMiningState sharedState)
             {
                 _threadId = threadId;
+                _sharedState = sharedState ?? throw new ArgumentNullException(nameof(sharedState));
             }
 
             /// <summary>
             /// ID niti
             /// </summary>
             public int ThreadId => _threadId;
+
+            /// <summary>
+            /// Deljeni state za koordinaciju
+            /// </summary>
+            public SharedMiningState SharedState => _sharedState;
 
             /// <summary>
             /// Signalizira worker-u da se zaustavi
@@ -251,6 +340,23 @@ namespace ParkingMate.Blockchain
             /// Proverava da li je worker otkazan
             /// </summary>
             public bool IsCancelled => _cancelled;
+
+            /// <summary>
+            /// Proverava da li je rešenje pronađeno (kroz deljeni flag ili direktno otkazan)
+            /// </summary>
+            protected bool ShouldStop()
+            {
+                return _cancelled || _sharedState.IsSolutionFound();
+            }
+
+            /// <summary>
+            /// Pokušava da postavi flag da je rešenje pronađeno.
+            /// Vraća true ako je ovaj worker prvi pronašao rešenje.
+            /// </summary>
+            protected bool TryMarkSolutionFound()
+            {
+                return _sharedState.TrySetSolutionFound();
+            }
 
             /// <summary>
             /// Glavna metoda za izvršavanje rada worker-a - implementira se u nasleđenim klasama
