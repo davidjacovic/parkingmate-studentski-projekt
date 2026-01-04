@@ -445,10 +445,20 @@ namespace ParkingMate.Blockchain
                 // Čekaj da se mining završi ili da se primi stop signal
                 pool.WaitAll();
                 
+                // Subtask 5.3.2: Bezbedno gašenje niti - proveri da li su sve niti zaista završile
+                if (!pool.AllThreadsCompleted)
+                {
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ⚠ Neke niti još rade, forsiranje zaustavljanja...");
+                    pool.Stop(); // Forsiraj bezbedno zaustavljanje
+                }
+
                 // Završi stop signal monitoring task
                 try
                 {
-                    stopSignalMonitor.Wait(1000); // Daj mu do 1 sekunde da se završi
+                    if (!stopSignalMonitor.IsCompleted)
+                    {
+                        stopSignalMonitor.Wait(1000); // Daj mu do 1 sekunde da se završi
+                    }
                 }
                 catch
                 {
@@ -456,6 +466,16 @@ namespace ParkingMate.Blockchain
                 }
                 
                 stopwatch.Stop();
+                
+                // Subtask 5.3.2: Finalna provera da su sve niti zaista zaustavljene
+                if (pool.AllThreadsCompleted)
+                {
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✓ Sve niti su bezbedno zaustavljene");
+                }
+                else
+                {
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ⚠ Upozorenje: {pool.ActiveThreadCount} niti još uvek rade");
+                }
 
                 // Prikupi rezultate
                 result.MiningTimeMs = stopwatch.ElapsedMilliseconds;
