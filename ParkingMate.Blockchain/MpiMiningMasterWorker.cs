@@ -14,6 +14,7 @@ namespace ParkingMate.Blockchain
     /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
     /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
     /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
+    /// - Subtask 5.3.1: MPI broadcast stop signala - integracija sa mining procesom
     /// </summary>
     public class MpiMiningMasterWorker
     {
@@ -291,6 +292,7 @@ namespace ParkingMate.Blockchain
         /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
         /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
         /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku (primanje stop signala)
+        /// - Subtask 5.3.1: MPI broadcast stop signala - integracija sa mining procesom
         /// </summary>
         public class MpiMiningWorker
         {
@@ -352,7 +354,9 @@ namespace ParkingMate.Blockchain
             /// <summary>
             /// Izvršava multi-threaded rudarjenje na dodeljenom opsegu.
             /// Subtask 5.2.3: Worker pokreće multi-thread PoW
+            /// Subtask 5.3.1: Integracija MPI broadcast stop signala sa mining procesom
             /// Deli opseg dodeljen ovom worker procesu na lokalne niti i pokreće multi-threaded mining.
+            /// Periodički proverava MPI stop signal tokom mining-a.
             /// </summary>
             /// <param name="message">Poruka sa nonce opsegom</param>
             /// <returns>Rezultat rudarjenja</returns>
@@ -404,7 +408,53 @@ namespace ParkingMate.Blockchain
 
                 // Pokreni multi-threaded mining
                 pool.StartWithWorkers(workers);
+                
+                // Subtask 5.3.1: Proveravaj MPI stop signal tokom mining-a
+                // Background task koji periodički proverava stop signal dok se mining izvršava
+                var stopSignalMonitor = Task.Run(() =>
+                {
+                    const int checkIntervalMs = 200; // Proveri stop signal svakih 200ms
+                    
+                    while (!pool.AllThreadsCompleted && !sharedState.IsSolutionFound())
+                    {
+                        Thread.Sleep(checkIntervalMs);
+                        
+                        // Proveri da li master šalje stop signal (non-blocking provera)
+                        try
+                        {
+                            var stopSignal = ReceiveStopSignal();
+                            if (stopSignal != null && stopSignal.ShouldStop)
+                            {
+                                Console.WriteLine($"[Worker Rank {_mpi.Rank}] ⚠ Primljen stop signal od master-a! Prekidam mining...");
+                                if (!string.IsNullOrEmpty(stopSignal.Reason))
+                                {
+                                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] Razlog: {stopSignal.Reason}");
+                                }
+                                pool.Stop(); // Bezbedno prekini mining i sve niti
+                                break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Ignoriši greške pri proveri stop signala - mining se nastavlja
+                            // Console.WriteLine($"[Worker Rank {_mpi.Rank}] Greška pri proveri stop signala: {ex.Message}");
+                        }
+                    }
+                });
+
+                // Čekaj da se mining završi ili da se primi stop signal
                 pool.WaitAll();
+                
+                // Završi stop signal monitoring task
+                try
+                {
+                    stopSignalMonitor.Wait(1000); // Daj mu do 1 sekunde da se završi
+                }
+                catch
+                {
+                    // Ignoriši timeout - mining je već završen
+                }
+                
                 stopwatch.Stop();
 
                 // Prikupi rezultate
@@ -421,7 +471,15 @@ namespace ParkingMate.Blockchain
                 else
                 {
                     result.Success = false;
-                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✗ Rešenje nije pronađeno u dodeljenom opsegu");
+                    // Proveri da li je mining prekinut zbog stop signala
+                    if (!pool.AllThreadsCompleted)
+                    {
+                        Console.WriteLine($"[Worker Rank {_mpi.Rank}] ⚠ Mining prekinut (stop signal ili timeout)");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✗ Rešenje nije pronađeno u dodeljenom opsegu");
+                    }
                 }
 
                 pool.Stop();
@@ -431,6 +489,7 @@ namespace ParkingMate.Blockchain
             /// <summary>
             /// Prima stop signal od master procesa.
             /// Subtask 5.2.5: Master obaveštava sve čvorove o završetku
+            /// Subtask 5.3.1: MPI broadcast stop signala - non-blocking provera
             /// Koristi MPI_Bcast (simulacija ili stvarno) za primanje stop signala od master procesa.
             /// </summary>
             /// <returns>Stop signal poruka ili null ako nema signala</returns>
@@ -442,6 +501,7 @@ namespace ParkingMate.Blockchain
                     
                     // Koristi IMpiCommunication za primanje broadcast poruke
                     // U stvarnom MPI okruženju bi se koristio MPI_Bcast
+                    // U simulaciji, ovo je non-blocking - vraća postojeću poruku ili null
                     _communication.Broadcast(ref stopSignal, rootRank: 0);
 
                     if (stopSignal.ShouldStop)
@@ -454,11 +514,13 @@ namespace ParkingMate.Blockchain
                         return stopSignal;
                     }
 
+                    // Nema stop signala (mining se nastavlja)
                     return null;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✗ Greška pri primanju stop signala: {ex.Message}");
+                    // Ignoriši greške - mining se nastavlja
+                    // Console.WriteLine($"[Worker Rank {_mpi.Rank}] Greška pri proveri stop signala: {ex.Message}");
                     return null;
                 }
             }
