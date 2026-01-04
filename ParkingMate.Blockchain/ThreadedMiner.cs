@@ -9,6 +9,8 @@ namespace ParkingMate.Blockchain
     /// Dizajn za paralelno rudarjenje blokova korišćenjem više niti.
     /// Subtask 4.1.1: Dizajn podele nonce prostora po nitima
     /// Subtask 4.1.2: Implementacija ThreadPool
+    /// Subtask 4.1.3: Deljeni flag za prekid rada kada se rešenje nađe
+    /// Subtask 4.1.4: Sinhronizacija (mutex/atomic) - thread-safe storage i atomic operacije
     /// </summary>
     public class ThreadedMiner
     {
@@ -52,12 +54,22 @@ namespace ParkingMate.Blockchain
         /// <summary>
         /// Thread-safe shared state za koordinaciju rudarjenja između niti.
         /// Subtask 4.1.3: Deljeni flag za prekid rada kada se rešenje nađe
+        /// Subtask 4.1.4: Sinhronizacija (mutex/atomic) za thread-safe storage rezultata
         /// </summary>
         public class SharedMiningState
         {
             // Thread-safe flag za signalizaciju da je rešenje pronađeno
             // Koristimo Interlocked.CompareExchange za atomic operacije
             private int _solutionFound = 0; // 0 = nije pronađeno, 1 = pronađeno
+
+            // Thread-safe storage za pronađeni blok
+            // Koristimo object lock za zaštitu pristupa
+            private readonly object _resultLock = new object();
+            private Block? _foundBlock = null;
+            private int _foundByThreadId = -1;
+
+            // Thread-safe counter za statistiku (broj pokušaja)
+            private long _totalAttempts = 0;
 
             /// <summary>
             /// Proverava da li je rešenje već pronađeno
@@ -80,11 +92,99 @@ namespace ParkingMate.Blockchain
             }
 
             /// <summary>
-            /// Resetuje flag (korisno za ponovno pokretanje rudarjenja)
+            /// Thread-safe postavljanje pronađenog bloka.
+            /// Vraća true ako je blok uspešno postavljen (prvi thread koji je našao rešenje),
+            /// false ako je neki drugi thread već postavio blok.
+            /// Subtask 4.1.4: Sinhronizacija pomoću lock-a
+            /// </summary>
+            public bool TrySetFoundBlock(Block block, int threadId)
+            {
+                // Prvo proveri da li je već pronađeno (fast path)
+                if (IsSolutionFound())
+                {
+                    return false;
+                }
+
+                // Atomically postavi flag i istovremeno proveri da li je uspeo
+                bool isFirst = TrySetSolutionFound();
+                
+                if (isFirst)
+                {
+                    // Ovo je prvi thread koji je pronašao rešenje
+                    // Koristimo lock za thread-safe postavljanje bloka
+                    lock (_resultLock)
+                    {
+                        // Ponovna provera (double-check locking pattern)
+                        if (_foundBlock == null)
+                        {
+                            _foundBlock = block;
+                            _foundByThreadId = threadId;
+                        }
+                    }
+                }
+
+                return isFirst;
+            }
+
+            /// <summary>
+            /// Thread-safe čitanje pronađenog bloka.
+            /// Vraća pronađeni blok ili null ako nije pronađen.
+            /// Subtask 4.1.4: Sinhronizacija pomoću lock-a
+            /// </summary>
+            public Block? GetFoundBlock()
+            {
+                lock (_resultLock)
+                {
+                    return _foundBlock;
+                }
+            }
+
+            /// <summary>
+            /// Vraća ID niti koja je pronašla rešenje.
+            /// Subtask 4.1.4: Thread-safe čitanje
+            /// </summary>
+            public int GetFoundByThreadId()
+            {
+                lock (_resultLock)
+                {
+                    return _foundByThreadId;
+                }
+            }
+
+            /// <summary>
+            /// Thread-safe inkrementiranje brojača pokušaja.
+            /// Koristi Interlocked za atomic operaciju.
+            /// Subtask 4.1.4: Atomic operacija
+            /// </summary>
+            public void IncrementAttempts()
+            {
+                Interlocked.Increment(ref _totalAttempts);
+            }
+
+            /// <summary>
+            /// Thread-safe čitanje ukupnog broja pokušaja.
+            /// Subtask 4.1.4: Thread-safe čitanje
+            /// </summary>
+            public long GetTotalAttempts()
+            {
+                return Interlocked.Read(ref _totalAttempts);
+            }
+
+            /// <summary>
+            /// Resetuje flag i sve podatke (korisno za ponovno pokretanje rudarjenja)
+            /// Subtask 4.1.4: Thread-safe reset sa lock-om
             /// </summary>
             public void Reset()
             {
                 Interlocked.Exchange(ref _solutionFound, 0);
+                
+                lock (_resultLock)
+                {
+                    _foundBlock = null;
+                    _foundByThreadId = -1;
+                }
+                
+                Interlocked.Exchange(ref _totalAttempts, 0);
             }
 
             /// <summary>

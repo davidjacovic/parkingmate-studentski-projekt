@@ -59,4 +59,153 @@ Thread 2: nonce = 2*rangeSize, 2*rangeSize+1, ..., 3*rangeSize-1
 - Većina blokova će biti pronađena u ranijim opsezima
 - Ako sve niti završe svoje opsege bez pronalaska, možemo pokrenuti novi ciklus ili povećati difficulty
 
+---
+
+## Subtask 4.1.3: Deljeni flag za prekid rada kada se rešenje nađe
+
+### Pregled
+Deljeni flag omogućava koordinaciju između niti - kada jedna nit pronađe validan blok, sve ostale niti moraju biti obaveštene da prekinu rad.
+
+### Implementacija
+- **Atomic flag**: Koristi `Interlocked.CompareExchange` za thread-safe postavljanje flag-a
+- **Volatile čitanje**: `Thread.VolatileRead` za thread-safe proveru bez lock-a
+- **Prvi pronalazač**: Samo jedna nit može postaviti flag (atomically)
+
+### Prednosti
+- Brza provera bez lock-a
+- Garantovano thread-safe postavljanje
+- Minimalna overhead
+
+---
+
+## Subtask 4.1.4: Sinhronizacija (mutex/atomic)
+
+### Pregled
+Potrebno je osigurati thread-safe pristup deljenim resursima: pronađenom bloku, statistici, i drugim podacima.
+
+### Korišćeni mehanizmi sinhronizacije
+
+#### 1. Atomic operacije (Interlocked)
+Koristi se za jednostavne operacije na primitivnim tipovima:
+
+**Primeri:**
+- `Interlocked.CompareExchange` - atomic postavljanje flag-a
+- `Interlocked.Exchange` - atomic zamena vrednosti
+- `Interlocked.Increment` - atomic inkrementiranje brojača
+- `Interlocked.Read` - atomic čitanje long vrednosti
+
+**Prednosti:**
+- Veoma brze (hardware podrška)
+- Nema deadlock rizika
+- Najmanji overhead
+
+**Upotreba:**
+```csharp
+// Atomic postavljanje flag-a
+int original = Interlocked.CompareExchange(ref _flag, 1, 0);
+
+// Atomic inkrementiranje
+Interlocked.Increment(ref _counter);
+```
+
+#### 2. Lock (mutex pattern)
+Koristi se za zaštitu kompleksnih operacija i objekata:
+
+**Primer:**
+```csharp
+private readonly object _resultLock = new object();
+private Block? _foundBlock = null;
+
+// Thread-safe postavljanje
+lock (_resultLock)
+{
+    _foundBlock = block;
+}
+```
+
+**Double-check locking pattern:**
+```csharp
+if (!IsSolutionFound())  // Brza provera bez lock-a
+{
+    if (TrySetSolutionFound())  // Atomic operacija
+    {
+        lock (_resultLock)  // Lock samo kada je potreban
+        {
+            if (_foundBlock == null)  // Ponovna provera
+            {
+                _foundBlock = block;
+            }
+        }
+    }
+}
+```
+
+**Prednosti:**
+- Zaštita kompleksnih operacija
+- Ekskluzivan pristup deljenim resursima
+- Lako razumevanje
+
+**Upotreba:**
+- Čuvanje pronađenog bloka
+- Pristup kompleksnim objektima
+- Koordinacija više operacija
+
+#### 3. Volatile čitanje
+Osigurava da se uvek čita najnovija vrednost iz memorije:
+
+**Primer:**
+```csharp
+return Thread.VolatileRead(ref _flag) == 1;
+```
+
+**Prednosti:**
+- Brzo čitanje bez lock-a
+- Garantovana konzistentnost
+- Ne blokira druge niti
+
+**Upotreba:**
+- Česta provera flag-a (hot path)
+- Provera statusa bez lock-a
+
+### Thread-safe storage rezultata
+
+#### TrySetFoundBlock metoda
+Kombinuje atomic operacije i lock za optimalnu performansu:
+
+1. **Fast path**: Brza provera flag-a bez lock-a
+2. **Atomic postavljanje**: Interlocked.CompareExchange za flag
+3. **Lock za storage**: Zaštita kompleksnog objekta (bloka)
+
+#### GetFoundBlock metoda
+Thread-safe čitanje pronađenog bloka koristeći lock.
+
+### Statistika i brojači
+
+#### Atomic brojači
+Koriste se `Interlocked.Increment` i `Interlocked.Read` za:
+- Broj pokušaja (total attempts)
+- Druge statistike koje se često ažuriraju
+
+### Sinhronizacione strategije po scenariju
+
+| Scenario | Mehanizam | Razlog |
+|----------|-----------|--------|
+| Provera flag-a (česta) | VolatileRead | Brz, ne blokira |
+| Postavljanje flag-a | Interlocked.CompareExchange | Atomic, bez lock-a |
+| Čuvanje bloka | Lock | Kompleksan objekat |
+| Brojanje pokušaja | Interlocked.Increment | Brz, atomic |
+| Resetovanje state-a | Kombinacija | Atomic za flag, lock za objekte |
+
+### Prednosti ovog pristupa
+1. **Optimalna performansa**: Kombinacija brzih atomic operacija i lock-a samo gde je potrebno
+2. **Thread-safety**: Garantovana sigurnost pri konkurentnom pristupu
+3. **Skalabilnost**: Minimalna blokiranja između niti
+4. **Čitljivost**: Jasna upotreba svakog mehanizma
+
+### Napomene
+- Atomic operacije su najbrže za jednostavne tipove
+- Lock je potreban za kompleksne objekte
+- Double-check locking pattern optimizuje česte provere
+- Volatile čitanje osigurava konzistentnost bez overhead-a lock-a
+
 
