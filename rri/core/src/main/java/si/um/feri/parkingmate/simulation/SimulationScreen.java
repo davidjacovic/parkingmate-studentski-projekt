@@ -19,7 +19,6 @@ import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
-import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
@@ -35,16 +34,12 @@ import si.um.feri.parkingmate.model.Marker;
 import si.um.feri.parkingmate.model.Parking;
 import si.um.feri.parkingmate.screens.BaseScreen;
 import si.um.feri.parkingmate.screens.MapScreen;
-import si.um.feri.parkingmate.ui.InfoPanel;
 import si.um.feri.parkingmate.util.FontManager;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Simulation screen displaying parking locations for simulation purposes.
- */
 public class SimulationScreen extends BaseScreen {
 
     private final ParkingMate game;
@@ -56,57 +51,46 @@ public class SimulationScreen extends BaseScreen {
     private ShapeRenderer shapeRenderer;
     private SpriteBatch spriteBatch;
     private List<Marker> markers;
+    private float clockX, clockY;
+    private float clockWidth = 200f;
+    private float clockHeight = 50f;
 
-    // Marker textures
     private Texture markerFreeTexture;
     private Texture markerPartialTexture;
     private Texture markerFullTexture;
     private Texture markerUnknownTexture;
 
-    // CLOSE BUTTON
     private Texture closeButtonTexture;
     private float closeButtonSize = 48f;
     private float closeButtonMargin = 15f;
     private float closeButtonX, closeButtonY;
-
-    // Marker size configuration (in pixels)
     private float markerSize = 128f;
 
-    // Font for text
     private BitmapFont font;
-
-    // API service for fetching parking data
     private ParkingService parkingService;
 
-    // Backend API base URL
+    private float simulationTime = 8.0f * 60f;
+    private float timeSpeedMultiplier = 10f;
+    private boolean isClockPaused = false;
+    private Texture clockIconTexture;
+    private float clockUpdateTimer = 0f;
+    private static final float CLOCK_UPDATE_INTERVAL = 0.1f;
+
     private static final String API_BASE_URL = "http://localhost:3002";
 
-    // Title
-    private String screenTitle = "PARKING SIMULATION";
-
-    /**
-     * Constructor for SimulationScreen.
-     * @param game The main game instance.
-     */
     public SimulationScreen(ParkingMate game) {
         this.game = game;
         this.markers = new ArrayList<>();
         this.parkingService = new ParkingService(API_BASE_URL);
     }
 
-    /**
-     * Called when this screen becomes the current screen.
-     */
     @Override
     public void show() {
         initializeSimulationMap();
+        initializeSimulationClock();
     }
 
-    /**
-     * Initializes the simulation map with tiles and markers.
-     */
     private void initializeSimulationMap() {
-        // Check if API key is set
         if (Keys.GEOAPIFY == null || Keys.GEOAPIFY.isEmpty()) {
             Gdx.app.error("SimulationScreen", "Geoapify API key is not set!");
             setupCamera();
@@ -114,17 +98,14 @@ public class SimulationScreen extends BaseScreen {
         }
 
         try {
-            // Get center tile based on center geolocation (Ljubljana)
             ZoomXY centerTile = MapRasterTiles.getTileNumber(
                 MapConstants.CENTER_GEOLOCATION.lat,
                 MapConstants.CENTER_GEOLOCATION.lng,
                 MapConstants.ZOOM
             );
 
-            // Fetch tiles for the area
             mapTiles = MapRasterTiles.getRasterTileZone(centerTile, MapConstants.NUM_TILES);
 
-            // Calculate beginning tile (top left corner)
             beginTile = new ZoomXY(
                 MapConstants.ZOOM,
                 centerTile.x - ((MapConstants.NUM_TILES - 1) / 2),
@@ -137,11 +118,9 @@ public class SimulationScreen extends BaseScreen {
             return;
         }
 
-        // Create TiledMap
         tiledMap = new TiledMap();
         MapLayers layers = tiledMap.getLayers();
 
-        // Create a tile layer
         TiledMapTileLayer layer = new TiledMapTileLayer(
             MapConstants.NUM_TILES,
             MapConstants.NUM_TILES,
@@ -149,7 +128,6 @@ public class SimulationScreen extends BaseScreen {
             MapRasterTiles.TILE_SIZE
         );
 
-        // Fill layer with tiles
         int index = 0;
         for (int j = MapConstants.NUM_TILES - 1; j >= 0; j--) {
             for (int i = 0; i < MapConstants.NUM_TILES; i++) {
@@ -167,139 +145,154 @@ public class SimulationScreen extends BaseScreen {
         }
         layers.add(layer);
 
-        // Create renderer
         tiledMapRenderer = new OrthogonalTiledMapRenderer(tiledMap);
 
-        // Setup camera
         setupCamera();
 
-        // Setup input handlers
         setupInputHandlers();
 
-        // Initialize renderers
         shapeRenderer = new ShapeRenderer();
         spriteBatch = new SpriteBatch();
 
-        // Load font
         loadFont();
 
-        // Load marker textures
         loadMarkerTextures();
 
-        // Initialize close button
         initializeCloseButton();
 
-        // Load parking locations from API
         loadParkingLocationsFromAPI();
     }
 
-    /**
-     * Initialize close button.
-     */
+    private void initializeSimulationClock() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING SIMULATION CLOCK ===");
+
+        try {
+            clockIconTexture = new Texture(Gdx.files.internal("ui/clock_icon.png"));
+        } catch (Exception e) {
+            createDefaultClockIcon();
+        }
+        updateClockPosition();
+    }
+
+    private void updateClockPosition() {
+        clockX = closeButtonMargin;
+        clockY = Gdx.graphics.getHeight() - clockHeight - closeButtonMargin;
+    }
+
+    private void updateCloseButtonPosition() {
+        closeButtonX = Gdx.graphics.getWidth() - closeButtonSize - closeButtonMargin;
+        closeButtonY = Gdx.graphics.getHeight() - closeButtonSize - closeButtonMargin;
+    }
+
+    private void createDefaultClockIcon() {
+        Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
+        pixmap.setColor(1f, 0.8f, 0f, 1f);
+        pixmap.fillCircle(32, 32, 30);
+        pixmap.setColor(0f, 0f, 0f, 1f);
+        pixmap.drawCircle(32, 32, 30);
+        pixmap.setColor(0f, 0f, 0f, 1f);
+        pixmap.fillCircle(32, 32, 4);
+        pixmap.drawLine(32, 32, 32, 18);
+        pixmap.drawLine(32, 32, 44, 32);
+        clockIconTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    private String formatSimulationTime(float totalMinutes) {
+        int hours = ((int) totalMinutes / 60) % 24;
+        int minutes = (int) totalMinutes % 60;
+        return String.format("%02d:%02d", hours, minutes);
+    }
+
+    private void updateSimulationTime(float delta) {
+        if (isClockPaused) return;
+        clockUpdateTimer += delta;
+        if (clockUpdateTimer >= CLOCK_UPDATE_INTERVAL) {
+            simulationTime += (timeSpeedMultiplier * CLOCK_UPDATE_INTERVAL * 60f);
+            if (simulationTime >= 24 * 60f) {
+                simulationTime -= 24 * 60f;
+            }
+            clockUpdateTimer = 0f;
+        }
+    }
+
+    private void drawSimulationClock() {
+        if (spriteBatch == null || font == null) return;
+        updateClockPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+        if (clockIconTexture != null) {
+            spriteBatch.draw(clockIconTexture, clockX + 5f, clockY + 1f, 40f, 40f);
+        }
+        String timeText = formatSimulationTime(simulationTime);
+        String displayText = "🕒 " + timeText;
+        font.setColor(Color.BLACK);
+        font.draw(spriteBatch, displayText, clockX + 50f, clockY + 30f);
+        spriteBatch.end();
+    }
+
     private void initializeCloseButton() {
         Gdx.app.log("SimulationScreen", "=== INITIALIZING CLOSE BUTTON ===");
-
         try {
             closeButtonTexture = new Texture(Gdx.files.internal("ui/close_button.png"));
         } catch (Exception e) {
             createDefaultCloseButton();
         }
-
-        // Position at top-right corner
-        closeButtonX = Gdx.graphics.getWidth() - closeButtonSize - closeButtonMargin;
-        closeButtonY = Gdx.graphics.getHeight() - closeButtonSize - closeButtonMargin;
-
+        updateCloseButtonPosition();
         Gdx.app.log("SimulationScreen", "Close button at: " + closeButtonX + ", " + closeButtonY);
     }
 
-    /**
-     * Create default close button (red X).
-     */
     private void createDefaultCloseButton() {
         Pixmap pixmap = new Pixmap((int)closeButtonSize, (int)closeButtonSize, Pixmap.Format.RGBA8888);
-
-        // Red background
-        pixmap.setColor(0.8f, 0.2f, 0.2f, 1f);
+        pixmap.setColor(1f, 0.2f, 0.2f, 1f);
         pixmap.fillRectangle(0, 0, (int)closeButtonSize, (int)closeButtonSize);
-
-        // White X symbol
         pixmap.setColor(Color.WHITE);
         int padding = (int)(closeButtonSize * 0.25f);
         int thickness = (int)(closeButtonSize * 0.1f);
-
-        // First diagonal
         for (int i = 0; i < thickness; i++) {
-            pixmap.drawLine(
-                padding + i, padding + i,
-                (int)closeButtonSize - padding + i, (int)closeButtonSize - padding + i
-            );
+            pixmap.drawLine(padding + i, padding + i, (int)closeButtonSize - padding + i, (int)closeButtonSize - padding + i);
         }
-
-        // Second diagonal
         for (int i = 0; i < thickness; i++) {
-            pixmap.drawLine(
-                (int)closeButtonSize - padding + i, padding + i,
-                padding + i, (int)closeButtonSize - padding + i
-            );
+            pixmap.drawLine((int)closeButtonSize - padding + i, padding + i, padding + i, (int)closeButtonSize - padding + i);
         }
-
         closeButtonTexture = new Texture(pixmap);
         pixmap.dispose();
     }
 
-    /**
-     * Loads font for text rendering.
-     */
     private void loadFont() {
-        font = FontManager.getFont(24);
+        font = FontManager.getFont(32);
     }
 
-    /**
-     * Loads marker textures from assets folder.
-     */
     private void loadMarkerTextures() {
         try {
             markerFreeTexture = new Texture(Gdx.files.internal("markers/marker_free.png"));
         } catch (Exception e) {
-            Gdx.app.debug("SimulationScreen", "Marker texture not found: markers/marker_free.png");
             markerFreeTexture = null;
         }
-
         try {
             markerPartialTexture = new Texture(Gdx.files.internal("markers/marker_partial.png"));
         } catch (Exception e) {
-            Gdx.app.debug("SimulationScreen", "Marker texture not found: markers/marker_partial.png");
             markerPartialTexture = null;
         }
-
         try {
             markerFullTexture = new Texture(Gdx.files.internal("markers/marker_full.png"));
         } catch (Exception e) {
-            Gdx.app.debug("SimulationScreen", "Marker texture not found: markers/marker_full.png");
             markerFullTexture = null;
         }
-
         try {
             markerUnknownTexture = new Texture(Gdx.files.internal("markers/marker_unknown.png"));
         } catch (Exception e) {
-            Gdx.app.debug("SimulationScreen", "Marker texture not found: markers/marker_unknown.png");
             markerUnknownTexture = null;
         }
     }
 
-    /**
-     * Loads parking locations from the API.
-     */
     private void loadParkingLocationsFromAPI() {
         new Thread(() -> {
             try {
                 Gdx.app.log("SimulationScreen", "Fetching parking locations for simulation...");
-
                 List<JSONObject> jsonLocations = parkingService.fetchParkingLocationsWithTariffs();
                 List<Parking> parkingList = ParkingMapper.mapToParkingListWithTariffs(jsonLocations);
-
                 Gdx.app.log("SimulationScreen", "Loaded " + parkingList.size() + " parking locations");
-
                 final List<Parking> finalParkingList = parkingList;
                 Gdx.app.postRunnable(() -> {
                     markers.clear();
@@ -311,11 +304,8 @@ public class SimulationScreen extends BaseScreen {
                     }
                     Gdx.app.log("SimulationScreen", "Added " + markers.size() + " markers to simulation map");
                 });
-
             } catch (Exception e) {
                 Gdx.app.error("SimulationScreen", "Failed to load parking locations", e);
-
-                // Fallback to test markers
                 Gdx.app.postRunnable(() -> {
                     initializeTestMarkers();
                 });
@@ -323,19 +313,13 @@ public class SimulationScreen extends BaseScreen {
         }).start();
     }
 
-    /**
-     * Converts a Parking model to a Marker model.
-     */
     private Marker convertParkingToMarker(Parking parking) {
         if (parking == null || parking.getLocation() == null) {
             return null;
         }
-
-        // Determine marker state
         Marker.MarkerState markerState;
         int totalSpots = parking.getTotalSpots();
         int availableSpots = parking.getTotalAvailableSpots();
-
         if (totalSpots == 0) {
             markerState = Marker.MarkerState.UNKNOWN;
         } else {
@@ -348,11 +332,7 @@ public class SimulationScreen extends BaseScreen {
                 markerState = Marker.MarkerState.FULL;
             }
         }
-
-        // Get price from tariffs
         float pricePerHour = parking.getPricePerHour();
-
-        // Create marker
         Marker marker = new Marker(
             parking.getLocation(),
             Marker.MarkerType.PARKING_LOT,
@@ -363,13 +343,9 @@ public class SimulationScreen extends BaseScreen {
             availableSpots,
             pricePerHour
         );
-
         return marker;
     }
 
-    /**
-     * Initialize test markers for demonstration.
-     */
     private void initializeTestMarkers() {
         markers.add(new Marker(
             new Geolocation(46.0569, 14.5058),
@@ -377,14 +353,12 @@ public class SimulationScreen extends BaseScreen {
             Marker.MarkerState.FREE,
             "test-1", "Parking Center", 50, 35, 2.5f
         ));
-
         markers.add(new Marker(
             new Geolocation(46.0580, 14.5070),
             Marker.MarkerType.GARAGE,
             Marker.MarkerState.PARTIAL,
             "test-2", "Garage North", 100, 45, 3.0f
         ));
-
         markers.add(new Marker(
             new Geolocation(46.0550, 14.5040),
             Marker.MarkerType.STREET_PARKING,
@@ -393,9 +367,6 @@ public class SimulationScreen extends BaseScreen {
         ));
     }
 
-    /**
-     * Sets up the camera.
-     */
     private void setupCamera() {
         camera.setToOrtho(false, MapConstants.MAP_WIDTH, MapConstants.MAP_HEIGHT);
         camera.position.set(MapConstants.MAP_WIDTH / 2f, MapConstants.MAP_HEIGHT / 2f, 0);
@@ -405,12 +376,8 @@ public class SimulationScreen extends BaseScreen {
         camera.update();
     }
 
-    /**
-     * Sets up input handlers for gestures and clicks.
-     */
     private void setupInputHandlers() {
         gestureDetector = new GestureDetector(new SimulationGestureListener());
-
         InputAdapter inputAdapter = new InputAdapter() {
             @Override
             public boolean scrolled(float amountX, float amountY) {
@@ -419,86 +386,68 @@ public class SimulationScreen extends BaseScreen {
                 camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
                 return true;
             }
-
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
-
-                // CHECK CLICK ON CLOSE BUTTON
                 if (isCloseButtonClicked(screenX, gdxY)) {
                     Gdx.app.log("SimulationScreen", "Close button clicked - returning to map");
                     returnToMapScreen();
                     return true;
                 }
-
+                if (isClockAreaClicked(screenX, gdxY)) {
+                    isClockPaused = !isClockPaused;
+                    Gdx.app.log("SimulationScreen", "Clock " + (isClockPaused ? "PAUSED" : "RESUMED") + " via click");
+                    return true;
+                }
                 return false;
             }
         };
-
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(inputAdapter);
         inputMultiplexer.addProcessor(gestureDetector);
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
-    /**
-     * Checks if the close button was clicked.
-     */
-    private boolean isCloseButtonClicked(float screenX, float screenY) {
-        return screenX >= closeButtonX &&
-            screenX <= closeButtonX + closeButtonSize &&
-            screenY >= closeButtonY &&
-            screenY <= closeButtonY + closeButtonSize;
+    private boolean isClockAreaClicked(float screenX, float screenY) {
+        updateClockPosition();
+        return screenX >= clockX && screenX <= clockX + clockWidth && screenY >= clockY && screenY <= clockY + clockHeight;
     }
 
-    /**
-     * Returns to the main map screen.
-     */
+    private boolean isCloseButtonClicked(float screenX, float screenY) {
+        updateCloseButtonPosition();
+        return screenX >= closeButtonX && screenX <= closeButtonX + closeButtonSize && screenY >= closeButtonY && screenY <= closeButtonY + closeButtonSize;
+    }
+
     private void returnToMapScreen() {
         Gdx.app.log("SimulationScreen", "Returning to MapScreen");
         game.setScreen(new MapScreen(game));
     }
 
-    /**
-     * Main render method.
-     */
     @Override
     public void render(float delta) {
         handleKeyboardInput();
-
+        updateSimulationTime(delta);
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if (tiledMapRenderer != null && tiledMap != null) {
-            // Clamp zoom
             camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
-
-            // Clamp camera position
             clampCameraPosition();
-
             camera.update();
             tiledMapRenderer.setView(camera);
             tiledMapRenderer.render();
-
-            // Draw markers
             drawMarkers();
-
-            // Draw UI elements
             drawUI();
+            drawSimulationClock();
         }
     }
 
-    /**
-     * Draws all parking markers on the map.
-     */
     private void drawMarkers() {
         if (beginTile == null || markers == null) {
             return;
         }
-
         boolean useTextures = markerFreeTexture != null || markerPartialTexture != null
             || markerFullTexture != null || markerUnknownTexture != null;
-
         if (useTextures) {
             drawMarkersWithTextures();
         } else {
@@ -506,13 +455,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
-    /**
-     * Draws markers using textures.
-     */
     private void drawMarkersWithTextures() {
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
-
         for (Marker marker : markers) {
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
                 marker.getPosition().lat,
@@ -520,32 +465,18 @@ public class SimulationScreen extends BaseScreen {
                 beginTile.x,
                 beginTile.y
             );
-
             Texture markerTexture = getTextureForState(marker.getState());
-
             if (markerTexture != null) {
-                spriteBatch.draw(
-                    markerTexture,
-                    pixelPos.x - markerSize / 2f,
-                    pixelPos.y - markerSize / 2f,
-                    markerSize,
-                    markerSize
-                );
+                spriteBatch.draw(markerTexture, pixelPos.x - markerSize / 2f, pixelPos.y - markerSize / 2f, markerSize, markerSize);
             }
         }
-
         spriteBatch.end();
     }
 
-    /**
-     * Draws markers using shapes.
-     */
     private void drawMarkersWithShapes() {
         if (shapeRenderer == null) return;
-
         shapeRenderer.setProjectionMatrix(camera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
         for (Marker marker : markers) {
             Vector2 pixelPos = MapRasterTiles.getPixelPosition(
                 marker.getPosition().lat,
@@ -553,103 +484,26 @@ public class SimulationScreen extends BaseScreen {
                 beginTile.x,
                 beginTile.y
             );
-
             Color markerColor = getColorForState(marker.getState());
             shapeRenderer.setColor(markerColor);
             shapeRenderer.circle(pixelPos.x, pixelPos.y, markerSize / 2f);
         }
-
         shapeRenderer.end();
     }
 
-    /**
-     * Draws UI elements (close button and title).
-     */
     private void drawUI() {
-        // Draw close button
         drawCloseButton();
-
-        // Draw title
-        drawTitle();
     }
 
-    /**
-     * Draws the close button.
-     */
     private void drawCloseButton() {
         if (spriteBatch == null || closeButtonTexture == null) return;
-
-        spriteBatch.setProjectionMatrix(
-            new Matrix4().setToOrtho2D(
-                0, 0,
-                Gdx.graphics.getWidth(),
-                Gdx.graphics.getHeight()
-            )
-        );
-
+        updateCloseButtonPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
         spriteBatch.begin();
-        spriteBatch.draw(
-            closeButtonTexture,
-            closeButtonX, closeButtonY,
-            closeButtonSize, closeButtonSize
-        );
+        spriteBatch.draw(closeButtonTexture, closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
         spriteBatch.end();
     }
 
-    /**
-     * Draws the screen title.
-     */
-    private void drawTitle() {
-        if (font == null || spriteBatch == null) return;
-
-        spriteBatch.setProjectionMatrix(
-            new Matrix4().setToOrtho2D(
-                0, 0,
-                Gdx.graphics.getWidth(),
-                Gdx.graphics.getHeight()
-            )
-        );
-
-        spriteBatch.begin();
-
-        // Draw title at top-center
-        float titleX = Gdx.graphics.getWidth() / 2f;
-        float titleY = Gdx.graphics.getHeight() - closeButtonMargin - 20f;
-
-        // Draw background for title
-        shapeRenderer.setProjectionMatrix(spriteBatch.getProjectionMatrix());
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0f, 0f, 0f, 0.7f);
-        float textWidth = 300f;
-        float textHeight = 40f;
-        shapeRenderer.rect(
-            titleX - textWidth / 2f - 10f,
-            titleY - textHeight / 2f - 5f,
-            textWidth + 20f,
-            textHeight + 10f
-        );
-        shapeRenderer.end();
-
-        // Draw title text
-        font.setColor(Color.YELLOW);
-        font.draw(spriteBatch, screenTitle,
-            titleX - textWidth / 2f,
-            titleY + textHeight / 2f);
-        font.setColor(Color.WHITE);
-
-        // Draw instruction
-        String instruction = "Click X to exit simulation";
-        float instX = closeButtonMargin;
-        float instY = closeButtonMargin + 20f;
-        font.setColor(Color.LIGHT_GRAY);
-        font.draw(spriteBatch, instruction, instX, instY);
-
-        spriteBatch.end();
-    }
-
-    /**
-     * Returns texture for marker based on its state.
-     */
     private Texture getTextureForState(Marker.MarkerState state) {
         switch (state) {
             case FREE:
@@ -664,9 +518,6 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
-    /**
-     * Returns color for marker based on its state.
-     */
     private Color getColorForState(Marker.MarkerState state) {
         switch (state) {
             case FREE:
@@ -681,19 +532,13 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
-    /**
-     * Handles keyboard input.
-     */
     private void handleKeyboardInput() {
-        // Zoom controls
         if (Gdx.input.isKeyPressed(Input.Keys.Q) || Gdx.input.isKeyPressed(Input.Keys.PLUS)) {
             camera.zoom -= 0.02f;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.MINUS)) {
             camera.zoom += 0.02f;
         }
-
-        // Pan controls
         float panSpeed = 3f * camera.zoom;
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             camera.translate(-panSpeed, 0, 0);
@@ -707,44 +552,42 @@ public class SimulationScreen extends BaseScreen {
         if (Gdx.input.isKeyPressed(Input.Keys.UP)) {
             camera.translate(0, panSpeed, 0);
         }
-
-        // ESC key to exit
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             returnToMapScreen();
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            isClockPaused = !isClockPaused;
+            Gdx.app.log("SimulationScreen", "Clock " + (isClockPaused ? "PAUSED" : "RESUMED"));
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_ADD) || Gdx.input.isKeyJustPressed(Input.Keys.EQUALS)) {
+            timeSpeedMultiplier = Math.min(timeSpeedMultiplier * 2f, 100f);
+            Gdx.app.log("SimulationScreen", "Time speed: " + timeSpeedMultiplier + "x");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUMPAD_SUBTRACT) || Gdx.input.isKeyJustPressed(Input.Keys.MINUS)) {
+            timeSpeedMultiplier = Math.max(timeSpeedMultiplier / 2f, 0.25f);
+            Gdx.app.log("SimulationScreen", "Time speed: " + timeSpeedMultiplier + "x");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            simulationTime = 8.0f * 60f;
+            Gdx.app.log("SimulationScreen", "Time reset to 08:00");
+        }
     }
 
-    /**
-     * Clamps camera position to stay within map bounds.
-     */
     private void clampCameraPosition() {
         float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
         float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
-
         if (effectiveViewportWidth < MapConstants.MAP_WIDTH) {
-            camera.position.x = MathUtils.clamp(
-                camera.position.x,
-                effectiveViewportWidth / 2f,
-                MapConstants.MAP_WIDTH - effectiveViewportWidth / 2f
-            );
+            camera.position.x = MathUtils.clamp(camera.position.x, effectiveViewportWidth / 2f, MapConstants.MAP_WIDTH - effectiveViewportWidth / 2f);
         } else {
             camera.position.x = MapConstants.MAP_WIDTH / 2f;
         }
-
         if (effectiveViewportHeight < MapConstants.MAP_HEIGHT) {
-            camera.position.y = MathUtils.clamp(
-                camera.position.y,
-                effectiveViewportHeight / 2f,
-                MapConstants.MAP_HEIGHT - effectiveViewportHeight / 2f
-            );
+            camera.position.y = MathUtils.clamp(camera.position.y, effectiveViewportHeight / 2f, MapConstants.MAP_HEIGHT - effectiveViewportHeight / 2f);
         } else {
             camera.position.y = MapConstants.MAP_HEIGHT / 2f;
         }
     }
 
-    /**
-     * Cleans up resources.
-     */
     @Override
     public void dispose() {
         if (tiledMap != null) {
@@ -781,44 +624,37 @@ public class SimulationScreen extends BaseScreen {
         if (closeButtonTexture != null) {
             closeButtonTexture.dispose();
         }
+        if (clockIconTexture != null) {
+            clockIconTexture.dispose();
+        }
     }
 
-    /**
-     * Gesture listener for map interactions.
-     */
     private class SimulationGestureListener implements GestureDetector.GestureListener {
-
         @Override
         public boolean touchDown(float x, float y, int pointer, int button) {
             return false;
         }
-
         @Override
         public boolean tap(float x, float y, int count, int button) {
             return false;
         }
-
         @Override
         public boolean longPress(float x, float y) {
             return false;
         }
-
         @Override
         public boolean fling(float velocityX, float velocityY, int button) {
             return false;
         }
-
         @Override
         public boolean pan(float x, float y, float deltaX, float deltaY) {
             camera.translate(-deltaX * camera.zoom, deltaY * camera.zoom);
             return true;
         }
-
         @Override
         public boolean panStop(float x, float y, int pointer, int button) {
             return false;
         }
-
         @Override
         public boolean zoom(float initialDistance, float distance) {
             float ratio = initialDistance / distance;
@@ -826,14 +662,20 @@ public class SimulationScreen extends BaseScreen {
             camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
             return true;
         }
-
         @Override
         public boolean pinch(Vector2 initialPointer1, Vector2 initialPointer2, Vector2 pointer1, Vector2 pointer2) {
             return false;
         }
-
         @Override
         public void pinchStop() {
         }
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        updateClockPosition();
+        updateCloseButtonPosition();
+        Gdx.app.log("SimulationScreen", "Screen resized to: " + width + "x" + height);
     }
 }
