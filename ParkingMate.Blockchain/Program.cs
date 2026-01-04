@@ -36,9 +36,14 @@ namespace ParkingMate.Blockchain
             // TestMpiInitialization.RunTest();
             // return;
 
-            // Test MPI Master-Worker arhitekture (5.2.1)
+            // Test MPI Master-Worker arhitekture (5.2.1-5.2.5)
             // Otkomentariši sledeću liniju da testiraš Master-Worker arhitekturu:
-            TestMpiMasterWorker.RunTest();
+            // TestMpiMasterWorker.RunTest();
+            // return;
+
+            // Test MPI sinhronizacije i prekida (5.3.1)
+            // Otkomentariši sledeću liniju da testiraš MPI sinhronizaciju:
+            TestMpiSynchronization.RunTest();
             return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)

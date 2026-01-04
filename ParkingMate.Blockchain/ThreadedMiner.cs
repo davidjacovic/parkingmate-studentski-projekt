@@ -12,6 +12,7 @@ namespace ParkingMate.Blockchain
     /// Subtask 4.1.3: Deljeni flag za prekid rada kada se rešenje nađe
     /// Subtask 4.1.4: Sinhronizacija (mutex/atomic) - thread-safe storage i atomic operacije
     /// Subtask 4.2.1: Detekcija broja CPU jezgara
+    /// Subtask 5.3.2: Bezbedno gašenje niti
     /// </summary>
     public class ThreadedMiner
     {
@@ -405,71 +406,150 @@ namespace ParkingMate.Blockchain
             }
 
             /// <summary>
-            /// Čeka da se sve niti završe sa timeout-om
+            /// Čeka da se sve niti završe sa timeout-om.
+            /// Subtask 5.3.2: Bezbedno gašenje niti - bezbedno čekanje završetka
             /// </summary>
             /// <param name="timeoutMs">Timeout u milisekundama</param>
             /// <returns>True ako su se sve niti završile unutar timeout-a</returns>
             public bool WaitAll(int timeoutMs)
             {
+                if (_threads.Count == 0)
+                {
+                    return true; // Nema niti za čekanje
+                }
+
                 bool allCompleted = true;
+                int remainingTimeout = timeoutMs;
+                int threadCount = _threads.Count;
+                
+                // Podeli timeout jednakomerno između svih niti
+                int timeoutPerThread = timeoutMs / threadCount;
+                if (timeoutPerThread < 100)
+                {
+                    timeoutPerThread = 100; // Minimum 100ms po niti
+                }
+
                 foreach (var thread in _threads)
                 {
                     if (thread.IsAlive)
                     {
-                        if (!thread.Join(timeoutMs))
+                        // Koristi thread.Join sa timeout-om za bezbedno čekanje
+                        bool joined = thread.Join(timeoutPerThread);
+                        if (!joined)
                         {
                             allCompleted = false;
+                            // Ako nit nije završila, proveri da li još radi
+                            if (thread.IsAlive)
+                            {
+                                // Nit još radi - oduzmi korišćeno vreme od preostalog timeout-a
+                                remainingTimeout -= timeoutPerThread;
+                                if (remainingTimeout <= 0)
+                                {
+                                    break; // Nema više vremena
+                                }
+                            }
                         }
                     }
                 }
+                
                 return allCompleted;
             }
 
             /// <summary>
             /// Zaustavlja sve niti (preko cancellation token-a u workers i shared flag-a)
             /// Subtask 4.1.3: Koristi shared flag za signalizaciju
+            /// Subtask 5.3.2: Bezbedno gašenje niti
             /// </summary>
             public void Stop()
             {
-                // Postavi shared flag da signalizira zaustavljanje
+                if (_threads.Count == 0)
+                {
+                    return; // Već zaustavljeno ili nije pokrenuto
+                }
+
+                Console.WriteLine($"[ThreadPool] Zaustavljam {_threads.Count} niti...");
+
+                // Korak 1: Postavi shared flag da signalizira zaustavljanje
                 _sharedState.TrySetSolutionFound();
 
-                // Signaliziraj svim workers da se zaustave
+                // Korak 2: Signaliziraj svim workers da se zaustave (graceful shutdown)
                 foreach (var worker in _workers)
                 {
                     worker?.Cancel();
                 }
 
-                // Čekaj da se niti završe
-                WaitAll(5000); // 5 sekundi timeout
+                // Korak 3: Bezbedno čekaj da se niti završe (graceful shutdown)
+                bool allStopped = WaitAll(5000); // 5 sekundi timeout za graceful shutdown
 
-                // Ako su neke niti još uvek aktivne, forsiraj ih
-                foreach (var thread in _threads)
+                if (allStopped)
                 {
-                    if (thread.IsAlive)
+                    Console.WriteLine($"[ThreadPool] ✓ Sve niti su bezbedno zaustavljene");
+                }
+                else
+                {
+                    Console.WriteLine($"[ThreadPool] ⚠ Neke niti nisu završile u roku od 5 sekundi");
+
+                    // Korak 4: Ako su neke niti još uvek aktivne, pokušaj interrupt (forceful shutdown)
+                    foreach (var thread in _threads)
                     {
-                        try
+                        if (thread.IsAlive)
                         {
-                            thread.Interrupt();
+                            try
+                            {
+                                thread.Interrupt(); // Pokušaj interrupt ako nit čeka
+                                Console.WriteLine($"[ThreadPool] Pokušavam interrupt thread-a {thread.ManagedThreadId}");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[ThreadPool] Greška pri interrupt-u thread-a {thread.ManagedThreadId}: {ex.Message}");
+                            }
                         }
-                        catch
+                    }
+
+                    // Korak 5: Sačekaj još malo nakon interrupt-a
+                    Thread.Sleep(500);
+                    
+                    // Proveri ponovo
+                    int aliveThreads = 0;
+                    foreach (var thread in _threads)
+                    {
+                        if (thread.IsAlive)
                         {
-                            // Ignoriši greške pri interrupt-u
+                            aliveThreads++;
+                            Console.WriteLine($"[ThreadPool] ⚠ Thread {thread.ManagedThreadId} još uvek radi");
                         }
+                    }
+
+                    if (aliveThreads == 0)
+                    {
+                        Console.WriteLine($"[ThreadPool] ✓ Sve niti su sada zaustavljene");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[ThreadPool] ⚠ Upozorenje: {aliveThreads} niti još uvek radi (možda blokirane)");
                     }
                 }
 
+                // Korak 6: Očisti resurse
                 _threads.Clear();
                 _workers.Clear();
+                
+                Console.WriteLine($"[ThreadPool] Cleanup završen");
             }
 
             /// <summary>
-            /// Proverava da li su sve niti završile
+            /// Proverava da li su sve niti završile.
+            /// Subtask 5.3.2: Bezbedno gašenje niti - provera statusa
             /// </summary>
             public bool AllThreadsCompleted
             {
                 get
                 {
+                    if (_threads.Count == 0)
+                    {
+                        return true; // Nema niti
+                    }
+
                     foreach (var thread in _threads)
                     {
                         if (thread.IsAlive)
@@ -478,6 +558,30 @@ namespace ParkingMate.Blockchain
                     return true;
                 }
             }
+
+            /// <summary>
+            /// Vraća broj aktivnih niti.
+            /// Subtask 5.3.2: Bezbedno gašenje niti - monitoring statusa
+            /// </summary>
+            public int ActiveThreadCount
+            {
+                get
+                {
+                    int count = 0;
+                    foreach (var thread in _threads)
+                    {
+                        if (thread.IsAlive)
+                            count++;
+                    }
+                    return count;
+                }
+            }
+
+            /// <summary>
+            /// Proverava da li ThreadPool ima pokrenute niti.
+            /// Subtask 5.3.2: Bezbedno gašenje niti - provera da li je aktivno
+            /// </summary>
+            public bool IsRunning => _threads.Count > 0 && !AllThreadsCompleted;
         }
 
         /// <summary>
