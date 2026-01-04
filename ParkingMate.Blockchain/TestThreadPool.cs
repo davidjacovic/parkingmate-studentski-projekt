@@ -32,7 +32,12 @@ namespace ParkingMate.Blockchain
             TestSharedFlag();
             Console.WriteLine();
 
-            Console.WriteLine("✓ Svi testovi ThreadPool-a i shared flag-a su prošli!");
+            // Test 5: Sinhronizacija i thread-safe storage (4.1.4)
+            Console.WriteLine("Test 5: Sinhronizacija (mutex/atomic) i thread-safe storage");
+            TestSynchronization();
+            Console.WriteLine();
+
+            Console.WriteLine("✓ Svi testovi ThreadPool-a, shared flag-a i sinhronizacije su prošli!");
         }
 
         private static void TestPoolCreation()
@@ -242,6 +247,152 @@ namespace ParkingMate.Blockchain
             }
 
             pool.Stop();
+        }
+
+        private static void TestSynchronization()
+        {
+            var sharedState = new ThreadedMiner.SharedMiningState();
+
+            // Test: Atomic operacije - brojanje pokušaja
+            Console.WriteLine("  Test 5.1: Atomic operacije (Interlocked)");
+            sharedState.Reset();
+            
+            // Simuliraj više niti koje inkrementiraju brojač
+            var threads = new List<Thread>();
+            const int numThreads = 4;
+            const int incrementsPerThread = 1000;
+            
+            for (int i = 0; i < numThreads; i++)
+            {
+                var thread = new Thread(() =>
+                {
+                    for (int j = 0; j < incrementsPerThread; j++)
+                    {
+                        sharedState.IncrementAttempts();
+                    }
+                });
+                threads.Add(thread);
+                thread.Start();
+            }
+
+            foreach (var thread in threads)
+            {
+                thread.Join();
+            }
+
+            long expectedTotal = numThreads * incrementsPerThread;
+            long actualTotal = sharedState.GetTotalAttempts();
+            
+            if (actualTotal == expectedTotal)
+            {
+                Console.WriteLine($"    ✓ Atomic brojač: {actualTotal} = {expectedTotal} (tačno)");
+            }
+            else
+            {
+                Console.WriteLine($"    ✗ Atomic brojač: {actualTotal} != {expectedTotal} (greška)");
+            }
+
+            // Test: Thread-safe storage bloka
+            Console.WriteLine("  Test 5.2: Thread-safe storage bloka (Lock)");
+            sharedState.Reset();
+            
+            var testBlock = new Block(
+                index: 1,
+                data: "Test Block",
+                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                previousHash: "0",
+                difficulty: 1,
+                nonce: 12345
+            );
+
+            threads.Clear();
+            int successfulSets = 0;
+            
+            for (int i = 0; i < numThreads; i++)
+            {
+                int threadId = i;
+                var thread = new Thread(() =>
+                {
+                    if (sharedState.TrySetFoundBlock(testBlock, threadId))
+                    {
+                        Interlocked.Increment(ref successfulSets);
+                    }
+                });
+                threads.Add(thread);
+                thread.Start();
+            }
+
+            foreach (var thread in threads)
+            {
+                thread.Join();
+            }
+
+            if (successfulSets == 1)
+            {
+                Console.WriteLine($"    ✓ Thread-safe storage: {successfulSets} nit je postavila blok");
+                
+                var retrievedBlock = sharedState.GetFoundBlock();
+                if (retrievedBlock != null && retrievedBlock.Nonce == testBlock.Nonce)
+                {
+                    Console.WriteLine($"    ✓ Blok je uspešno čuvan i vraćen (nonce: {retrievedBlock.Nonce})");
+                }
+                else
+                {
+                    Console.WriteLine("    ✗ Blok nije ispravno čuvan ili vraćen");
+                }
+
+                int foundByThreadId = sharedState.GetFoundByThreadId();
+                Console.WriteLine($"    ✓ Blok je pronašla nit {foundByThreadId}");
+            }
+            else
+            {
+                Console.WriteLine($"    ✗ Thread-safe storage: {successfulSets} niti je postavilo blok (trebalo bi biti 1)");
+            }
+
+            // Test: Kombinovana sinhronizacija (atomic + lock)
+            Console.WriteLine("  Test 5.3: Kombinovana sinhronizacija");
+            sharedState.Reset();
+            
+            threads.Clear();
+            successfulSets = 0;
+            long totalAttemptsBefore = 0;
+            
+            for (int i = 0; i < numThreads; i++)
+            {
+                int threadId = i;
+                var thread = new Thread(() =>
+                {
+                    // Simuliraj neke pokušaje
+                    for (int j = 0; j < 100; j++)
+                    {
+                        sharedState.IncrementAttempts();
+                    }
+                    
+                    // Pokušaj postaviti blok
+                    if (sharedState.TrySetFoundBlock(testBlock, threadId))
+                    {
+                        Interlocked.Increment(ref successfulSets);
+                        Interlocked.Exchange(ref totalAttemptsBefore, sharedState.GetTotalAttempts());
+                    }
+                });
+                threads.Add(thread);
+                thread.Start();
+            }
+
+            foreach (var thread in threads)
+            {
+                thread.Join();
+            }
+
+            if (successfulSets == 1 && sharedState.IsSolutionFound())
+            {
+                Console.WriteLine($"    ✓ Kombinovana sinhronizacija radi ispravno");
+                Console.WriteLine($"    ✓ Ukupno pokušaja: {sharedState.GetTotalAttempts()}");
+            }
+            else
+            {
+                Console.WriteLine($"    ✗ Kombinovana sinhronizacija ima probleme");
+            }
         }
 
         /// <summary>

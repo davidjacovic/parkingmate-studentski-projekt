@@ -8,8 +8,8 @@ namespace ParkingMate.Blockchain
         {
             // Test ThreadPool implementacije
             // Otkomentariši sledeću liniju da testiraš ThreadPool:
-            // TestThreadPool.RunTest();
-            // return;
+            TestThreadPool.RunTest();
+            return;
 
             var blockchain = new Blockchain();
 
