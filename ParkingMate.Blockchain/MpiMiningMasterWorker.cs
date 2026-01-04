@@ -12,9 +12,9 @@ namespace ParkingMate.Blockchain
     /// - Subtask 5.2.1: Master generiše seed / nonce opsege
     /// - Subtask 5.2.2: Slanje seed-ova worker procesima
     /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
+    /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
     /// 
     /// TODO (naredni subtaskovi):
-    /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
     /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
     /// </summary>
     public class MpiMiningMasterWorker
@@ -63,9 +63,9 @@ namespace ParkingMate.Blockchain
         /// Implementirano:
         /// - Subtask 5.2.1: Master generiše seed / nonce opsege
         /// - Subtask 5.2.2: Slanje seed-ova worker procesima
+        /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
         /// 
         /// TODO:
-        /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
         /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
         /// </summary>
         public class MpiMiningMaster
@@ -73,8 +73,7 @@ namespace ParkingMate.Blockchain
             private readonly MpiEnvironment _mpi;
             private readonly int _numWorkers;
             private readonly IMpiCommunication _communication;
-            // TODO: 5.2.4 - Dictionary za rezultate od workers
-            // private readonly Dictionary<int, MiningResultMessage> _workerResults;
+            private readonly Dictionary<int, MiningResultMessage> _workerResults;
 
             // Tagovi za MPI komunikaciju
             private const int TAG_NONCE_RANGE = 1; // Tag za slanje nonce opsega workers
@@ -90,8 +89,7 @@ namespace ParkingMate.Blockchain
 
                 _numWorkers = mpi.Size - 1; // Bez master procesa
                 _communication = communication ?? new SimulatedMpiCommunication(mpi);
-                // TODO: 5.2.4 - Inicijalizacija dictionary-a za rezultate
-                // _workerResults = new Dictionary<int, MiningResultMessage>();
+                _workerResults = new Dictionary<int, MiningResultMessage>();
             }
 
             /// <summary>
@@ -164,45 +162,68 @@ namespace ParkingMate.Blockchain
                 Console.WriteLine($"[Master Rank {_mpi.Rank}] Svi nonce opsezi su poslati workers");
             }
 
-            // TODO: 5.2.4, 5.2.5 - Čekanje rezultata od workers
-            /*
+            /// <summary>
+            /// Prima rezultat od workera.
+            /// Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
+            /// Koristi MPI_Recv (simulacija ili stvarno) za primanje rezultata od workera.
+            /// </summary>
+            /// <param name="workerRank">Rank workera od koga se prima rezultat</param>
+            /// <returns>Primljeni rezultat ili null ako nema poruke</returns>
+            public MiningResultMessage? ReceiveResult(int workerRank)
+            {
+                try
+                {
+                    // Koristi IMpiCommunication za primanje poruke
+                    // U stvarnom MPI okruženju bi se koristio MPI_Recv
+                    var result = _communication.Receive<MiningResultMessage>(sourceRank: workerRank, tag: TAG_MINING_RESULT);
+
+                    if (result != null)
+                    {
+                        _workerResults[result.WorkerRank] = result;
+                        Console.WriteLine($"[Master Rank {_mpi.Rank}] ✓ Primio rezultat od worker-a rank {workerRank} (Success: {result.Success})");
+                        return result;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Master Rank {_mpi.Rank}] ⚠ Nema rezultata od worker-a rank {workerRank}");
+                        return null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Master Rank {_mpi.Rank}] ✗ Greška pri primanju rezultata od worker-a rank {workerRank}: {ex.Message}");
+                    return null;
+                }
+            }
+
             /// <summary>
             /// Čeka rezultate od svih workers ili prvo pronađeno rešenje.
             /// Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
+            /// U simulaciji, proverava sve workers jednom. U stvarnom MPI, ovo bi bilo blocking čekanje.
             /// </summary>
             /// <param name="messages">Poruke poslate workers-ima</param>
             /// <param name="timeoutMs">Timeout u milisekundama</param>
             /// <returns>Prvo pronađeno rešenje ili null ako nije pronađeno</returns>
             public MiningResultMessage? WaitForResults(List<NonceRangeMessage> messages, int timeoutMs = 60000)
             {
-                // Simulacija MPI_Recv - u stvarnom MPI okruženju bi se koristio MPI_Recv
-                // Za sada, ovo će biti simulirano kroz shared state ili callback mehanizam
-                // U stvarnoj implementaciji, ovo bi blokiralo dok ne dobije poruku od nekog workera
-
                 Console.WriteLine($"[Master Rank {_mpi.Rank}] Čekam rezultate od {_numWorkers} workers...");
 
-                // Ovo je simulacija - u stvarnom MPI okruženju bi čekao MPI poruke
-                // Za testiranje, koristićemo in-memory komunikaciju
-                return null; // Vraća se iz stvarne implementacije
-            }
+                // U simulaciji, pokušaj da primiš rezultate od svih workers
+                // U stvarnom MPI okruženju bi se koristio MPI_Recv ili MPI_Irecv sa blokiranjem
+                foreach (var message in messages)
+                {
+                    var result = ReceiveResult(message.WorkerRank);
+                    
+                    // Ako je pronađeno rešenje, vrati ga odmah
+                    if (result != null && result.Success && result.FoundBlock != null)
+                    {
+                        Console.WriteLine($"[Master Rank {_mpi.Rank}] ✓ Pronađeno rešenje od worker-a rank {result.WorkerRank}!");
+                        return result;
+                    }
+                }
 
-            /// <summary>
-            /// Obaveštava sve worker procese da prekinu rad.
-            /// Subtask 5.2.5: Master obaveštava sve čvorove o završetku
-            /// </summary>
-            public void NotifyWorkersToStop()
-            {
-                // Simulacija MPI_Bcast - u stvarnom MPI okruženju bi se koristio MPI_Bcast
-                Console.WriteLine($"[Master Rank {_mpi.Rank}] Obaveštavam sve workers da prekinu rad...");
-            }
-
-            /// <summary>
-            /// Prima rezultat od workera.
-            /// Subtask 5.2.4
-            /// </summary>
-            public void ReceiveResult(MiningResultMessage result)
-            {
-                _workerResults[result.WorkerRank] = result;
+                Console.WriteLine($"[Master Rank {_mpi.Rank}] Nema pronađenog rešenja od workers (ili još nisu poslali rezultate)");
+                return GetFirstSuccessfulResult();
             }
 
             /// <summary>
@@ -220,6 +241,18 @@ namespace ParkingMate.Blockchain
                 }
                 return null;
             }
+
+            // TODO: 5.2.5 - Master obaveštava sve čvorove o završetku
+            /*
+            /// <summary>
+            /// Obaveštava sve worker procese da prekinu rad.
+            /// Subtask 5.2.5: Master obaveštava sve čvorove o završetku
+            /// </summary>
+            public void NotifyWorkersToStop()
+            {
+                // Simulacija MPI_Bcast - u stvarnom MPI okruženju bi se koristio MPI_Bcast
+                Console.WriteLine($"[Master Rank {_mpi.Rank}] Obaveštavam sve workers da prekinu rad...");
+            }
             */
         }
 
@@ -228,8 +261,6 @@ namespace ParkingMate.Blockchain
         /// 
         /// Implementirano:
         /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
-        /// 
-        /// TODO:
         /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
         /// </summary>
         public class MpiMiningWorker
@@ -367,26 +398,38 @@ namespace ParkingMate.Blockchain
                 return result;
             }
 
-            // TODO: 5.2.4 - Worker vraća pronađeno rešenje masteru
-            /*
             /// <summary>
             /// Šalje rezultat master procesu.
             /// Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
+            /// Koristi MPI_Send (simulacija ili stvarno) za slanje rezultata master procesu.
             /// </summary>
             /// <param name="result">Rezultat rudarjenja</param>
             public void SendResultToMaster(MiningResultMessage result)
             {
-                // Koristi IMpiCommunication za slanje rezultata masteru
-                // U stvarnom MPI okruženju bi se koristio MPI_Send
-                _communication.Send(result, destinationRank: 0, tag: TAG_MINING_RESULT);
-                
-                Console.WriteLine($"[Worker Rank {_mpi.Rank}] Šaljem rezultat master procesu (rank 0)...");
-                if (result.Success)
+                try
                 {
-                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] Rezultat: Uspeh - Nonce {result.FoundBlock?.Nonce:N0}");
+                    // Koristi IMpiCommunication za slanje rezultata masteru
+                    // U stvarnom MPI okruženju bi se koristio MPI_Send
+                    _communication.Send(result, destinationRank: 0, tag: TAG_MINING_RESULT);
+                    
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✓ Poslao rezultat master procesu (rank 0)");
+                    if (result.Success && result.FoundBlock != null)
+                    {
+                        string hashPreview = result.FoundBlock.Hash != null && result.FoundBlock.Hash.Length > 20
+                            ? result.FoundBlock.Hash.Substring(0, 20)
+                            : result.FoundBlock.Hash ?? "";
+                        Console.WriteLine($"[Worker Rank {_mpi.Rank}] Rezultat: Uspeh - Nonce {result.FoundBlock.Nonce:N0}, Hash: {hashPreview}...");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Worker Rank {_mpi.Rank}] Rezultat: Nema pronađenog rešenja u opsegu (Pokušaji: {result.TotalAttempts:N0})");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✗ Greška pri slanju rezultata masteru: {ex.Message}");
                 }
             }
-            */
         }
 
         // TODO: Integracija Master-Worker arhitekture (nakon 5.2.5)

@@ -4,13 +4,13 @@ using System.Collections.Generic;
 namespace ParkingMate.Blockchain
 {
     /// <summary>
-    /// Test klasa za testiranje MPI Master-Worker arhitekture (Subtasks 5.2.1, 5.2.2, 5.2.3)
+    /// Test klasa za testiranje MPI Master-Worker arhitekture (Subtasks 5.2.1, 5.2.2, 5.2.3, 5.2.4)
     /// </summary>
     public class TestMpiMasterWorker
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test MPI Master-Worker arhitekture (5.2.1, 5.2.2, 5.2.3) ===\n");
+            Console.WriteLine("=== Test MPI Master-Worker arhitekture (5.2.1, 5.2.2, 5.2.3, 5.2.4) ===\n");
 
             // Test 1: Master generiše nonce opsege (Subtask 5.2.1)
             Console.WriteLine("Test 1: Master generiše seed / nonce opsege (5.2.1)");
@@ -27,13 +27,10 @@ namespace ParkingMate.Blockchain
             TestWorkerMultiThreadMining();
             Console.WriteLine();
 
-            // TODO: 5.2.4 - Test worker vraća pronađeno rešenje masteru
-            /*
-            // Test 4: Worker vraća pronađeno rešenje masteru
-            Console.WriteLine("Test 4: Worker vraća pronađeno rešenje masteru");
+            // Test 4: Worker vraća pronađeno rešenje masteru (Subtask 5.2.4)
+            Console.WriteLine("Test 4: Worker vraća pronađeno rešenje masteru (5.2.4)");
             TestWorkerReturnsResult();
             Console.WriteLine();
-            */
 
             // TODO: 5.2.5 - Test master obaveštava sve čvorove o završetku
             /*
@@ -48,7 +45,7 @@ namespace ParkingMate.Blockchain
             Console.WriteLine();
             */
 
-            Console.WriteLine("✓ Testovi za Subtask 5.2.1, 5.2.2 i 5.2.3 (Master generiše, šalje opsege; Worker pokreće multi-thread PoW) su prošli!");
+            Console.WriteLine("✓ Testovi za Subtask 5.2.1, 5.2.2, 5.2.3 i 5.2.4 (Kompletan Master-Worker ciklus) su prošli!");
         }
 
         private static void TestMasterGenerateRanges()
@@ -202,16 +199,19 @@ namespace ParkingMate.Blockchain
             }
         }
 
-        // TODO: 5.2.4 - Test worker vraća pronađeno rešenje masteru
-        /*
         private static void TestWorkerReturnsResult()
         {
-            var mpi = MpiEnvironment.Instance;
-            mpi.Finalize();
-            mpi.Initialize(size: 4, rank: 2); // Worker
+            // Očisti message queue pre testa
+            SimulatedMpiCommunication.ClearQueue();
 
-            var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpi);
+            // Worker deo - kreiraj i pošalji rezultat PRVO
+            var mpiWorker = MpiEnvironment.Instance;
+            mpiWorker.Finalize();
+            mpiWorker.Initialize(size: 4, rank: 2); // Worker rank 2
 
+            var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpiWorker);
+
+            // Kreiraj test rezultat
             var result = new MpiMiningMasterWorker.MiningResultMessage(2);
             result.Success = true;
             result.MiningTimeMs = 100;
@@ -230,16 +230,48 @@ namespace ParkingMate.Blockchain
 
             try
             {
+                // Worker šalje rezultat masteru (rank 0)
                 worker.SendResultToMaster(result);
-                Console.WriteLine("  ✓ Worker je uspešno poslao rezultat masteru");
-                Console.WriteLine($"  ✓ Rezultat: Success={result.Success}, Nonce={result.FoundBlock.Nonce}");
+                Console.WriteLine("  ✓ Worker (rank 2) je uspešno poslao rezultat masteru (rank 0)");
+
+                // Sada postavi master okruženje za primanje
+                var mpiMaster = MpiEnvironment.Instance;
+                mpiMaster.Finalize();
+                mpiMaster.Initialize(size: 4, rank: 0); // Master rank 0
+
+                var master = new MpiMiningMasterWorker.MpiMiningMaster(mpiMaster);
+
+                // Master prima rezultat od workera (rank 2)
+                var receivedResult = master.ReceiveResult(workerRank: 2);
+                
+                if (receivedResult != null && receivedResult.Success && receivedResult.FoundBlock != null)
+                {
+                    Console.WriteLine($"  ✓ Master (rank 0) je uspešno primio rezultat od worker-a rank {receivedResult.WorkerRank}");
+                    Console.WriteLine($"  ✓ Rezultat: Success={receivedResult.Success}, Nonce={receivedResult.FoundBlock.Nonce}");
+                    Console.WriteLine($"  ✓ Vreme: {receivedResult.MiningTimeMs} ms, Pokušaji: {receivedResult.TotalAttempts:N0}");
+
+                    // Proveri da li je rezultat sačuvan u dictionary-u
+                    var savedResult = master.GetFirstSuccessfulResult();
+                    if (savedResult != null && savedResult.WorkerRank == 2)
+                    {
+                        Console.WriteLine("  ✓ Rezultat je uspešno sačuvan u master dictionary-u");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("  ✗ Greška: Master nije primio rezultat ili rezultat nije validan");
+                    Console.WriteLine($"    receivedResult == null: {receivedResult == null}");
+                    if (receivedResult != null)
+                    {
+                        Console.WriteLine($"    Success: {receivedResult.Success}, FoundBlock == null: {receivedResult.FoundBlock == null}");
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"  ✗ Greška pri slanju rezultata: {ex.Message}");
+                Console.WriteLine($"  ✗ Greška pri slanju/primanju rezultata: {ex.Message}");
             }
         }
-        */
 
         // TODO: 5.2.5 - Test master obaveštava sve čvorove o završetku
         /*
