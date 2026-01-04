@@ -13,7 +13,12 @@ namespace ParkingMate.Blockchain
 
             // Test skaliranja (4.1.5)
             // Otkomentariši sledeću liniju da testiraš skaliranje sa različitim brojevima niti:
-            TestScaling.RunTest();
+            // TestScaling.RunTest();
+            // return;
+
+            // Test detekcije CPU jezgara (4.2.1)
+            // Otkomentariši sledeću liniju da testiraš detekciju CPU jezgara:
+            TestCpuDetection.RunTest();
             return;
 
             var blockchain = new Blockchain();
