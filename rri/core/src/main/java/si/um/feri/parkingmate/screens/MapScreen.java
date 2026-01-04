@@ -20,6 +20,7 @@ import com.badlogic.gdx.maps.tiled.TiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
+import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
@@ -65,9 +66,6 @@ public class MapScreen extends BaseScreen {
     private boolean navigationMode = false;
     private Vector2 carPosition; // Car position on the map
     private Vector2 cursorWorldPos; // Cursor position in world coordinates
-
-    // Route navigation variables
-    private Route currentRoute;
     private boolean isCalculatingRoute = false;
 
     // NAVIGATION TARGET VARIABLES
@@ -78,6 +76,17 @@ public class MapScreen extends BaseScreen {
     private float navButtonSize = 48f;
     private float navButtonMargin = 15f;
     private float navButtonX, navButtonY;
+
+    // ROUTE VISUALIZATION
+    private List<Vector2> finalRoutePoints = null; // Fiksna ruta koja se prikazuje
+    private List<Vector2> traveledRoutePoints = new ArrayList<>(); // Predjeni deo rute
+    private Texture flagIconTexture; // Zastavica ikonica za cilj
+    private Vector2 flagPosition = null; // Pozicija zastavice
+    private float flagSize = 64f; // Veličina zastavice
+
+    // ROUTE COLORS
+    private static final Color FUTURE_ROUTE_COLOR = new Color(0f, 0.5f, 1f, 0.6f); // Plava za budući deo
+    private static final Color TRAVELED_ROUTE_COLOR = new Color(0f, 0.8f, 0.2f, 0.8f); // Zelena za pređeni deo
 
     // DASHED LINE PROPERTIES
     private float dashedLinePhase = 0f;
@@ -101,6 +110,16 @@ public class MapScreen extends BaseScreen {
     private boolean isArriving = false;
     private float arrivalTimer = 0f;
     private static final float ARRIVAL_DURATION = 0.4f;
+
+    // ARRIVAL EFFECTS
+    private boolean arrivalPause = false;
+    private static final float ARRIVAL_PAUSE_TIME = 0.25f;
+
+    // ARRIVAL ZOOM EFFECT
+    private float arrivalZoomTimer = 0f;
+    private float arrivalZoomHoldTime = 1.2f; // koliko sekundi drži zoom
+    private float arrivalZoomTarget = 1.4f;
+    private float arrivalZoomOriginal = -1f;
 
 
     // Backend API base URL (backend runs on port 3002)
@@ -255,12 +274,44 @@ public class MapScreen extends BaseScreen {
             createDefaultCarIcon();
         }
 
+        // Load flag icon texture
+        try {
+            flagIconTexture = new Texture(Gdx.files.internal("markers/flag.png"));
+        } catch (Exception e) {
+            createDefaultFlagIcon();
+        }
+
         navButtonX = navButtonMargin;
         navButtonY = Gdx.graphics.getHeight() - navButtonSize - navButtonMargin;
 
         Gdx.app.log("MapScreen", "Nav button (TOP-LEFT) at: " + navButtonX + ", " + navButtonY);
     }
+    /**
+     * Create default flag icon (checkered flag).
+     */
+    private void createDefaultFlagIcon() {
+        Pixmap pixmap = new Pixmap((int)flagSize, (int)flagSize, Pixmap.Format.RGBA8888);
 
+        // White and black checkered pattern
+        int cellSize = (int)flagSize / 8;
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                if ((x + y) % 2 == 0) {
+                    pixmap.setColor(Color.WHITE);
+                } else {
+                    pixmap.setColor(Color.BLACK);
+                }
+                pixmap.fillRectangle(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+        }
+
+        // Red pole
+        pixmap.setColor(Color.RED);
+        pixmap.fillRectangle(0, 0, 8, (int)flagSize);
+
+        flagIconTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
     /**
      * Create default navigation button (red circle).
      */
@@ -728,58 +779,241 @@ public class MapScreen extends BaseScreen {
                 isArriving = false;
             }
         }
+        if (isArriving) {
+            camera.zoom = MathUtils.lerp(camera.zoom, 1.4f, 0.06f);
+        }
+
 
     }
     /**
      * Update car movement - follows route
      */
     private void updateCarMovement(float delta) {
-        if (currentRoute != null && navigationTarget != null && isMovingToTarget) {
+        if (arrivalPause) {
+            arrivalTimer += delta;
+            if (arrivalTimer >= ARRIVAL_PAUSE_TIME) {
+                arrivalPause = false;
+            }
+            return;
+        }
+
+        // PROMENJENO: Proverava finalRoutePoints umesto currentRoute
+        if (finalRoutePoints != null && navigationTarget != null && isMovingToTarget) {
             followRoute(delta);
         }
     }
 
     /**
-     * Follow route waypoints
+     * Follow route smoothly - BETTER VERSION
      */
     private void followRoute(float delta) {
-        if (currentRoute == null || navigationTarget == null) return;
+        if (finalRoutePoints == null || finalRoutePoints.size() < 2 || navigationTarget == null) return;
 
-        Vector2 currentWaypoint = currentRoute.getCurrentWaypoint();
-        if (currentWaypoint == null) return;
+        float speed = 150f;
+        float distanceToTarget = carPosition.dst(navigationTarget);
 
-        float speed = 150f; // pixels per second
-        float distanceToWaypoint = carPosition.dst(currentWaypoint);
-
-        if (distanceToWaypoint < 10f) {
-            // Reached waypoint, move to next
-            if (!currentRoute.moveToNextWaypoint()) {
-                // Route complete → start arrival animation
-                carPosition.set(navigationTarget);
-                isMovingToTarget = false;
-                isArriving = true;
-                arrivalTimer = 0f;
-
-
-                // Resetuj samo neke stvari, ali ostavi auto na parkingu
-                selectedParkingMarker = null;
-                navigationTarget = null;
-                originalCarPosition = null;
-
-                // NE resetuj currentRoute - ostavi ga da bi mogao da crtaš gde je auto bio
-                Gdx.app.log("MapScreen", "Car arrived at parking!");
-                return;
-            }
-            currentWaypoint = currentRoute.getCurrentWaypoint();
+        // Proveri dolazak
+        if (distanceToTarget < 15f) {
+            handleArrival();
+            return;
         }
 
-        // Move towards current waypoint
-        Vector2 direction = new Vector2(currentWaypoint).sub(carPosition).nor();
-        carPosition.add(direction.scl(speed * delta));
+        // Pronađi trenutni segment
+        int segmentIndex = -1;
+        float closestDistance = Float.MAX_VALUE;
 
-        // Update camera to follow car
-        camera.position.set(carPosition.x, carPosition.y, 0);
+        for (int i = 0; i < finalRoutePoints.size() - 1; i++) {
+            Vector2 start = finalRoutePoints.get(i);
+            Vector2 end = finalRoutePoints.get(i + 1);
+
+            float distance = pointToSegmentDistance(carPosition, start, end);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                segmentIndex = i;
+            }
+        }
+
+        if (segmentIndex >= 0) {
+            Vector2 segmentStart = finalRoutePoints.get(segmentIndex);
+            Vector2 segmentEnd = finalRoutePoints.get(segmentIndex + 1);
+
+            // Kreći se duž segmenta
+            Vector2 segmentDir = new Vector2(segmentEnd).sub(segmentStart).nor();
+
+            // Projekcija trenutne pozicije na segment
+            Vector2 toStart = new Vector2(carPosition).sub(segmentStart);
+            float projection = toStart.dot(segmentDir);
+
+            // Nova pozicija je projekcija + pomeraj duž segmenta
+            float moveDistance = speed * delta;
+            float newProjection = projection + moveDistance;
+            float segmentLength = segmentStart.dst(segmentEnd);
+
+            if (newProjection <= segmentLength) {
+                // Ostani na ovom segmentu
+                carPosition.set(segmentStart).add(segmentDir.scl(newProjection));
+            } else {
+                // Pređi na sledeći segment
+                float remaining = newProjection - segmentLength;
+
+                if (segmentIndex + 2 < finalRoutePoints.size()) {
+                    // Ima još segmenata
+                    Vector2 nextSegmentStart = segmentEnd;
+                    Vector2 nextSegmentEnd = finalRoutePoints.get(segmentIndex + 2);
+                    Vector2 nextSegmentDir = new Vector2(nextSegmentEnd).sub(nextSegmentStart).nor();
+
+                    carPosition.set(nextSegmentStart).add(nextSegmentDir.scl(remaining));
+                } else {
+                    // Ovo je poslednji segment, idi ka cilju
+                    Vector2 toTarget = new Vector2(navigationTarget).sub(segmentEnd).nor();
+                    carPosition.set(segmentEnd).add(toTarget.scl(remaining));
+                }
+            }
+        }
+
+        // Ažuriraj pređeni put
+        updateTraveledRoute();
+
+        // Kamera prati auto
+        camera.position.lerp(new Vector3(carPosition.x, carPosition.y, 0), 0.08f);
         camera.update();
+    }
+    /**
+     * Handle arrival at destination
+     */
+    private void handleArrival() {
+        carPosition.set(navigationTarget);
+        isMovingToTarget = false;
+
+        isArriving = true;
+        arrivalPause = true;
+        arrivalTimer = 0f;
+        arrivalZoomTimer = 0f;
+        arrivalZoomOriginal = camera.zoom;
+
+        // Show info panel for the parking
+        if (selectedParkingMarker != null) {
+            infoPanel.show(selectedParkingMarker);
+        }
+
+        // Clear route visualization but keep flag
+        finalRoutePoints = null;
+        traveledRoutePoints.clear();
+
+        Gdx.app.log("MapScreen", "Arrived at parking");
+    }
+    /**
+     * Find current segment index on route
+     */
+    private int findCurrentSegmentIndex(Vector2 position, List<Vector2> routePoints) {
+        if (routePoints == null || routePoints.size() < 2) return -1;
+
+        float minDistance = Float.MAX_VALUE;
+        int closestSegment = 0;
+
+        for (int i = 0; i < routePoints.size() - 1; i++) {
+            Vector2 start = routePoints.get(i);
+            Vector2 end = routePoints.get(i + 1);
+
+            float distance = pointToSegmentDistance(position, start, end);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestSegment = i;
+            }
+        }
+
+        return closestSegment;
+    }
+
+    /**
+     * Calculate distance from point to line segment
+     */
+    private float pointToSegmentDistance(Vector2 point, Vector2 segmentStart, Vector2 segmentEnd) {
+        Vector2 line = new Vector2(segmentEnd).sub(segmentStart);
+        float lineLength = line.len();
+        line.nor();
+
+        Vector2 v = new Vector2(point).sub(segmentStart);
+        float dot = v.dot(line);
+
+        if (dot <= 0) return point.dst(segmentStart);
+        if (dot >= lineLength) return point.dst(segmentEnd);
+
+        Vector2 projection = new Vector2(segmentStart).add(line.scl(dot));
+        return point.dst(projection);
+    }
+
+    /**
+     * Get progress along segment
+     */
+    private float getProjectedProgress(Vector2 point, Vector2 segmentStart, Vector2 segmentEnd) {
+        Vector2 line = new Vector2(segmentEnd).sub(segmentStart);
+        float lineLength = line.len();
+        line.nor();
+
+        Vector2 v = new Vector2(point).sub(segmentStart);
+        return v.dot(line);
+    }
+
+    /**
+     * Update traveled route points - SIMPLE VERSION
+     */
+    private void updateTraveledRoute() {
+        if (finalRoutePoints == null) return;
+
+        traveledRoutePoints.clear();
+
+        // Prođi kroz sve tačke rute i dodaj one koje je auto već prošao
+        for (int i = 0; i < finalRoutePoints.size(); i++) {
+            Vector2 routePoint = finalRoutePoints.get(i);
+
+            // Ako je auto prošao ovu tačku (ili je blizu nje)
+            if (carPosition.dst(routePoint) < 50f) {
+                traveledRoutePoints.add(new Vector2(routePoint));
+            } else {
+                // Dodaj trenutnu poziciju auta kao poslednju tačku
+                if (i > 0) {
+                    traveledRoutePoints.add(new Vector2(carPosition));
+                }
+                break;
+            }
+        }
+    }
+
+    /**
+     * Get progress along segment (0-1)
+     */
+    private float getProgressOnSegment(Vector2 point, Vector2 segmentStart, Vector2 segmentEnd) {
+        Vector2 segmentVec = new Vector2(segmentEnd).sub(segmentStart);
+        Vector2 pointVec = new Vector2(point).sub(segmentStart);
+
+        float segmentLength = segmentVec.len();
+        if (segmentLength == 0) return 0f;
+
+        segmentVec.nor();
+        float dot = pointVec.dot(segmentVec);
+
+        return MathUtils.clamp(dot / segmentLength, 0f, 1f);
+    }
+    /**
+     * Simplify route points
+     */
+    private List<Vector2> simplifyRoutePoints(List<Vector2> points, int maxPoints) {
+        if (points.size() <= maxPoints) return points;
+
+        List<Vector2> simplified = new ArrayList<>();
+
+        // Always keep first and last points
+        simplified.add(points.get(0));
+
+        // Sample points evenly
+        int step = points.size() / (maxPoints - 1);
+        for (int i = step; i < points.size() - step; i += step) {
+            simplified.add(points.get(i));
+        }
+
+        simplified.add(points.get(points.size() - 1));
+        return simplified;
     }
     /**
      * Draw navigation
@@ -787,51 +1021,119 @@ public class MapScreen extends BaseScreen {
     private void drawNavigation() {
         if (shapeRenderer == null || spriteBatch == null || carPosition == null) return;
 
-        // Draw route from current car position
-        if (currentRoute != null && currentRoute.getWaypoints().size() > 1 && isMovingToTarget) {
-            drawRoute(shapeRenderer);
+        // Draw flag at target if set
+        if (flagPosition != null) {
+            drawFlag();
         }
-        // Draw dashed line to cursor when no target selected
-        else if (navigationTarget == null && cursorWorldPos != null &&
-            carPosition.dst(cursorWorldPos) > 5f) {
-            drawDashedLine(shapeRenderer, carPosition, cursorWorldPos);
+
+        // Draw complete route (future part)
+        if (finalRoutePoints != null && finalRoutePoints.size() > 1) {
+            drawRouteWithColors();
         }
 
         // Draw car
         drawCar();
+        drawParkingArrivalEffect();
     }
     /**
-     * Draw route from CURRENT CAR POSITION to target
+     * Update traveled route - ALTERNATIVE VERSION (još jednostavnije)
      */
-    private void drawRoute(ShapeRenderer shapeRenderer) {
-        if (shapeRenderer == null || currentRoute == null) return;
+    private void updateTraveledRouteSimple() {
+        if (finalRoutePoints == null) return;
+
+        traveledRoutePoints.clear();
+
+        // Dodaj sve tačke od početka do trenutne pozicije auta
+        for (int i = 0; i < finalRoutePoints.size(); i++) {
+            Vector2 point = finalRoutePoints.get(i);
+
+            // Dodaj tačku ako je auto prošao pored nje
+            if (i < finalRoutePoints.size() - 1) {
+                // Proveri da li je auto prošao segment
+                Vector2 nextPoint = finalRoutePoints.get(i + 1);
+                float segmentProgress = getProgressOnSegment(carPosition, point, nextPoint);
+
+                if (segmentProgress >= 0) {
+                    traveledRoutePoints.add(new Vector2(point));
+
+                    // Ako je auto na ovom segmentu, dodaj i trenutnu poziciju
+                    if (segmentProgress > 0 && segmentProgress < 1) {
+                        traveledRoutePoints.add(new Vector2(carPosition));
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * Draw flag at target position
+     */
+    private void drawFlag() {
+        if (flagIconTexture == null || flagPosition == null) return;
+
+        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.begin();
+
+        float size = flagSize * (1f / camera.zoom); // Scale with zoom
+
+        // Draw flag with slight bounce animation if arriving
+        float yOffset = 0;
+        if (isArriving) {
+            float t = arrivalTimer / ARRIVAL_DURATION;
+            t = MathUtils.clamp(t, 0f, 1f);
+            yOffset = 20f * (float)Math.sin(t * Math.PI * 2f);
+        }
+
+        spriteBatch.draw(
+            flagIconTexture,
+            flagPosition.x - size / 2f,
+            flagPosition.y - size / 2f + yOffset,
+            size,
+            size
+        );
+
+        spriteBatch.end();
+    }
+    /**
+     * Draw route with different colors for traveled and future parts
+     */
+    private void drawRouteWithColors() {
+        if (shapeRenderer == null || finalRoutePoints == null || finalRoutePoints.size() < 2) return;
 
         shapeRenderer.setProjectionMatrix(camera.combined);
+
+        // Prvo nacrtaj celu rutu u plavoj boji (budući deo)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f); // Blue route
+        shapeRenderer.setColor(FUTURE_ROUTE_COLOR);
 
-        List<Vector2> waypoints = currentRoute.getWaypoints();
-
-        // Pronađi indeks trenutne tačke (ili najbliže tačke)
-        int startIndex = findClosestWaypointIndex(carPosition, waypoints);
-
-        // Crtaj od trenutne pozicije auta do kraja rute
-        for (int i = startIndex; i < waypoints.size() - 1; i++) {
-            Vector2 start = waypoints.get(i);
-            Vector2 end = waypoints.get(i + 1);
-
-            // Ako je prvi segment, koristi trenutnu poziciju auta umesto početne tačke
-            if (i == startIndex) {
-                start = carPosition;
-            }
-
+        for (int i = 0; i < finalRoutePoints.size() - 1; i++) {
+            Vector2 start = finalRoutePoints.get(i);
+            Vector2 end = finalRoutePoints.get(i + 1);
             shapeRenderer.rectLine(start, end, 6f);
         }
 
         shapeRenderer.end();
-    }
 
-    /**
+        // Zatim nacrtaj pređeni deo u zelenoj boji (preko plave)
+        if (!traveledRoutePoints.isEmpty() && traveledRoutePoints.size() > 1) {
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(TRAVELED_ROUTE_COLOR);
+
+            for (int i = 0; i < traveledRoutePoints.size() - 1; i++) {
+                Vector2 start = traveledRoutePoints.get(i);
+                Vector2 end = traveledRoutePoints.get(i + 1);
+                shapeRenderer.rectLine(start, end, 6f);
+            }
+
+            // Dodaj liniju od poslednje tačke do auta
+            if (!traveledRoutePoints.isEmpty()) {
+                Vector2 lastPoint = traveledRoutePoints.get(traveledRoutePoints.size() - 1);
+                shapeRenderer.rectLine(lastPoint, carPosition, 6f);
+            }
+
+            shapeRenderer.end();
+        }
+    }
+   /**
      * Pronalazi indeks najbliže tačke u ruti
      */
     private int findClosestWaypointIndex(Vector2 position, List<Vector2> waypoints) {
@@ -856,16 +1158,22 @@ public class MapScreen extends BaseScreen {
     private void drawCar() {
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
+
         float baseSize = 150f;
         float scale = 1f;
+        float alpha = 1f;
 
         if (isArriving) {
-            float progress = arrivalTimer / ARRIVAL_DURATION;
-            scale = 1.1f - 0.1f * progress; // mali bounce
+            float t = arrivalTimer / ARRIVAL_DURATION;
+            t = MathUtils.clamp(t, 0f, 1f);
+
+            scale = 1.25f - 0.25f * Interpolation.bounceOut.apply(t);
+            alpha = Interpolation.fade.apply(t);
         }
 
         float size = baseSize * scale;
 
+        spriteBatch.setColor(1f, 1f, 1f, alpha);
         spriteBatch.draw(
             carIconTexture,
             carPosition.x - size / 2f,
@@ -873,9 +1181,26 @@ public class MapScreen extends BaseScreen {
             size,
             size
         );
+        spriteBatch.setColor(Color.WHITE);
 
         spriteBatch.end();
     }
+    private void drawParkingArrivalEffect() {
+        if (!isArriving || originalCarPosition == null) return;
+
+        float t = arrivalTimer / ARRIVAL_DURATION;
+        t = MathUtils.clamp(t, 0f, 1f);
+
+        float radius = 30f + 80f * t;
+        float alpha = 1f - t;
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(0f, 1f, 0f, alpha);
+        shapeRenderer.circle(carPosition.x, carPosition.y, radius);
+        shapeRenderer.end();
+    }
+
 
     /**
      * Draw navigation button (always on top of everything).
@@ -951,6 +1276,7 @@ public class MapScreen extends BaseScreen {
         }
         return false;
     }
+
     /**
      * Calculate route from car position to marker using Geoapify API
      */
@@ -958,6 +1284,11 @@ public class MapScreen extends BaseScreen {
         if (isCalculatingRoute) return;
 
         isCalculatingRoute = true;
+
+        // Clear previous route visualization
+        finalRoutePoints = null;
+        traveledRoutePoints.clear();
+        flagPosition = null;
 
         // Get current car geolocation
         final Geolocation carGeolocation = getGeolocationFromPixel(carPosition);
@@ -978,8 +1309,25 @@ public class MapScreen extends BaseScreen {
 
                 Gdx.app.postRunnable(() -> {
                     if (routePoints != null && routePoints.length > 1) {
-                        // Create route from geolocations
-                        currentRoute = createRouteFromGeolocations(routePoints);
+                        // Create final route points
+                        finalRoutePoints = new ArrayList<>();
+                        for (Geolocation geo : routePoints) {
+                            Vector2 pixelPos = MapRasterTiles.getPixelPosition(
+                                geo.lat,
+                                geo.lng,
+                                beginTile.x,
+                                beginTile.y
+                            );
+                            finalRoutePoints.add(pixelPos);
+                        }
+
+                        // Simplify route if too many points
+                        if (finalRoutePoints.size() > 20) {
+                            finalRoutePoints = simplifyRoutePoints(finalRoutePoints, 20);
+                        }
+
+                        // Dodaj početnu tačku (trenutnu poziciju auta)
+                        finalRoutePoints.add(0, new Vector2(carPosition));
 
                         // Set navigation target
                         selectedParkingMarker = marker;
@@ -989,16 +1337,15 @@ public class MapScreen extends BaseScreen {
                             beginTile.x,
                             beginTile.y
                         );
-                        originalCarPosition = new Vector2(carPosition);
 
-                        // Reset route index na početak
-                        currentRoute.reset();
+                        // Postavi zastavicu na cilj
+                        flagPosition = new Vector2(navigationTarget);
 
                         // Start moving immediately
                         isMovingToTarget = true;
 
                         Gdx.app.log("MapScreen", "Route calculated with " +
-                            routePoints.length + " points. Starting navigation.");
+                            finalRoutePoints.size() + " points. Starting navigation.");
 
                     } else {
                         // Fallback: create simple route
@@ -1010,12 +1357,14 @@ public class MapScreen extends BaseScreen {
                             beginTile.x,
                             beginTile.y
                         );
-                        originalCarPosition = new Vector2(carPosition);
 
                         // Kreiraj jednostavnu rutu
-                        currentRoute = new Route();
-                        currentRoute.addWaypoint(carPosition);
-                        currentRoute.addWaypoint(navigationTarget);
+                        finalRoutePoints = new ArrayList<>();
+                        finalRoutePoints.add(new Vector2(carPosition));
+                        finalRoutePoints.add(new Vector2(navigationTarget));
+
+                        // Postavi zastavicu
+                        flagPosition = new Vector2(navigationTarget);
 
                         // Start moving immediately
                         isMovingToTarget = true;
@@ -1034,12 +1383,12 @@ public class MapScreen extends BaseScreen {
                         beginTile.x,
                         beginTile.y
                     );
-                    originalCarPosition = new Vector2(carPosition);
 
-                    // Kreiraj jednostavnu rutu
-                    currentRoute = new Route();
-                    currentRoute.addWaypoint(carPosition);
-                    currentRoute.addWaypoint(navigationTarget);
+                    finalRoutePoints = new ArrayList<>();
+                    finalRoutePoints.add(new Vector2(carPosition));
+                    finalRoutePoints.add(new Vector2(navigationTarget));
+
+                    flagPosition = new Vector2(navigationTarget);
 
                     // Start moving immediately
                     isMovingToTarget = true;
@@ -1164,16 +1513,19 @@ public class MapScreen extends BaseScreen {
     }
 
     private void resetNavigation() {
-        // Samo resetuj navigaciju, ali ostavi auto gde jeste
+        // Reset navigation state
         selectedParkingMarker = null;
         navigationTarget = null;
         isMovingToTarget = false;
-        originalCarPosition = null;
-        currentRoute = null;
+        flagPosition = null;
+        finalRoutePoints = null;
+        traveledRoutePoints.clear();
         cursorWorldPos = new Vector2(carPosition);
         isCalculatingRoute = false;
-    }
 
+        // Hide info panel if it was showing the target
+        infoPanel.hide();
+    }
     /**
      * Draws all markers on the map.
      * Uses PNG textures if available, otherwise falls back to colored circles.
@@ -1415,6 +1767,9 @@ public class MapScreen extends BaseScreen {
         }
         if (carIconTexture != null) {
             carIconTexture.dispose();
+        }
+        if (flagIconTexture != null) {
+            flagIconTexture.dispose();
         }
         FontManager.dispose();
     }
