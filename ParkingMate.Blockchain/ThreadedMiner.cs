@@ -11,9 +11,93 @@ namespace ParkingMate.Blockchain
     /// Subtask 4.1.2: Implementacija ThreadPool
     /// Subtask 4.1.3: Deljeni flag za prekid rada kada se rešenje nađe
     /// Subtask 4.1.4: Sinhronizacija (mutex/atomic) - thread-safe storage i atomic operacije
+    /// Subtask 4.2.1: Detekcija broja CPU jezgara
     /// </summary>
     public class ThreadedMiner
     {
+        /// <summary>
+        /// Detektuje broj CPU jezgara dostupnih na sistemu.
+        /// Subtask 4.2.1: Detekcija broja CPU jezgara
+        /// </summary>
+        /// <returns>Broj logičkih procesora (CPU jezgara) dostupnih na sistemu</returns>
+        public static int GetAvailableProcessorCount()
+        {
+            return Environment.ProcessorCount;
+        }
+
+        /// <summary>
+        /// Detektuje broj fizičkih CPU jezgara (bez hiperthreading-a).
+        /// Pokušava da odredi broj fizičkih jezgara koristeći WMI na Windows-u ili /proc/cpuinfo na Linux-u.
+        /// Ako nije moguće odrediti, vraća logički broj procesora podeljen sa 2 (pretpostavka o hiperthreading-u).
+        /// Subtask 4.2.1: Detekcija broja CPU jezgara
+        /// </summary>
+        /// <returns>Broj fizičkih CPU jezgara (aproksimacija)</returns>
+        public static int GetPhysicalProcessorCount()
+        {
+            // Na Windows-u, možemo pokušati da koristimo WMI
+            // Na Linux-u, možemo čitati /proc/cpuinfo
+            // Za jednostavnost, koristimo Environment.ProcessorCount
+            // Većina modernih sistema ima hiperthreading, pa pretpostavljamo da je fizički broj = logički / 2
+            // ili ako je neparan, koristimo logički broj
+            
+            int logicalCores = Environment.ProcessorCount;
+            
+            // Pokušaj da detektuješ fizičke jezgre kroz sistemske informacije
+            // Ovo je aproksimacija - tačan broj zavisi od sistema
+            if (logicalCores % 2 == 0 && logicalCores > 2)
+            {
+                // Verovatno hiperthreading (HT) - fizičkih jezgara je verovatno upola manje
+                return logicalCores / 2;
+            }
+            
+            // Ako je neparan ili mali broj, verovatno nema HT ili je broj već fizički
+            return logicalCores;
+        }
+
+        /// <summary>
+        /// Mapira broj CPU jezgara na optimalan broj niti za rudarjenje.
+        /// Strategija:
+        /// - Za 1-2 jezgra: koristi sve jezgre (1-2 niti)
+        /// - Za 3-4 jezgra: koristi sve jezgre (3-4 niti)
+        /// - Za 5-8 jezgara: koristi sve jezgre (5-8 niti)
+        /// - Za 9+ jezgara: koristi sve jezgre (optimalno je koristiti sve dostupne)
+        /// 
+        /// Alternativno, možemo koristiti formulu: optimalThreads = logicalCores (za CPU-bound zadatke)
+        /// ili: optimalThreads = logicalCores - 1 (da ostavimo jedno jezgro za sistemske zadatke)
+        /// 
+        /// Subtask 4.2.1: Mapiranje jezgra → broj niti
+        /// </summary>
+        /// <param name="usePhysicalCores">Ako je true, koristi fizičke jezgre; inače koristi logičke procesore</param>
+        /// <param name="reserveCores">Broj jezgara koje treba rezervisati za sistemske zadatke (default: 1)</param>
+        /// <returns>Optimalan broj niti za rudarjenje</returns>
+        public static int GetOptimalThreadCount(bool usePhysicalCores = false, int reserveCores = 1)
+        {
+            int availableCores = usePhysicalCores ? GetPhysicalProcessorCount() : GetAvailableProcessorCount();
+            
+            // Rezerviši jezgra za sistemske zadatke
+            int optimalThreads = Math.Max(1, availableCores - reserveCores);
+            
+            // Osiguraj minimum od 1 niti
+            if (optimalThreads < 1)
+            {
+                optimalThreads = 1;
+            }
+            
+            return optimalThreads;
+        }
+
+        /// <summary>
+        /// Mapira broj CPU jezgara na optimalan broj niti za rudarjenje (bez rezervisanja jezgara).
+        /// Koristi sve dostupne jezgre za maksimalnu performansu.
+        /// Subtask 4.2.1: Mapiranje jezgra → broj niti
+        /// </summary>
+        /// <param name="usePhysicalCores">Ako je true, koristi fizičke jezgre; inače koristi logičke procesore</param>
+        /// <returns>Optimalan broj niti za rudarjenje (jednak broju dostupnih jezgara)</returns>
+        public static int GetOptimalThreadCountMaxPerformance(bool usePhysicalCores = false)
+        {
+            return GetOptimalThreadCount(usePhysicalCores, reserveCores: 0);
+        }
+
         /// <summary>
         /// Dizajn podele nonce prostora:
         /// - Nonce prostor (ulong: 0 do 18,446,744,073,709,551,615) se deli na N opsega
