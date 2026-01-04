@@ -6,6 +6,11 @@ namespace ParkingMate.Blockchain
     {
         static void Main()
         {
+            // Test podele nonce prostora (Subtask 4.1.1)
+            // Otkomentariši sledeću liniju da testiraš dizajn podele nonce prostora:
+            TestNonceRangeDivision.RunTest();
+            return;
+
             var blockchain = new Blockchain();
 
             int blocksToMine = 30;
