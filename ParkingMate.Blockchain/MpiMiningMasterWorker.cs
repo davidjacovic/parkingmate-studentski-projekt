@@ -11,9 +11,9 @@ namespace ParkingMate.Blockchain
     /// Implementirano:
     /// - Subtask 5.2.1: Master generiše seed / nonce opsege
     /// - Subtask 5.2.2: Slanje seed-ova worker procesima
+    /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
     /// 
     /// TODO (naredni subtaskovi):
-    /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
     /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
     /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
     /// </summary>
@@ -38,10 +38,9 @@ namespace ParkingMate.Blockchain
             }
         }
 
-        // TODO: 5.2.4 - Struktura za poruku sa pronađenim rešenjem koji worker šalje masteru
-        /*
         /// <summary>
-        /// Struktura za poruku sa pronađenim rešenjem koji worker šalje masteru
+        /// Struktura za poruku sa pronađenim rešenjem koji worker šalje masteru.
+        /// Koristi se za 5.2.3 i 5.2.4.
         /// </summary>
         public class MiningResultMessage
         {
@@ -57,7 +56,6 @@ namespace ParkingMate.Blockchain
                 Success = false;
             }
         }
-        */
 
         /// <summary>
         /// Master proces koji koordinira distribuirano rudarjenje.
@@ -225,19 +223,26 @@ namespace ParkingMate.Blockchain
             */
         }
 
-        // TODO: 5.2.3, 5.2.4 - Worker proces koji izvršava rudarjenje
-        /*
         /// <summary>
         /// Worker proces koji izvršava rudarjenje na dodeljenom opsegu.
-        /// Subtask 5.2.3: Worker pokreće multi-thread PoW
-        /// Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
+        /// 
+        /// Implementirano:
+        /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
+        /// 
+        /// TODO:
+        /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
         /// </summary>
         public class MpiMiningWorker
         {
             private readonly MpiEnvironment _mpi;
             private readonly int _optimalThreadCount;
+            private readonly IMpiCommunication _communication;
 
-            public MpiMiningWorker(MpiEnvironment mpi, int? threadCount = null)
+            // Tagovi za MPI komunikaciju
+            private const int TAG_NONCE_RANGE = 1; // Tag za primanje nonce opsega od mastera
+            private const int TAG_MINING_RESULT = 2; // Tag za slanje rezultata masteru (5.2.4)
+
+            public MpiMiningWorker(MpiEnvironment mpi, IMpiCommunication? communication = null, int? threadCount = null)
             {
                 _mpi = mpi ?? throw new ArgumentNullException(nameof(mpi));
                 if (mpi.IsMaster)
@@ -246,23 +251,47 @@ namespace ParkingMate.Blockchain
                 }
 
                 _optimalThreadCount = threadCount ?? ThreadedMiner.GetOptimalThreadCount();
+                _communication = communication ?? new SimulatedMpiCommunication(mpi);
             }
 
             /// <summary>
             /// Prima nonce opseg od master procesa.
-            /// Subtask 5.2.1: Slanje seed-ova worker procesima
+            /// Subtask 5.2.2: Prima seed od master procesa (posledica slanja)
+            /// Koristi MPI_Recv (simulacija ili stvarno) za primanje poruke od master procesa.
             /// </summary>
-            /// <returns>Poruka sa nonce opsegom</returns>
+            /// <returns>Poruka sa nonce opsegom ili null ako nema poruke</returns>
             public NonceRangeMessage? ReceiveNonceRange()
             {
-                // Simulacija MPI_Recv - u stvarnom MPI okruženju bi se koristio MPI_Recv
-                Console.WriteLine($"[Worker Rank {_mpi.Rank}] Čekam nonce opseg od master procesa...");
-                return null; // Vraća se iz stvarne implementacije
+                Console.WriteLine($"[Worker Rank {_mpi.Rank}] Čekam nonce opseg od master procesa (rank 0)...");
+
+                try
+                {
+                    // Koristi IMpiCommunication za primanje poruke
+                    // U stvarnom MPI okruženju bi se koristio MPI_Recv
+                    var message = _communication.Receive<NonceRangeMessage>(sourceRank: 0, tag: TAG_NONCE_RANGE);
+
+                    if (message != null)
+                    {
+                        Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✓ Primio nonce opseg [{message.StartNonce:N0}, {message.EndNonce:N0}] od master procesa");
+                        return message;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Worker Rank {_mpi.Rank}] ⚠ Nema poruke od master procesa (možda još nije poslata)");
+                        return null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✗ Greška pri primanju poruke od master procesa: {ex.Message}");
+                    return null;
+                }
             }
 
             /// <summary>
             /// Izvršava multi-threaded rudarjenje na dodeljenom opsegu.
-            /// Subtask 5.2.1: Worker pokreće multi-thread PoW
+            /// Subtask 5.2.3: Worker pokreće multi-thread PoW
+            /// Deli opseg dodeljen ovom worker procesu na lokalne niti i pokreće multi-threaded mining.
             /// </summary>
             /// <param name="message">Poruka sa nonce opsegom</param>
             /// <returns>Rezultat rudarjenja</returns>
@@ -338,22 +367,27 @@ namespace ParkingMate.Blockchain
                 return result;
             }
 
+            // TODO: 5.2.4 - Worker vraća pronađeno rešenje masteru
+            /*
             /// <summary>
             /// Šalje rezultat master procesu.
-            /// Subtask 5.2.1: Worker vraća pronađeno rešenje masteru
+            /// Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
             /// </summary>
             /// <param name="result">Rezultat rudarjenja</param>
             public void SendResultToMaster(MiningResultMessage result)
             {
-                // Simulacija MPI_Send - u stvarnom MPI okruženju bi se koristio MPI_Send
+                // Koristi IMpiCommunication za slanje rezultata masteru
+                // U stvarnom MPI okruženju bi se koristio MPI_Send
+                _communication.Send(result, destinationRank: 0, tag: TAG_MINING_RESULT);
+                
                 Console.WriteLine($"[Worker Rank {_mpi.Rank}] Šaljem rezultat master procesu (rank 0)...");
                 if (result.Success)
                 {
                     Console.WriteLine($"[Worker Rank {_mpi.Rank}] Rezultat: Uspeh - Nonce {result.FoundBlock?.Nonce:N0}");
                 }
             }
+            */
         }
-        */
 
         // TODO: Integracija Master-Worker arhitekture (nakon 5.2.5)
         /*

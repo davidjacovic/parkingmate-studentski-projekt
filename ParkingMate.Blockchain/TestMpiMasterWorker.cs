@@ -4,13 +4,13 @@ using System.Collections.Generic;
 namespace ParkingMate.Blockchain
 {
     /// <summary>
-    /// Test klasa za testiranje MPI Master-Worker arhitekture (Subtasks 5.2.1, 5.2.2)
+    /// Test klasa za testiranje MPI Master-Worker arhitekture (Subtasks 5.2.1, 5.2.2, 5.2.3)
     /// </summary>
     public class TestMpiMasterWorker
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test MPI Master-Worker arhitekture (5.2.1, 5.2.2) ===\n");
+            Console.WriteLine("=== Test MPI Master-Worker arhitekture (5.2.1, 5.2.2, 5.2.3) ===\n");
 
             // Test 1: Master generiše nonce opsege (Subtask 5.2.1)
             Console.WriteLine("Test 1: Master generiše seed / nonce opsege (5.2.1)");
@@ -22,13 +22,10 @@ namespace ParkingMate.Blockchain
             TestSendRangesToWorkers();
             Console.WriteLine();
 
-            // TODO: 5.2.3 - Test worker multi-thread PoW
-            /*
-            // Test 3: Worker pokreće multi-thread PoW
-            Console.WriteLine("Test 3: Worker pokreće multi-thread PoW");
+            // Test 3: Worker pokreće multi-thread PoW (Subtask 5.2.3)
+            Console.WriteLine("Test 3: Worker pokreće multi-thread PoW (5.2.3)");
             TestWorkerMultiThreadMining();
             Console.WriteLine();
-            */
 
             // TODO: 5.2.4 - Test worker vraća pronađeno rešenje masteru
             /*
@@ -51,7 +48,7 @@ namespace ParkingMate.Blockchain
             Console.WriteLine();
             */
 
-            Console.WriteLine("✓ Testovi za Subtask 5.2.1 i 5.2.2 (Master generiše i šalje seed / nonce opsege) su prošli!");
+            Console.WriteLine("✓ Testovi za Subtask 5.2.1, 5.2.2 i 5.2.3 (Master generiše, šalje opsege; Worker pokreće multi-thread PoW) su prošli!");
         }
 
         private static void TestMasterGenerateRanges()
@@ -157,10 +154,11 @@ namespace ParkingMate.Blockchain
             }
         }
 
-        // TODO: 5.2.3 - Test worker multi-thread PoW
-        /*
         private static void TestWorkerMultiThreadMining()
         {
+            // Očisti message queue pre testa
+            SimulatedMpiCommunication.ClearQueue();
+
             var mpi = MpiEnvironment.Instance;
             mpi.Finalize();
             mpi.Initialize(size: 4, rank: 1); // Worker
@@ -191,6 +189,11 @@ namespace ParkingMate.Blockchain
                 if (result.FoundBlock != null)
                 {
                     Console.WriteLine($"  ✓ Pronađen nonce: {result.FoundBlock.Nonce:N0}");
+                    Console.WriteLine($"  ✓ Hash: {result.FoundBlock.Hash.Substring(0, Math.Min(20, result.FoundBlock.Hash.Length))}...");
+                }
+                else
+                {
+                    Console.WriteLine("  ⚠ Rešenje nije pronađeno u dodeljenom opsegu (može biti normalno ako je difficulty prevelika)");
                 }
             }
             else
@@ -198,7 +201,6 @@ namespace ParkingMate.Blockchain
                 Console.WriteLine("  ✗ Greška: Worker nije vratio rezultat");
             }
         }
-        */
 
         // TODO: 5.2.4 - Test worker vraća pronađeno rešenje masteru
         /*
