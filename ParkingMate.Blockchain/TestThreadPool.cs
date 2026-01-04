@@ -10,7 +10,7 @@ namespace ParkingMate.Blockchain
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test ThreadPool implementacije (4.1.2) ===\n");
+            Console.WriteLine("=== Test ThreadPool implementacije (4.1.2 i 4.1.3) ===\n");
 
             // Test 1: Kreiranje ThreadPool-a sa različitim brojevima niti
             Console.WriteLine("Test 1: Kreiranje ThreadPool-a");
@@ -27,7 +27,12 @@ namespace ParkingMate.Blockchain
             TestStopWorkers();
             Console.WriteLine();
 
-            Console.WriteLine("✓ Svi testovi ThreadPool-a su prošli!");
+            // Test 4: Deljeni flag za prekid rada (4.1.3)
+            Console.WriteLine("Test 4: Deljeni flag za prekid rada kada se rešenje nađe");
+            TestSharedFlag();
+            Console.WriteLine();
+
+            Console.WriteLine("✓ Svi testovi ThreadPool-a i shared flag-a su prošli!");
         }
 
         private static void TestPoolCreation()
@@ -70,13 +75,14 @@ namespace ParkingMate.Blockchain
         {
             const int numThreads = 4;
             var pool = new ThreadedMiner.MiningThreadPool(numThreads);
+            var sharedState = pool.SharedState;
             
-            // Kreiraj jednostavne worker-e
+            // Kreiraj jednostavne worker-e sa deljenim state-om
             var workers = new System.Collections.Generic.List<ThreadedMiner.MiningWorker>();
             for (int i = 0; i < numThreads; i++)
             {
                 int threadId = i;
-                var worker = new SimpleTestWorker(threadId);
+                var worker = new SimpleTestWorker(threadId, sharedState);
                 workers.Add(worker);
             }
 
@@ -123,12 +129,13 @@ namespace ParkingMate.Blockchain
         {
             const int numThreads = 2;
             var pool = new ThreadedMiner.MiningThreadPool(numThreads);
+            var sharedState = pool.SharedState;
             
             var workers = new System.Collections.Generic.List<ThreadedMiner.MiningWorker>();
             for (int i = 0; i < numThreads; i++)
             {
                 int threadId = i;
-                var worker = new LongRunningTestWorker(threadId);
+                var worker = new LongRunningTestWorker(threadId, sharedState);
                 workers.Add(worker);
             }
 
@@ -150,6 +157,93 @@ namespace ParkingMate.Blockchain
             }
         }
 
+        private static void TestSharedFlag()
+        {
+            const int numThreads = 4;
+            var pool = new ThreadedMiner.MiningThreadPool(numThreads);
+            var sharedState = pool.SharedState;
+
+            // Test: Provera da flag nije postavljen na početku
+            if (!sharedState.IsSolutionFound())
+            {
+                Console.WriteLine("  ✓ Flag nije postavljen na početku");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Flag je postavljen na početku (greška)");
+            }
+
+            // Test: Postavljanje flag-a
+            bool firstSet = sharedState.TrySetSolutionFound();
+            if (firstSet && sharedState.IsSolutionFound())
+            {
+                Console.WriteLine("  ✓ Flag je uspešno postavljen");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Greška pri postavljanju flag-a");
+            }
+
+            // Test: Pokušaj ponovnog postavljanja (ne bi trebalo da uspe - već je postavljen)
+            bool secondSet = sharedState.TrySetSolutionFound();
+            if (!secondSet)
+            {
+                Console.WriteLine("  ✓ Drugi pokušaj postavljanja vraća false (već je postavljen)");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Drugi pokušaj postavljanja je uspeo (ne bi trebalo)");
+            }
+
+            // Test: Reset flag-a
+            sharedState.Reset();
+            if (!sharedState.IsSolutionFound())
+            {
+                Console.WriteLine("  ✓ Flag je uspešno resetovan");
+            }
+            else
+            {
+                Console.WriteLine("  ✗ Greška pri resetovanju flag-a");
+            }
+
+            // Test: Više niti pokušavaju postaviti flag - samo jedna treba uspeti
+            var workers = new System.Collections.Generic.List<ThreadedMiner.MiningWorker>();
+            for (int i = 0; i < numThreads; i++)
+            {
+                int threadId = i;
+                var worker = new FlagTestWorker(threadId, sharedState);
+                workers.Add(worker);
+            }
+
+            sharedState.Reset();
+            pool.StartWithWorkers(workers);
+            
+            Thread.Sleep(500); // Daj vremena nitima da rade
+            
+            pool.WaitAll(1000);
+            
+            // Proveri koliko workers je postavilo flag (samo jedan bi trebalo)
+            int successfulWorkers = 0;
+            foreach (var worker in workers)
+            {
+                if (worker is FlagTestWorker ftw && ftw.SuccessfullySetFlag)
+                {
+                    successfulWorkers++;
+                }
+            }
+
+            if (successfulWorkers == 1)
+            {
+                Console.WriteLine($"  ✓ Tačno jedna nit je postavila flag (thread-safe)");
+            }
+            else
+            {
+                Console.WriteLine($"  ✗ {successfulWorkers} niti je postavilo flag (trebalo bi biti 1)");
+            }
+
+            pool.Stop();
+        }
+
         /// <summary>
         /// Jednostavan test worker koji samo izvršava akciju i završava
         /// </summary>
@@ -157,7 +251,8 @@ namespace ParkingMate.Blockchain
         {
             public bool HasExecuted { get; private set; }
 
-            public SimpleTestWorker(int threadId) : base(threadId)
+            public SimpleTestWorker(int threadId, ThreadedMiner.SharedMiningState sharedState) 
+                : base(threadId, sharedState)
             {
             }
 
@@ -174,17 +269,40 @@ namespace ParkingMate.Blockchain
         /// </summary>
         private class LongRunningTestWorker : ThreadedMiner.MiningWorker
         {
-            public LongRunningTestWorker(int threadId) : base(threadId)
+            public LongRunningTestWorker(int threadId, ThreadedMiner.SharedMiningState sharedState) 
+                : base(threadId, sharedState)
             {
             }
 
             public override void Execute()
             {
-                // Radi dok nije otkazan
-                while (!_cancelled)
+                // Radi dok nije otkazan ili rešenje pronađeno (preko shared flag-a)
+                while (!ShouldStop())
                 {
                     Thread.Sleep(100);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Worker za testiranje deljenog flag-a - pokušava da postavi flag
+        /// </summary>
+        private class FlagTestWorker : ThreadedMiner.MiningWorker
+        {
+            public bool SuccessfullySetFlag { get; private set; }
+
+            public FlagTestWorker(int threadId, ThreadedMiner.SharedMiningState sharedState) 
+                : base(threadId, sharedState)
+            {
+            }
+
+            public override void Execute()
+            {
+                // Pokušaj postaviti flag
+                // Simuliraj neki rad pre pokušaja
+                Thread.Sleep(ThreadId * 50); // Različito vreme za svaku nit
+                
+                SuccessfullySetFlag = TryMarkSolutionFound();
             }
         }
     }
