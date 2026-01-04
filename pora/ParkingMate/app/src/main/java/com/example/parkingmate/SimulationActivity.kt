@@ -23,6 +23,8 @@ class SimulationActivity : AppCompatActivity() {
 
     private val simulations = mutableListOf<Simulation>()
 
+    private var lastEventType: EventType? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySimulationBinding.inflate(layoutInflater)
@@ -170,6 +172,36 @@ class SimulationActivity : AppCompatActivity() {
 
                 else -> null
             }
+
+        if (eventType != null && eventType != lastEventType) {
+
+            val event = when (eventType) {
+                EventType.PARKING_FULL -> Event(
+                    topic = "parking/full",
+                    message = "Parking is full",
+                    timestamp = System.currentTimeMillis(),
+                    location = "$lat,$lon"
+                )
+
+                EventType.LOW_AVAILABILITY -> Event(
+                    topic = "parking/low-availability",
+                    message = "Low parking availability",
+                    timestamp = System.currentTimeMillis(),
+                    location = "$lat,$lon"
+                )
+
+                EventType.PARKING_AVAILABLE -> Event(
+                    topic = "parking/available",
+                    message = "Parking is available",
+                    timestamp = System.currentTimeMillis(),
+                    location = "$lat,$lon"
+                )
+            }
+
+            // zapamti poslednji generisani event
+            lastEventType = eventType
+        }
+
 
         val urvrvResultJson = """
         {
