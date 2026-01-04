@@ -31,6 +31,42 @@ namespace ParkingMate.Blockchain
             // TestCpuDetection.RunTest();
             // return;
 
+            // Test MPI inicijalizacije (5.1.1)
+            // Otkomentariši sledeću liniju da testiraš MPI inicijalizaciju:
+            // TestMpiInitialization.RunTest();
+            //return;
+
+            // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
+            var mpi = MpiEnvironment.Instance;
+            if (cliArgs.UseMpi)
+            {
+                // Inicijalizuj MPI okruženje
+                int mpiSize = cliArgs.MpiSize ?? 1;
+                int mpiRank = cliArgs.MpiRank ?? 0;
+                
+                if (!mpi.Initialize(mpiSize, mpiRank))
+                {
+                    Console.WriteLine("Upozorenje: MPI okruženje je već inicijalizovano. Nastavljam sa postojećom konfiguracijom.");
+                }
+
+                Console.WriteLine("=== MPI okruženje ===");
+                Console.WriteLine(mpi);
+                Console.WriteLine($"IsMaster: {mpi.IsMaster}, IsWorker: {mpi.IsWorker}");
+                Console.WriteLine();
+            }
+            else
+            {
+                // Pokušaj inicijalizaciju iz environment varijabli ili argumenata (ako su postavljeni)
+                // Ovo omogućava automatsku detekciju u stvarnom MPI okruženju
+                mpi.InitializeFromArgs(args);
+                if (mpi.IsInitialized)
+                {
+                    Console.WriteLine("=== MPI okruženje (detektovano automatski) ===");
+                    Console.WriteLine(mpi);
+                    Console.WriteLine();
+                }
+            }
+
             // Napomena: Sledeći kod testira CLI parametre i blockchain funkcionalnost
 
             // Dobij broj niti (CLI override ili automatska detekcija)
