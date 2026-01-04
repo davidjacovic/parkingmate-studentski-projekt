@@ -68,24 +68,18 @@ public class MapScreen extends BaseScreen {
 
     // Route navigation variables
     private Route currentRoute;
-    private float routeUpdateTimer = 0f;
-    private static final float ROUTE_UPDATE_INTERVAL = 5f; // Update route every 5 seconds
     private boolean isCalculatingRoute = false;
 
     // NAVIGATION TARGET VARIABLES
     private Vector2 navigationTarget = null; // Target parking marker position
     private Marker selectedParkingMarker = null; // Currently selected parking marker
     private boolean isMovingToTarget = false; // Whether car is moving to target
-    private float moveProgress = 0f; // Progress of movement (0 to 1)
-    private float moveSpeed = 1.0f; // Speed of car movement (units per second)
-
     // BUTTON DIMENSIONS AND POSITION
     private float navButtonSize = 48f;
     private float navButtonMargin = 15f;
     private float navButtonX, navButtonY;
 
     // DASHED LINE PROPERTIES
-    private float[] dashedLinePattern = {10f, 5f}; // 10px line, 5px gap
     private float dashedLinePhase = 0f;
 
     // Marker size configuration (in pixels)
@@ -104,6 +98,9 @@ public class MapScreen extends BaseScreen {
 
     // API service for fetching parking data
     private ParkingService parkingService;
+    private boolean isArriving = false;
+    private float arrivalTimer = 0f;
+    private static final float ARRIVAL_DURATION = 0.4f;
 
 
     // Backend API base URL (backend runs on port 3002)
@@ -232,9 +229,6 @@ public class MapScreen extends BaseScreen {
 
         // Set initial car position (camera center)
         setupInitialCarPosition();
-
-        // Load parking locations from API
-        loadParkingLocationsFromAPI();
     }
 
     /**
@@ -686,20 +680,6 @@ public class MapScreen extends BaseScreen {
 
         shapeRenderer.end();
     }
-
-    /**
-     * Draw solid line between two points.
-     */
-    private void drawSolidLine(ShapeRenderer shapeRenderer, Vector2 start, Vector2 end, float thickness) {
-        if (shapeRenderer == null) return;
-
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f); // Blue color for navigation line
-        shapeRenderer.rectLine(start, end, thickness);
-        shapeRenderer.end();
-    }
-
     @Override
     public void render(float delta) {
         handleKeyboardInput();
@@ -742,42 +722,14 @@ public class MapScreen extends BaseScreen {
             infoPanel.render();
             drawNavigationButton();
         }
-    }
-    private void updateRouteFromCurrentPosition() {
-        if (selectedParkingMarker == null || isCalculatingRoute) return;
-
-        final Geolocation carGeolocation = getGeolocationFromPixel(carPosition);
-        if (carGeolocation == null) return;
-
-        isCalculatingRoute = true;
-
-        new Thread(() -> {
-            try {
-                Geolocation[] newRoutePoints = MapRasterTiles.fetchRoute(
-                    carGeolocation,
-                    selectedParkingMarker.getPosition()
-                );
-
-                Gdx.app.postRunnable(() -> {
-                    if (newRoutePoints != null && newRoutePoints.length > 1) {
-                        Route newRoute = createRouteFromGeolocations(newRoutePoints);
-                        if (newRoute != null) {
-                            currentRoute = newRoute;
-                            Gdx.app.log("MapScreen", "Route updated from current position");
-                        }
-                    }
-                    isCalculatingRoute = false;
-                });
-
-            } catch (Exception e) {
-                Gdx.app.error("MapScreen", "Failed to update route", e);
-                Gdx.app.postRunnable(() -> {
-                    isCalculatingRoute = false;
-                });
+        if (isArriving) {
+            arrivalTimer += delta;
+            if (arrivalTimer >= ARRIVAL_DURATION) {
+                isArriving = false;
             }
-        }).start();
-    }
+        }
 
+    }
     /**
      * Update car movement - follows route
      */
@@ -802,9 +754,12 @@ public class MapScreen extends BaseScreen {
         if (distanceToWaypoint < 10f) {
             // Reached waypoint, move to next
             if (!currentRoute.moveToNextWaypoint()) {
-                // Route complete - auto JE STIGAO NA PARKING
-                carPosition.set(navigationTarget); // Postavi tačno na parking
+                // Route complete → start arrival animation
+                carPosition.set(navigationTarget);
                 isMovingToTarget = false;
+                isArriving = true;
+                arrivalTimer = 0f;
+
 
                 // Resetuj samo neke stvari, ali ostavi auto na parkingu
                 selectedParkingMarker = null;
@@ -901,14 +856,22 @@ public class MapScreen extends BaseScreen {
     private void drawCar() {
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
+        float baseSize = 150f;
+        float scale = 1f;
 
-        float carIconSize = 150f;
+        if (isArriving) {
+            float progress = arrivalTimer / ARRIVAL_DURATION;
+            scale = 1.1f - 0.1f * progress; // mali bounce
+        }
+
+        float size = baseSize * scale;
+
         spriteBatch.draw(
             carIconTexture,
-            carPosition.x - carIconSize / 2f,
-            carPosition.y - carIconSize / 2f,
-            carIconSize,
-            carIconSize
+            carPosition.x - size / 2f,
+            carPosition.y - size / 2f,
+            size,
+            size
         );
 
         spriteBatch.end();
@@ -1200,27 +1163,6 @@ public class MapScreen extends BaseScreen {
         }
     }
 
-    /**
-     * Resets navigation state.
-     */
-    /**
-     * Resets navigation state
-     */
-    /**
-     * Resets navigation state
-     */
-    /**
-     * Draw simple line between two points (za fallback)
-     */
-    private void drawSimpleLine(Vector2 start, Vector2 end) {
-        if (shapeRenderer == null) return;
-
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0f, 0.5f, 1f, 0.8f);
-        shapeRenderer.rectLine(start, end, 6f);
-        shapeRenderer.end();
-    }
     private void resetNavigation() {
         // Samo resetuj navigaciju, ali ostavi auto gde jeste
         selectedParkingMarker = null;
