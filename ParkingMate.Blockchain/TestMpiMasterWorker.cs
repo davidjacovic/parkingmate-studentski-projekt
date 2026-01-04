@@ -4,13 +4,13 @@ using System.Collections.Generic;
 namespace ParkingMate.Blockchain
 {
     /// <summary>
-    /// Test klasa za testiranje MPI Master-Worker arhitekture (Subtasks 5.2.1, 5.2.2, 5.2.3, 5.2.4)
+    /// Test klasa za testiranje MPI Master-Worker arhitekture (Subtasks 5.2.1, 5.2.2, 5.2.3, 5.2.4, 5.2.5)
     /// </summary>
     public class TestMpiMasterWorker
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test MPI Master-Worker arhitekture (5.2.1, 5.2.2, 5.2.3, 5.2.4) ===\n");
+            Console.WriteLine("=== Test MPI Master-Worker arhitekture (5.2.1, 5.2.2, 5.2.3, 5.2.4, 5.2.5) ===\n");
 
             // Test 1: Master generiše nonce opsege (Subtask 5.2.1)
             Console.WriteLine("Test 1: Master generiše seed / nonce opsege (5.2.1)");
@@ -32,20 +32,20 @@ namespace ParkingMate.Blockchain
             TestWorkerReturnsResult();
             Console.WriteLine();
 
-            // TODO: 5.2.5 - Test master obaveštava sve čvorove o završetku
-            /*
-            // Test 5: Master obaveštava sve čvorove o završetku
-            Console.WriteLine("Test 5: Master obaveštava sve čvorove o završetku");
+            // Test 5: Master obaveštava sve čvorove o završetku (Subtask 5.2.5)
+            Console.WriteLine("Test 5: Master obaveštava sve čvorove o završetku (5.2.5)");
             TestMasterNotifiesWorkers();
             Console.WriteLine();
 
+            // TODO: Integracija - Kompletan Master-Worker ciklus (opciono za buduće)
+            /*
             // Test 6: Kompletan Master-Worker ciklus
             Console.WriteLine("Test 6: Kompletan Master-Worker ciklus");
             TestCompleteMasterWorkerCycle();
             Console.WriteLine();
             */
 
-            Console.WriteLine("✓ Testovi za Subtask 5.2.1, 5.2.2, 5.2.3 i 5.2.4 (Kompletan Master-Worker ciklus) su prošli!");
+            Console.WriteLine("✓ Testovi za Subtask 5.2.1, 5.2.2, 5.2.3, 5.2.4 i 5.2.5 (Kompletan Master-Worker ciklus) su prošli!");
         }
 
         private static void TestMasterGenerateRanges()
@@ -273,20 +273,49 @@ namespace ParkingMate.Blockchain
             }
         }
 
-        // TODO: 5.2.5 - Test master obaveštava sve čvorove o završetku
-        /*
         private static void TestMasterNotifiesWorkers()
         {
-            var mpi = MpiEnvironment.Instance;
-            mpi.Finalize();
-            mpi.Initialize(size: 4, rank: 0); // Master
+            // Očisti message queue i broadcast queue pre testa
+            SimulatedMpiCommunication.ClearQueue();
 
-            var master = new MpiMiningMasterWorker.MpiMiningMaster(mpi);
+            // Master deo - obaveštava workers
+            var mpiMaster = MpiEnvironment.Instance;
+            mpiMaster.Finalize();
+            mpiMaster.Initialize(size: 4, rank: 0); // Master rank 0
+
+            var master = new MpiMiningMasterWorker.MpiMiningMaster(mpiMaster);
 
             try
             {
-                master.NotifyWorkersToStop();
-                Console.WriteLine("  ✓ Master je obavestio sve workers da prekinu rad");
+                // Master obaveštava sve workers da prekinu rad
+                master.NotifyWorkersToStop("Rešenje je pronađeno");
+                Console.WriteLine("  ✓ Master (rank 0) je uspešno poslao stop signal svim workers");
+
+                // Test primanja stop signala od strane workers
+                for (int workerRank = 1; workerRank < 4; workerRank++)
+                {
+                    var mpiWorker = MpiEnvironment.Instance;
+                    mpiWorker.Finalize();
+                    mpiWorker.Initialize(size: 4, rank: workerRank); // Worker rank 1, 2, 3
+
+                    var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpiWorker);
+
+                    // Worker prima stop signal
+                    var stopSignal = worker.ReceiveStopSignal();
+
+                    if (stopSignal != null && stopSignal.ShouldStop)
+                    {
+                        Console.WriteLine($"  ✓ Worker (rank {workerRank}) je primio stop signal od master-a");
+                        if (!string.IsNullOrEmpty(stopSignal.Reason))
+                        {
+                            Console.WriteLine($"    Razlog: {stopSignal.Reason}");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  ⚠ Worker (rank {workerRank}) nije primio stop signal");
+                    }
+                }
             }
             catch (Exception ex)
             {

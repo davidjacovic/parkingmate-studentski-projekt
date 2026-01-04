@@ -13,8 +13,6 @@ namespace ParkingMate.Blockchain
     /// - Subtask 5.2.2: Slanje seed-ova worker procesima
     /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
     /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
-    /// 
-    /// TODO (naredni subtaskovi):
     /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
     /// </summary>
     public class MpiMiningMasterWorker
@@ -58,14 +56,28 @@ namespace ParkingMate.Blockchain
         }
 
         /// <summary>
+        /// Struktura za stop signal koji master šalje workers-ima.
+        /// Subtask 5.2.5: Master obaveštava sve čvorove o završetku
+        /// </summary>
+        public class StopSignalMessage
+        {
+            public bool ShouldStop { get; set; }
+            public string? Reason { get; set; }
+
+            public StopSignalMessage(bool shouldStop, string? reason = null)
+            {
+                ShouldStop = shouldStop;
+                Reason = reason;
+            }
+        }
+
+        /// <summary>
         /// Master proces koji koordinira distribuirano rudarjenje.
         /// 
         /// Implementirano:
         /// - Subtask 5.2.1: Master generiše seed / nonce opsege
         /// - Subtask 5.2.2: Slanje seed-ova worker procesima
         /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
-        /// 
-        /// TODO:
         /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku
         /// </summary>
         public class MpiMiningMaster
@@ -78,6 +90,7 @@ namespace ParkingMate.Blockchain
             // Tagovi za MPI komunikaciju
             private const int TAG_NONCE_RANGE = 1; // Tag za slanje nonce opsega workers
             private const int TAG_MINING_RESULT = 2; // Tag za primanje rezultata od workers (5.2.4)
+            private const int TAG_STOP_SIGNAL = 3; // Tag za slanje stop signala workers (5.2.5)
 
             public MpiMiningMaster(MpiEnvironment mpi, IMpiCommunication? communication = null)
             {
@@ -242,18 +255,33 @@ namespace ParkingMate.Blockchain
                 return null;
             }
 
-            // TODO: 5.2.5 - Master obaveštava sve čvorove o završetku
-            /*
             /// <summary>
             /// Obaveštava sve worker procese da prekinu rad.
             /// Subtask 5.2.5: Master obaveštava sve čvorove o završetku
+            /// Koristi MPI_Bcast (simulacija ili stvarno) za slanje stop signala svim workers.
             /// </summary>
-            public void NotifyWorkersToStop()
+            /// <param name="reason">Razlog zaustavljanja (opciono)</param>
+            public void NotifyWorkersToStop(string? reason = null)
             {
-                // Simulacija MPI_Bcast - u stvarnom MPI okruženju bi se koristio MPI_Bcast
-                Console.WriteLine($"[Master Rank {_mpi.Rank}] Obaveštavam sve workers da prekinu rad...");
+                var stopSignal = new StopSignalMessage(shouldStop: true, reason: reason);
+
+                try
+                {
+                    // Koristi IMpiCommunication za broadcast stop signala
+                    // U stvarnom MPI okruženju bi se koristio MPI_Bcast
+                    _communication.Broadcast(ref stopSignal, rootRank: _mpi.Rank);
+
+                    Console.WriteLine($"[Master Rank {_mpi.Rank}] ✓ Obavešteni su svi workers da prekinu rad");
+                    if (!string.IsNullOrEmpty(reason))
+                    {
+                        Console.WriteLine($"[Master Rank {_mpi.Rank}] Razlog: {reason}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Master Rank {_mpi.Rank}] ✗ Greška pri obaveštavanju workers: {ex.Message}");
+                }
             }
-            */
         }
 
         /// <summary>
@@ -262,6 +290,7 @@ namespace ParkingMate.Blockchain
         /// Implementirano:
         /// - Subtask 5.2.3: Worker pokreće multi-thread PoW
         /// - Subtask 5.2.4: Worker vraća pronađeno rešenje masteru
+        /// - Subtask 5.2.5: Master obaveštava sve čvorove o završetku (primanje stop signala)
         /// </summary>
         public class MpiMiningWorker
         {
@@ -272,6 +301,7 @@ namespace ParkingMate.Blockchain
             // Tagovi za MPI komunikaciju
             private const int TAG_NONCE_RANGE = 1; // Tag za primanje nonce opsega od mastera
             private const int TAG_MINING_RESULT = 2; // Tag za slanje rezultata masteru (5.2.4)
+            private const int TAG_STOP_SIGNAL = 3; // Tag za primanje stop signala od mastera (5.2.5)
 
             public MpiMiningWorker(MpiEnvironment mpi, IMpiCommunication? communication = null, int? threadCount = null)
             {
@@ -396,6 +426,41 @@ namespace ParkingMate.Blockchain
 
                 pool.Stop();
                 return result;
+            }
+
+            /// <summary>
+            /// Prima stop signal od master procesa.
+            /// Subtask 5.2.5: Master obaveštava sve čvorove o završetku
+            /// Koristi MPI_Bcast (simulacija ili stvarno) za primanje stop signala od master procesa.
+            /// </summary>
+            /// <returns>Stop signal poruka ili null ako nema signala</returns>
+            public StopSignalMessage? ReceiveStopSignal()
+            {
+                try
+                {
+                    var stopSignal = new StopSignalMessage(shouldStop: false);
+                    
+                    // Koristi IMpiCommunication za primanje broadcast poruke
+                    // U stvarnom MPI okruženju bi se koristio MPI_Bcast
+                    _communication.Broadcast(ref stopSignal, rootRank: 0);
+
+                    if (stopSignal.ShouldStop)
+                    {
+                        Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✓ Primio stop signal od master procesa");
+                        if (!string.IsNullOrEmpty(stopSignal.Reason))
+                        {
+                            Console.WriteLine($"[Worker Rank {_mpi.Rank}] Razlog: {stopSignal.Reason}");
+                        }
+                        return stopSignal;
+                    }
+
+                    return null;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Worker Rank {_mpi.Rank}] ✗ Greška pri primanju stop signala: {ex.Message}");
+                    return null;
+                }
             }
 
             /// <summary>
