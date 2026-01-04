@@ -35,6 +35,7 @@ import si.um.feri.parkingmate.model.Marker;
 import si.um.feri.parkingmate.model.Parking;
 import si.um.feri.parkingmate.ui.InfoPanel;
 import si.um.feri.parkingmate.util.FontManager;
+import si.um.feri.parkingmate.simulation.SimulationScreen;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -123,6 +124,11 @@ public class MapScreen extends BaseScreen {
     private float arrivalZoomTarget = 1.4f;
     private float arrivalZoomOriginal = -1f;
 
+    // SIMULATION BUTTON
+    private Texture simulationButtonTexture;
+    private Texture simulationButtonActiveTexture;
+    private boolean simulationMode = false;
+    private float simulationButtonX, simulationButtonY;
 
     // Backend API base URL (backend runs on port 3002)
     private static final String API_BASE_URL = "http://localhost:3002";
@@ -262,6 +268,9 @@ public class MapScreen extends BaseScreen {
 
         // Set initial car position (camera center)
         setupInitialCarPosition();
+
+        // Initialize simulation button
+        initializeSimulationButton();
     }
 
     /**
@@ -300,6 +309,78 @@ public class MapScreen extends BaseScreen {
         Gdx.app.log("MapScreen", "Nav button (TOP-LEFT) at: " + navButtonX + ", " + navButtonY);
     }
 
+    /**
+     * Initialize textures for simulation button.
+     */
+    private void initializeSimulationButton() {
+        Gdx.app.log("MapScreen", "=== INITIALIZING SIMULATION BUTTON ===");
+
+        try {
+            simulationButtonTexture = new Texture(Gdx.files.internal("markers/simulation.png"));
+        } catch (Exception e) {
+            createDefaultSimulationButton();
+        }
+
+        try {
+            simulationButtonActiveTexture = new Texture(Gdx.files.internal("markers/simulation.png"));
+        } catch (Exception e) {
+            simulationButtonActiveTexture = simulationButtonTexture;
+        }
+
+        // Position below navigation button
+        simulationButtonX = navButtonMargin;
+        simulationButtonY = navButtonY - navButtonSize - navButtonMargin;
+
+        Gdx.app.log("MapScreen", "Simulation button at: " + simulationButtonX + ", " + simulationButtonY);
+    }
+
+    /**
+     * Create default simulation button (blue square with play icon).
+     */
+    private void createDefaultSimulationButton() {
+        Pixmap pixmap = new Pixmap((int)navButtonSize, (int)navButtonSize, Pixmap.Format.RGBA8888);
+
+        // Blue background
+        pixmap.setColor(0.2f, 0.4f, 0.8f, 1f);
+        pixmap.fillRectangle(0, 0, (int)navButtonSize, (int)navButtonSize);
+
+        // White play symbol (triangle)
+        pixmap.setColor(Color.WHITE);
+        pixmap.fillTriangle(
+            (int)(navButtonSize * 0.35f), (int)(navButtonSize * 0.25f),
+            (int)(navButtonSize * 0.35f), (int)(navButtonSize * 0.75f),
+            (int)(navButtonSize * 0.75f), (int)(navButtonSize * 0.5f)
+        );
+
+        simulationButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Draw simulation button (below navigation button).
+     */
+    private void drawSimulationButton() {
+        if (spriteBatch == null || simulationButtonTexture == null) return;
+
+        float x = simulationButtonX;
+        float y = simulationButtonY;
+
+        spriteBatch.setProjectionMatrix(
+            new Matrix4().setToOrtho2D(
+                0, 0,
+                Gdx.graphics.getWidth(),
+                Gdx.graphics.getHeight()
+            )
+        );
+
+        spriteBatch.begin();
+        spriteBatch.draw(
+            simulationMode ? simulationButtonActiveTexture : simulationButtonTexture,
+            x, y,
+            navButtonSize, navButtonSize
+        );
+        spriteBatch.end();
+    }
 
     /**
      * Create default flag icon
@@ -640,6 +721,14 @@ public class MapScreen extends BaseScreen {
                     }
                     return true;
                 }
+                // CHECK CLICK ON SIMULATION BUTTON
+                if (isSimulationButtonClicked(screenX, gdxY)) {
+                    Gdx.app.log("MapScreen", "Simulation button clicked");
+
+                    // Otvori novi simulation screen
+                    openSimulationScreen();
+                    return true;
+                }
 
                 // If info panel is clicked, turn off navigation
                 if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
@@ -699,7 +788,38 @@ public class MapScreen extends BaseScreen {
         inputMultiplexer.addProcessor(gestureDetector);
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
+    /**
+     * Checks if the simulation button was clicked.
+     */
+    private boolean isSimulationButtonClicked(float screenX, float screenY) {
+        float x = simulationButtonX;
+        float y = simulationButtonY;
 
+        return screenX >= x &&
+            screenX <= x + navButtonSize &&
+            screenY >= y &&
+            screenY <= y + navButtonSize;
+    }
+    private void openSimulationScreen() {
+        Gdx.app.log("MapScreen", "Opening simulation screen...");
+
+        // Zaustavi sve aktivne animacije ili procese
+        if (isMovingToTarget) {
+            isMovingToTarget = false;
+        }
+
+        if (navigationMode) {
+            navigationMode = false;
+            resetNavigation();
+        }
+
+        // Sakrij info panel ako je otvoren
+        infoPanel.hide();
+
+        // Otvori novi simulation screen
+        SimulationScreen simulationScreen = new SimulationScreen(game);
+        game.setScreen(simulationScreen);
+    }
     /**
      * Checks if the navigation button was clicked.
      */
@@ -788,6 +908,9 @@ public class MapScreen extends BaseScreen {
 
             // DRAW NAVIGATION IF ACTIVE
             drawNavigation();
+
+            // Draw simulation button
+            drawSimulationButton();
 
             // Draw info panel if visible
             infoPanel.render();
@@ -1782,6 +1905,12 @@ public class MapScreen extends BaseScreen {
         }
         if (flagIconTexture != null) {
             flagIconTexture.dispose();
+        }
+        if (simulationButtonTexture != null) {
+            simulationButtonTexture.dispose();
+        }
+        if (simulationButtonActiveTexture != null && simulationButtonActiveTexture != simulationButtonTexture) {
+            simulationButtonActiveTexture.dispose();
         }
         FontManager.dispose();
     }
