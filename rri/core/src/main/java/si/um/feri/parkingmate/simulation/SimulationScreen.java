@@ -86,6 +86,16 @@ public class SimulationScreen extends BaseScreen {
     private float speedButtonX, speedButtonY;
     private float speedButtonSpacing = 55f;
 
+    private Texture playButtonTexture;
+    private Texture pauseButtonTexture;
+    private float playButtonSize = 48f;
+    private float playButtonX, playButtonY;
+
+    private boolean isSimulationRunning = false;
+    private float simulationUpdateTimer = 0f;
+    // Dodajte ove konstante na početku klase
+    private static final float SIMULATION_UPDATE_INTERVAL = 0.5f; // Smanjite na 0.5 sekundi (brže menjanje)
+    private static final float SLOW_CLOCK_UPDATE_INTERVAL = 0.2f; // Dodajte za sporije kretanje sata
     public SimulationScreen(ParkingMate game) {
         this.game = game;
         this.markers = new ArrayList<>();
@@ -97,8 +107,29 @@ public class SimulationScreen extends BaseScreen {
         initializeSimulationMap();
         initializeSimulationClock();
         initializeSpeedButtons();
+        initializeSimulationButton(); // DODAJTE OVO
     }
+    private void drawSimulationButton() {
+        if (spriteBatch == null) return;
 
+        updatePlayButtonPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        if (isSimulationRunning) {
+            // Prikaži pause dugme kada je simulacija aktivna
+            if (pauseButtonTexture != null) {
+                spriteBatch.draw(pauseButtonTexture, playButtonX, playButtonY, playButtonSize, playButtonSize);
+            }
+        } else {
+            // Prikaži play dugme kada je simulacija pauzirana
+            if (playButtonTexture != null) {
+                spriteBatch.draw(playButtonTexture, playButtonX, playButtonY, playButtonSize, playButtonSize);
+            }
+        }
+
+        spriteBatch.end();
+    }
     private void initializeSimulationMap() {
         if (Keys.GEOAPIFY == null || Keys.GEOAPIFY.isEmpty()) {
             Gdx.app.error("SimulationScreen", "Geoapify API key is not set!");
@@ -262,7 +293,74 @@ public class SimulationScreen extends BaseScreen {
         speedButtonX = closeButtonMargin;
         speedButtonY = Gdx.graphics.getHeight() - speedButtonSize - closeButtonMargin - 120f;
     }
+    private void initializeSimulationButton() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING SIMULATION BUTTON ===");
 
+        try {
+            playButtonTexture = new Texture(Gdx.files.internal("ui/play_button.png"));
+        } catch (Exception e) {
+            createDefaultPlayButton();
+        }
+
+        try {
+            pauseButtonTexture = new Texture(Gdx.files.internal("ui/pause_button.png"));
+        } catch (Exception e) {
+            createDefaultPauseButton();
+        }
+
+        updatePlayButtonPosition();
+    }
+
+    private void createDefaultPlayButton() {
+        Pixmap pixmap = new Pixmap((int)playButtonSize, (int)playButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.2f, 0.7f, 0.2f, 1f); // Zelena boja
+        pixmap.fillCircle((int)playButtonSize/2, (int)playButtonSize/2, (int)playButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        // Crtanje trougla (play ikonica)
+        int triangleSize = (int)(playButtonSize * 0.4);
+        int[] xPoints = {(int)(playButtonSize*0.4), (int)(playButtonSize*0.4), (int)(playButtonSize*0.7)};
+        int[] yPoints = {(int)(playButtonSize*0.35), (int)(playButtonSize*0.65), (int)(playButtonSize*0.5)};
+        pixmap.fillTriangle(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2]);
+
+        playButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    private void createDefaultPauseButton() {
+        Pixmap pixmap = new Pixmap((int)playButtonSize, (int)playButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.8f, 0.6f, 0.2f, 1f); // Narandžasta boja
+        pixmap.fillCircle((int)playButtonSize/2, (int)playButtonSize/2, (int)playButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        // Crtanje dve vertikalne linije (pause ikonica)
+        int barWidth = (int)(playButtonSize * 0.15f);
+        int barHeight = (int)(playButtonSize * 0.4f);
+
+        // Leva linija
+        pixmap.fillRectangle(
+            (int)(playButtonSize * 0.35f) - barWidth/2,
+            (int)(playButtonSize * 0.5f) - barHeight/2,
+            barWidth,
+            barHeight
+        );
+
+        // Desna linija
+        pixmap.fillRectangle(
+            (int)(playButtonSize * 0.65f) - barWidth/2,
+            (int)(playButtonSize * 0.5f) - barHeight/2,
+            barWidth,
+            barHeight
+        );
+
+        pauseButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    private void updatePlayButtonPosition() {
+        playButtonX = closeButtonMargin;
+        playButtonY = Gdx.graphics.getHeight() - playButtonSize - closeButtonMargin - 170f;
+    }
     private void createDefaultClockIcon() {
         Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
         pixmap.setColor(1f, 0.8f, 0f, 1f);
@@ -286,15 +384,14 @@ public class SimulationScreen extends BaseScreen {
     private void updateSimulationTime(float delta) {
         if (isClockPaused) return;
         clockUpdateTimer += delta;
-        if (clockUpdateTimer >= CLOCK_UPDATE_INTERVAL) {
-            simulationTime += (timeSpeedMultiplier * CLOCK_UPDATE_INTERVAL * 60f);
+        if (clockUpdateTimer >= SLOW_CLOCK_UPDATE_INTERVAL) { // Koristite sporiji interval za sat
+            simulationTime += (timeSpeedMultiplier * SLOW_CLOCK_UPDATE_INTERVAL * 30f); // Umanjite faktor (30f umesto 60f)
             if (simulationTime >= 24 * 60f) {
                 simulationTime -= 24 * 60f;
             }
             clockUpdateTimer = 0f;
         }
     }
-
     private void drawSimulationClock() {
         if (spriteBatch == null || font == null) return;
         updateClockPosition();
@@ -490,13 +587,16 @@ public class SimulationScreen extends BaseScreen {
                 camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
                 return true;
             }
+
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
 
-                if (isCloseButtonClicked(screenX, gdxY)) {
-                    Gdx.app.log("SimulationScreen", "Close button clicked - returning to map");
-                    returnToMapScreen();
+                // Provera za play/pause dugme
+                if (isPlayButtonClicked(screenX, gdxY)) {
+                    isSimulationRunning = !isSimulationRunning;
+                    Gdx.app.log("SimulationScreen", "Simulation " +
+                        (isSimulationRunning ? "STARTED" : "PAUSED"));
                     return true;
                 }
 
@@ -565,11 +665,158 @@ public class SimulationScreen extends BaseScreen {
         Gdx.app.log("SimulationScreen", "Returning to MapScreen");
         game.setScreen(new MapScreen(game));
     }
+    private void updateSimulation(float delta) {
+        if (!isSimulationRunning) return;
 
+        simulationUpdateTimer += delta;
+        if (simulationUpdateTimer >= SIMULATION_UPDATE_INTERVAL) {
+            applyTimeBasedBehavior();
+            updateMarkersBasedOnTime();
+            simulationUpdateTimer = 0f;
+        }
+    }
+    private boolean isPlayButtonClicked(float screenX, float screenY) {
+        updatePlayButtonPosition();
+        return screenX >= playButtonX && screenX <= playButtonX + playButtonSize &&
+            screenY >= playButtonY && screenY <= playButtonY + playButtonSize;
+    }
+    private void drawStatistics() {
+        if (spriteBatch == null || font == null) return;
+
+        int totalMarkers = markers.size();
+        int freeMarkers = 0;
+        int partialMarkers = 0;
+        int fullMarkers = 0;
+
+        for (Marker marker : markers) {
+            switch (marker.getState()) {
+                case FREE:
+                    freeMarkers++;
+                    break;
+                case PARTIAL:
+                    partialMarkers++;
+                    break;
+                case FULL:
+                    fullMarkers++;
+                    break;
+            }
+        }
+
+        DayPhase phase = SimulationTimeMapper.getDayPhase(simulationTime);
+        String phaseText = "Phase: " + phase.toString();
+        String statsText = String.format("Free: %d/%d (%.0f%%)",
+            freeMarkers, totalMarkers,
+            totalMarkers > 0 ? (freeMarkers * 100f / totalMarkers) : 0);
+
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0,
+            Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        font.setColor(Color.WHITE);
+        font.draw(spriteBatch, phaseText, clockX, clockY - 30f);
+        font.draw(spriteBatch, statsText, clockX, clockY - 60f);
+
+        // Prikaz statusa simulacije
+        String simStatus = isSimulationRunning ? "▶ SIMULATION RUNNING" : "⏸ SIMULATION PAUSED";
+        font.setColor(isSimulationRunning ? Color.GREEN : Color.YELLOW);
+        font.draw(spriteBatch, simStatus, playButtonX, playButtonY - 20f);
+
+        spriteBatch.end();
+    }
+    private void updateMarkersBasedOnTime() {
+        DayPhase phase = SimulationTimeMapper.getDayPhase(simulationTime);
+        float arrivalMultiplier = SimulationTimeMapper.getArrivalMultiplier(phase);
+        float occupancyMultiplier = SimulationTimeMapper.getOccupancyRateMultiplier(phase);
+
+        Gdx.app.log("SimulationScreen", "Phase: " + phase +
+            ", Arrival: " + arrivalMultiplier + "x" +
+            ", Occupancy: " + occupancyMultiplier + "x");
+
+        for (Marker marker : markers) {
+            int available = marker.getAvailableSpots();
+            int total = marker.getTotalSpots();
+
+            if (total == 0) continue;
+
+            // Računamo osnovnu promenu na osnovu vremena dana
+            float baseChange = calculateBaseChange(phase);
+
+            // Primenjujemo multiplikatore za špic periode
+            float adjustedChange = baseChange * arrivalMultiplier;
+
+            // Dodajemo dodatnu nasumičnost
+            float randomFactor = MathUtils.random(-0.5f, 0.5f);
+            float finalChange = adjustedChange + randomFactor;
+
+            // Ažuriramo dostupna mesta (negativna vrednost = dolazak vozila)
+            available -= Math.round(finalChange);
+
+            // Ograničavamo vrednosti
+            available = MathUtils.clamp(available, 0, total);
+
+            // Primenjujemo brže punjenje tokom špica
+            if (finalChange < 0 && (phase == DayPhase.MORNING_RUSH ||
+                phase == DayPhase.AFTERNOON_RUSH)) {
+                // Tokom špica, dodatno smanjujemo dostupna mesta
+                if (available > 0) {
+                    available -= MathUtils.random(0, 2);
+                    available = Math.max(available, 0);
+                }
+            }
+
+            marker.setAvailableSpots(available);
+
+            // Ažuriramo status markera na osnovu zauzeća
+            updateMarkerState(marker);
+        }
+    }
+
+    private float calculateBaseChange(DayPhase phase) {
+        switch (phase) {
+            case MORNING_RUSH:
+                return 3.0f; // Najviše dolazaka
+            case DAYTIME:
+                return 1.0f; // Normalan promet
+            case AFTERNOON_RUSH:
+                return 2.5f; // Mnogo dolazaka
+            case EVENING:
+                return -1.0f; // Polagan odlazak
+            case NIGHT:
+                return -2.0f; // Odlazak vozila
+            default:
+                return 0.5f;
+        }
+    }
+
+    private void updateMarkerState(Marker marker) {
+        int total = marker.getTotalSpots();
+        int available = marker.getAvailableSpots();
+
+        if (total == 0) {
+            marker.setState(Marker.MarkerState.UNKNOWN);
+            return;
+        }
+
+        float occupancyRatio = (float) available / total;
+
+        if (occupancyRatio >= 0.6f) {
+            marker.setState(Marker.MarkerState.FREE);
+        } else if (occupancyRatio >= 0.2f) {
+            marker.setState(Marker.MarkerState.PARTIAL);
+        } else {
+            marker.setState(Marker.MarkerState.FULL);
+        }
+    }
     @Override
     public void render(float delta) {
         handleKeyboardInput();
-        updateSimulationTime(delta);
+
+        // Ažuriraj vreme samo ako je simulacija pokrenuta
+        if (isSimulationRunning) {
+            updateSimulationTime(delta);
+            updateSimulation(delta); // DODAJTE OVO
+        }
+
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -583,9 +830,9 @@ public class SimulationScreen extends BaseScreen {
             drawUI();
             drawSimulationClock();
             drawSpeedButtons();
+            drawSimulationButton(); // DODAJTE OVO
         }
     }
-
     private void drawMarkers() {
         if (beginTile == null || markers == null) {
             return;
@@ -685,25 +932,60 @@ public class SimulationScreen extends BaseScreen {
 
             if (total == 0) continue;
 
+            // Dobijamo multiplikatore za trenutnu fazu dana
+            float arrivalMultiplier = SimulationTimeMapper.getArrivalMultiplier(phase);
+            float occupancyMultiplier = SimulationTimeMapper.getOccupancyRateMultiplier(phase);
+
+            // Osnovna promena koja zavisi od faze dana
+            int baseChange = 0;
+            int additionalChange = 0; // Dodatna promena tokom špica
+
             switch (phase) {
-                case MORNING:
-                    available -= 1; // dolasci
+                case MORNING_RUSH:
+                    // Jutarnji špic: VIŠE dolazaka i BRŽE menjanje
+                    baseChange = -MathUtils.random(3, 6); // Povećano za brže menjanje
+                    additionalChange = -MathUtils.random(1, 3); // Dodatno tokom špica
                     break;
-                case DAY:
-                    // skoro stabilno
-                    available += MathUtils.random(-1, 1);
+                case DAYTIME:
+                    // Dan: normalan promet
+                    baseChange = MathUtils.random(-1, 2);
+                    break;
+                case AFTERNOON_RUSH:
+                    // Popodnevni špic: VIŠE dolazaka i BRŽE menjanje
+                    baseChange = -MathUtils.random(2, 5); // Povećano za brže menjanje
+                    additionalChange = -MathUtils.random(1, 2); // Dodatno tokom špica
+                    break;
+                case EVENING:
+                    // Veče: polagan odlazak
+                    baseChange = MathUtils.random(0, 3);
                     break;
                 case NIGHT:
-                    available += 1; // odlasci
+                    // Noć: odlazak vozila
+                    baseChange = MathUtils.random(2, 4);
                     break;
             }
 
+            // Primenjujemo multiplikatore
+            int finalChange = Math.round(baseChange * arrivalMultiplier);
+
+            // Tokom špica dodajemo DODATNU promenu za brže menjanje
+            if ((phase == DayPhase.MORNING_RUSH || phase == DayPhase.AFTERNOON_RUSH)) {
+                finalChange += additionalChange;
+                // Dodatno ubrzanje za brže menjanje
+                finalChange = (int)(finalChange * 1.5f);
+            }
+
+            // Ažuriramo dostupna mesta
+            available += finalChange;
             available = MathUtils.clamp(available, 0, total);
+
+            // Postavljamo novu vrednost
             marker.setAvailableSpots(available);
+
+            // Ažuriramo status markera na osnovu zauzeća
+            updateMarkerState(marker);
         }
     }
-
-
     private void handleKeyboardInput() {
         if (Gdx.input.isKeyPressed(Input.Keys.Q) || Gdx.input.isKeyPressed(Input.Keys.PLUS)) {
             camera.zoom -= 0.02f;
@@ -820,6 +1102,12 @@ public class SimulationScreen extends BaseScreen {
         if (fastButtonTexture != null) {
             fastButtonTexture.dispose();
         }
+        if (playButtonTexture != null) {
+            playButtonTexture.dispose();
+        }
+        if (pauseButtonTexture != null) {
+            pauseButtonTexture.dispose();
+        }
     }
 
     private class SimulationGestureListener implements GestureDetector.GestureListener {
@@ -870,6 +1158,7 @@ public class SimulationScreen extends BaseScreen {
         updateClockPosition();
         updateCloseButtonPosition();
         updateSpeedButtonsPosition();
+        updatePlayButtonPosition(); // DODAJTE OVO
         Gdx.app.log("SimulationScreen", "Screen resized to: " + width + "x" + height);
     }
 }
