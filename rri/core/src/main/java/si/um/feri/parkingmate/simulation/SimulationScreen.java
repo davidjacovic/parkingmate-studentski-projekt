@@ -70,13 +70,21 @@ public class SimulationScreen extends BaseScreen {
     private ParkingService parkingService;
 
     private float simulationTime = 8.0f * 60f;
-    private float timeSpeedMultiplier = 10f;
+    private float timeSpeedMultiplier = 1f;
     private boolean isClockPaused = false;
     private Texture clockIconTexture;
     private float clockUpdateTimer = 0f;
     private static final float CLOCK_UPDATE_INTERVAL = 0.1f;
 
     private static final String API_BASE_URL = "http://localhost:3002";
+
+    private Texture slowButtonTexture;
+    private Texture normalButtonTexture;
+    private Texture fastButtonTexture;
+    private float speedButtonSize = 48f;
+    private float speedButtonMargin = 15f;
+    private float speedButtonX, speedButtonY;
+    private float speedButtonSpacing = 55f;
 
     public SimulationScreen(ParkingMate game) {
         this.game = game;
@@ -88,6 +96,7 @@ public class SimulationScreen extends BaseScreen {
     public void show() {
         initializeSimulationMap();
         initializeSimulationClock();
+        initializeSpeedButtons();
     }
 
     private void initializeSimulationMap() {
@@ -174,14 +183,84 @@ public class SimulationScreen extends BaseScreen {
         updateClockPosition();
     }
 
+    private void initializeSpeedButtons() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING SPEED BUTTONS ===");
+
+        try {
+            slowButtonTexture = new Texture(Gdx.files.internal("ui/slow_speed_icon.png"));
+        } catch (Exception e) {
+            createDefaultSlowButton();
+        }
+
+        try {
+            normalButtonTexture = new Texture(Gdx.files.internal("ui/normal_speed_icon.png"));
+        } catch (Exception e) {
+            createDefaultNormalButton();
+        }
+
+        try {
+            fastButtonTexture = new Texture(Gdx.files.internal("ui/fast_speed_icon.png"));
+        } catch (Exception e) {
+            createDefaultFastButton();
+        }
+
+        updateSpeedButtonsPosition();
+    }
+
+    private void createDefaultSlowButton() {
+        Pixmap pixmap = new Pixmap((int)speedButtonSize, (int)speedButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.2f, 0.6f, 0.2f, 1f);
+        pixmap.fillCircle((int)speedButtonSize/2, (int)speedButtonSize/2, (int)speedButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+        pixmap.drawLine((int)(speedButtonSize*0.3), (int)(speedButtonSize*0.5), (int)(speedButtonSize*0.7), (int)(speedButtonSize*0.5));
+        pixmap.drawLine((int)(speedButtonSize*0.3), (int)(speedButtonSize*0.6), (int)(speedButtonSize*0.7), (int)(speedButtonSize*0.6));
+        pixmap.drawLine((int)(speedButtonSize*0.5), (int)(speedButtonSize*0.35), (int)(speedButtonSize*0.5), (int)(speedButtonSize*0.65));
+        slowButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    private void createDefaultNormalButton() {
+        Pixmap pixmap = new Pixmap((int)speedButtonSize, (int)speedButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.2f, 0.4f, 0.8f, 1f);
+        pixmap.fillCircle((int)speedButtonSize/2, (int)speedButtonSize/2, (int)speedButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+        int triangleSize = (int)(speedButtonSize * 0.4);
+        int[] xPoints = {(int)(speedButtonSize*0.4), (int)(speedButtonSize*0.4), (int)(speedButtonSize*0.7)};
+        int[] yPoints = {(int)(speedButtonSize*0.35), (int)(speedButtonSize*0.65), (int)(speedButtonSize*0.5)};
+        pixmap.fillTriangle(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2]);
+        normalButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    private void createDefaultFastButton() {
+        Pixmap pixmap = new Pixmap((int)speedButtonSize, (int)speedButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.8f, 0.2f, 0.2f, 1f);
+        pixmap.fillCircle((int)speedButtonSize/2, (int)speedButtonSize/2, (int)speedButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+        int arrowSize = (int)(speedButtonSize * 0.3);
+        int[] xPoints1 = {(int)(speedButtonSize*0.35), (int)(speedButtonSize*0.35), (int)(speedButtonSize*0.55)};
+        int[] yPoints1 = {(int)(speedButtonSize*0.35), (int)(speedButtonSize*0.65), (int)(speedButtonSize*0.5)};
+        pixmap.fillTriangle(xPoints1[0], yPoints1[0], xPoints1[1], yPoints1[1], xPoints1[2], yPoints1[2]);
+        int[] xPoints2 = {(int)(speedButtonSize*0.55), (int)(speedButtonSize*0.55), (int)(speedButtonSize*0.75)};
+        int[] yPoints2 = {(int)(speedButtonSize*0.35), (int)(speedButtonSize*0.65), (int)(speedButtonSize*0.5)};
+        pixmap.fillTriangle(xPoints2[0], yPoints2[0], xPoints2[1], yPoints2[1], xPoints2[2], yPoints2[2]);
+        fastButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
     private void updateClockPosition() {
         clockX = closeButtonMargin;
-        clockY = Gdx.graphics.getHeight() - clockHeight - closeButtonMargin;
+        clockY = Gdx.graphics.getHeight() - clockHeight - closeButtonMargin - 70f;
     }
 
     private void updateCloseButtonPosition() {
         closeButtonX = Gdx.graphics.getWidth() - closeButtonSize - closeButtonMargin;
         closeButtonY = Gdx.graphics.getHeight() - closeButtonSize - closeButtonMargin;
+    }
+
+    private void updateSpeedButtonsPosition() {
+        speedButtonX = closeButtonMargin;
+        speedButtonY = Gdx.graphics.getHeight() - speedButtonSize - closeButtonMargin - 120f;
     }
 
     private void createDefaultClockIcon() {
@@ -226,8 +305,33 @@ public class SimulationScreen extends BaseScreen {
         }
         String timeText = formatSimulationTime(simulationTime);
         String displayText = "🕒 " + timeText;
-        font.setColor(Color.BLACK);
+        font.setColor(Color.WHITE);
         font.draw(spriteBatch, displayText, clockX + 50f, clockY + 30f);
+        spriteBatch.end();
+    }
+
+    private void drawSpeedButtons() {
+        if (spriteBatch == null) return;
+        updateSpeedButtonsPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        float currentX = speedButtonX;
+
+        if (slowButtonTexture != null) {
+            spriteBatch.draw(slowButtonTexture, currentX, speedButtonY, speedButtonSize, speedButtonSize);
+            currentX += speedButtonSpacing;
+        }
+
+        if (normalButtonTexture != null) {
+            spriteBatch.draw(normalButtonTexture, currentX, speedButtonY, speedButtonSize, speedButtonSize);
+            currentX += speedButtonSpacing;
+        }
+
+        if (fastButtonTexture != null) {
+            spriteBatch.draw(fastButtonTexture, currentX, speedButtonY, speedButtonSize, speedButtonSize);
+        }
+
         spriteBatch.end();
     }
 
@@ -389,16 +493,37 @@ public class SimulationScreen extends BaseScreen {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
+
                 if (isCloseButtonClicked(screenX, gdxY)) {
                     Gdx.app.log("SimulationScreen", "Close button clicked - returning to map");
                     returnToMapScreen();
                     return true;
                 }
+
                 if (isClockAreaClicked(screenX, gdxY)) {
                     isClockPaused = !isClockPaused;
                     Gdx.app.log("SimulationScreen", "Clock " + (isClockPaused ? "PAUSED" : "RESUMED") + " via click");
                     return true;
                 }
+
+                if (isSlowButtonClicked(screenX, gdxY)) {
+                    timeSpeedMultiplier = 0.25f;
+                    Gdx.app.log("SimulationScreen", "Speed set to SLOW (0.25x)");
+                    return true;
+                }
+
+                if (isNormalButtonClicked(screenX, gdxY)) {
+                    timeSpeedMultiplier = 1f;
+                    Gdx.app.log("SimulationScreen", "Speed set to NORMAL (1x)");
+                    return true;
+                }
+
+                if (isFastButtonClicked(screenX, gdxY)) {
+                    timeSpeedMultiplier = 4f;
+                    Gdx.app.log("SimulationScreen", "Speed set to FAST (4x)");
+                    return true;
+                }
+
                 return false;
             }
         };
@@ -416,6 +541,24 @@ public class SimulationScreen extends BaseScreen {
     private boolean isCloseButtonClicked(float screenX, float screenY) {
         updateCloseButtonPosition();
         return screenX >= closeButtonX && screenX <= closeButtonX + closeButtonSize && screenY >= closeButtonY && screenY <= closeButtonY + closeButtonSize;
+    }
+
+    private boolean isSlowButtonClicked(float screenX, float screenY) {
+        updateSpeedButtonsPosition();
+        float buttonX = speedButtonX;
+        return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
+    }
+
+    private boolean isNormalButtonClicked(float screenX, float screenY) {
+        updateSpeedButtonsPosition();
+        float buttonX = speedButtonX + speedButtonSpacing;
+        return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
+    }
+
+    private boolean isFastButtonClicked(float screenX, float screenY) {
+        updateSpeedButtonsPosition();
+        float buttonX = speedButtonX + speedButtonSpacing * 2;
+        return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
     }
 
     private void returnToMapScreen() {
@@ -439,6 +582,7 @@ public class SimulationScreen extends BaseScreen {
             drawMarkers();
             drawUI();
             drawSimulationClock();
+            drawSpeedButtons();
         }
     }
 
@@ -571,6 +715,18 @@ public class SimulationScreen extends BaseScreen {
             simulationTime = 8.0f * 60f;
             Gdx.app.log("SimulationScreen", "Time reset to 08:00");
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
+            timeSpeedMultiplier = 0.25f;
+            Gdx.app.log("SimulationScreen", "Speed set to SLOW (0.25x)");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_2)) {
+            timeSpeedMultiplier = 1f;
+            Gdx.app.log("SimulationScreen", "Speed set to NORMAL (1x)");
+        }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_3)) {
+            timeSpeedMultiplier = 4f;
+            Gdx.app.log("SimulationScreen", "Speed set to FAST (4x)");
+        }
     }
 
     private void clampCameraPosition() {
@@ -627,6 +783,15 @@ public class SimulationScreen extends BaseScreen {
         if (clockIconTexture != null) {
             clockIconTexture.dispose();
         }
+        if (slowButtonTexture != null) {
+            slowButtonTexture.dispose();
+        }
+        if (normalButtonTexture != null) {
+            normalButtonTexture.dispose();
+        }
+        if (fastButtonTexture != null) {
+            fastButtonTexture.dispose();
+        }
     }
 
     private class SimulationGestureListener implements GestureDetector.GestureListener {
@@ -676,6 +841,7 @@ public class SimulationScreen extends BaseScreen {
         super.resize(width, height);
         updateClockPosition();
         updateCloseButtonPosition();
+        updateSpeedButtonsPosition();
         Gdx.app.log("SimulationScreen", "Screen resized to: " + width + "x" + height);
     }
 }
