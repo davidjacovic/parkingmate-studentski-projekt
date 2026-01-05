@@ -58,7 +58,12 @@ namespace ParkingMate.Blockchain
 
             // Test integracije dinamičke težine u mining proces (6.1.3)
             // Otkomentariši sledeću liniju da testiraš integraciju:
-            TestDynamicDifficultyIntegration.RunTest();
+            // TestDynamicDifficultyIntegration.RunTest();
+            // return;
+
+            // Test izračunavanja kumulativne težine (6.2.1)
+            // Otkomentariši sledeću liniju da testiraš izračunavanje 2^difficulty:
+            TestCumulativeWeight.RunTest();
             return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
