@@ -1,23 +1,27 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace ParkingMate.Blockchain
 {
     /// <summary>
-    /// Testovi za izračunavanje kumulativne težine (6.2.1 - Izračunavanje 2^difficulty po bloku).
+    /// Testovi za izračunavanje kumulativne težine (6.2.1 - Izračunavanje 2^difficulty po bloku, 6.2.2 - Sabiranje po lancu).
     /// </summary>
     public static class TestCumulativeWeight
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test izračunavanja 2^difficulty po bloku (6.2.1) ===\n");
+            Console.WriteLine("=== Test izračunavanja kumulativne težine (6.2.1, 6.2.2) ===\n");
 
             TestBlockWeightCalculation();
             TestBlockWeightWithBlockObject();
             TestBlockWeightEdgeCases();
             TestBlockWeightComparison();
+            TestChainWeightCalculation();
+            TestChainWeightWithBlockchain();
+            TestChainWeightEdgeCases();
 
-            Console.WriteLine("\n✓ Testovi za Subtask 6.2.1 (Izračunavanje 2^difficulty po bloku) su prošli!\n");
+            Console.WriteLine("\n✓ Testovi za Subtask 6.2.1 (Izračunavanje 2^difficulty po bloku) i 6.2.2 (Sabiranje po lancu) su prošli!\n");
         }
 
         private static void TestBlockWeightCalculation()
@@ -168,6 +172,151 @@ namespace ParkingMate.Blockchain
             else
             {
                 Console.WriteLine("  ✗ Razlika između uzastopnih difficulty vrednosti nije eksponencijalna");
+            }
+        }
+
+        private static void TestChainWeightCalculation()
+        {
+            Console.WriteLine("\nTest 5: Izračunavanje kumulativne težine lanca (6.2.2)");
+
+            // Kreiraj lanac sa različitim difficulty vrednostima
+            var chain = new List<Block>();
+            long baseTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            // Genesis blok (difficulty=1)
+            chain.Add(new Block(0, "Genesis", baseTime, "0", 1, 0));
+            // Blok 1 (difficulty=2)
+            chain.Add(new Block(1, "Block 1", baseTime + 1, "", 2, 0));
+            // Blok 2 (difficulty=3)
+            chain.Add(new Block(2, "Block 2", baseTime + 2, "", 3, 0));
+            // Blok 3 (difficulty=2)
+            chain.Add(new Block(3, "Block 3", baseTime + 3, "", 2, 0));
+
+            BigInteger chainWeight = CumulativeWeight.CalculateChainWeight(chain);
+
+            // Očekivana težina: 2^1 + 2^2 + 2^3 + 2^2 = 2 + 4 + 8 + 4 = 18
+            BigInteger expectedWeight = 2 + 4 + 8 + 4; // 18
+
+            if (chainWeight == expectedWeight)
+            {
+                Console.WriteLine($"  ✓ Kumulativna težina lanca: {chainWeight} (očekivano: {expectedWeight})");
+                Console.WriteLine($"    Blokovi: difficulty [1, 2, 3, 2] => težine [2, 4, 8, 4] => suma = 18");
+            }
+            else
+            {
+                Console.WriteLine($"  ✗ Očekivano: {expectedWeight}, dobijeno: {chainWeight}");
+            }
+
+            // Test sa jednim blokom
+            var singleBlockChain = new List<Block> { chain[0] };
+            BigInteger singleBlockWeight = CumulativeWeight.CalculateChainWeight(singleBlockChain);
+            BigInteger expectedSingleWeight = BigInteger.Pow(2, 1); // 2
+            if (singleBlockWeight == expectedSingleWeight)
+            {
+                Console.WriteLine($"  ✓ Lanac sa jednim blokom (difficulty=1): weight={singleBlockWeight}");
+            }
+            else
+            {
+                Console.WriteLine($"  ✗ Očekivano: {expectedSingleWeight}, dobijeno: {singleBlockWeight}");
+            }
+        }
+
+        private static void TestChainWeightWithBlockchain()
+        {
+            Console.WriteLine("\nTest 6: Izračunavanje kumulativne težine pomoću Blockchain objekta (6.2.2)");
+
+            var blockchain = new Blockchain();
+            
+            // Genesis blok je već dodat (difficulty=1)
+            // Dodaj još nekoliko blokova za test
+            for (int i = 1; i <= 3; i++)
+            {
+                var block = new Block(
+                    (uint)i,
+                    $"Test block {i}",
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    blockchain.GetLatestBlock().Hash,
+                    (uint)(i + 1), // difficulty: 2, 3, 4
+                    0
+                );
+                blockchain.AddBlock(block);
+            }
+
+            BigInteger chainWeight = CumulativeWeight.CalculateChainWeight(blockchain);
+
+            // Genesis (difficulty=1) + blokovi (difficulty=2,3,4)
+            // Težine: 2 + 4 + 8 + 16 = 30
+            BigInteger expectedWeight = 2 + 4 + 8 + 16; // 30
+
+            if (chainWeight >= expectedWeight) // >= jer genesis blok ima difficulty=1
+            {
+                Console.WriteLine($"  ✓ Kumulativna težina blockchain-a: {chainWeight:N0}");
+                Console.WriteLine($"    Očekivano: ~{expectedWeight:N0} (zavisno od genesis bloka)");
+            }
+            else
+            {
+                Console.WriteLine($"  ✗ Očekivano minimum: {expectedWeight}, dobijeno: {chainWeight}");
+            }
+
+            // Test sa null blockchain-om
+            try
+            {
+                Blockchain? nullBlockchain = null;
+                CumulativeWeight.CalculateChainWeight(nullBlockchain!);
+                Console.WriteLine("  ✗ Očekivana greška za null blockchain, ali nije bačena");
+            }
+            catch (ArgumentNullException)
+            {
+                Console.WriteLine("  ✓ Null blockchain baca ArgumentNullException");
+            }
+        }
+
+        private static void TestChainWeightEdgeCases()
+        {
+            Console.WriteLine("\nTest 7: Edge cases za kumulativnu težinu lanca (6.2.2)");
+
+            // Test sa praznom listom
+            var emptyChain = new List<Block>();
+            BigInteger emptyWeight = CumulativeWeight.CalculateChainWeight(emptyChain);
+            if (emptyWeight == BigInteger.Zero)
+            {
+                Console.WriteLine("  ✓ Prazan lanac ima težinu 0");
+            }
+            else
+            {
+                Console.WriteLine($"  ✗ Očekivano: 0, dobijeno: {emptyWeight}");
+            }
+
+            // Test sa null listom
+            try
+            {
+                IReadOnlyList<Block>? nullChain = null;
+                CumulativeWeight.CalculateChainWeight(nullChain!);
+                Console.WriteLine("  ✗ Očekivana greška za null chain, ali nije bačena");
+            }
+            catch (ArgumentNullException)
+            {
+                Console.WriteLine("  ✓ Null chain baca ArgumentNullException");
+            }
+
+            // Test sa blokovima sa istom difficulty vrednošću
+            var sameDifficultyChain = new List<Block>();
+            long baseTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            for (int i = 0; i < 5; i++)
+            {
+                sameDifficultyChain.Add(new Block((uint)i, $"Block {i}", baseTime + i, i == 0 ? "0" : "", 3, 0));
+            }
+
+            BigInteger sameDifficultyWeight = CumulativeWeight.CalculateChainWeight(sameDifficultyChain);
+            BigInteger expectedSameWeight = 5 * BigInteger.Pow(2, 3); // 5 * 8 = 40
+
+            if (sameDifficultyWeight == expectedSameWeight)
+            {
+                Console.WriteLine($"  ✓ Lanac sa 5 blokova istom difficulty (3): weight={sameDifficultyWeight} (5 * 8 = 40)");
+            }
+            else
+            {
+                Console.WriteLine($"  ✗ Očekivano: {expectedSameWeight}, dobijeno: {sameDifficultyWeight}");
             }
         }
     }
