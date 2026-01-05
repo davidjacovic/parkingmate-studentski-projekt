@@ -5,13 +5,13 @@ using System.Numerics;
 namespace ParkingMate.Blockchain
 {
     /// <summary>
-    /// Testovi za izračunavanje kumulativne težine (6.2.1, 6.2.2, 6.2.3).
+    /// Testovi za izračunavanje kumulativne težine (6.2.1, 6.2.2, 6.2.3, 6.2.4).
     /// </summary>
     public static class TestCumulativeWeight
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test izračunavanja kumulativne težine (6.2.1, 6.2.2, 6.2.3) ===\n");
+            Console.WriteLine("=== Test izračunavanja kumulativne težine (6.2.1, 6.2.2, 6.2.3, 6.2.4) ===\n");
 
             TestBlockWeightCalculation();
             TestBlockWeightWithBlockObject();
@@ -23,8 +23,10 @@ namespace ParkingMate.Blockchain
             TestChainComparison();
             TestChainComparisonWithBlockchain();
             TestIsFirstChainHeavier();
+            TestSelectHeaviestChain();
+            TestSelectHeaviestBlockchain();
 
-            Console.WriteLine("\n✓ Testovi za Subtask 6.2.1, 6.2.2 i 6.2.3 su prošli!\n");
+            Console.WriteLine("\n✓ Testovi za Subtask 6.2.1, 6.2.2, 6.2.3 i 6.2.4 su prošli!\n");
         }
 
         private static void TestBlockWeightCalculation()
@@ -513,6 +515,31 @@ namespace ParkingMate.Blockchain
             bool isBlockchain1Heavier = CumulativeWeight.IsFirstChainHeavier(blockchain1, blockchain2);
             Console.WriteLine($"  ✓ IsFirstChainHeavier sa Blockchain objektima: {isBlockchain1Heavier}");
         }
+
+        private static void TestSelectHeaviestChain()
+        {
+            Console.WriteLine("\nTest 11: Izbor najte�eg lanca iz liste lanaca (6.2.4)");
+            var chains = new List<IReadOnlyList<Block>>();
+            long baseTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var chain1 = new List<Block> { new Block(0, "Genesis 1", baseTime, "0", 1, 0), new Block(1, "Block 1", baseTime + 1, "", 1, 0) };
+            var chain2 = new List<Block> { new Block(0, "Genesis 2", baseTime, "0", 2, 0), new Block(1, "Block 1", baseTime + 1, "", 2, 0) };
+            chains.Add(chain1); chains.Add(chain2);
+            var heaviest = CumulativeWeight.SelectHeaviestChain(chains);
+            if (heaviest == chain2) Console.WriteLine("   Najte�i lanac je pravilno izabran");
+        }
+
+        private static void TestSelectHeaviestBlockchain()
+        {
+            Console.WriteLine("\nTest 12: Izbor najte�eg blockchain-a iz liste (6.2.4)");
+            var blockchains = new List<Blockchain>();
+            var bc1 = new Blockchain(); var bc2 = new Blockchain();
+            bc1.AddBlock(new Block(1, "B1", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), bc1.GetLatestBlock().Hash, 3, 0));
+            bc2.AddBlock(new Block(1, "B1", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), bc2.GetLatestBlock().Hash, 2, 0));
+            blockchains.Add(bc1); blockchains.Add(bc2);
+            var heaviest = CumulativeWeight.SelectHeaviestBlockchain(blockchains);
+            if (heaviest == bc1) Console.WriteLine("   Najte�i blockchain je pravilno izabran");
+        }
     }
 }
+
 
