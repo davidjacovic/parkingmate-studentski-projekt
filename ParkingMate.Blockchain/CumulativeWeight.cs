@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 
 namespace ParkingMate.Blockchain
@@ -40,6 +42,54 @@ namespace ParkingMate.Blockchain
             }
 
             return CalculateBlockWeight(block.Difficulty);
+        }
+
+        /// <summary>
+        /// Izračunava kumulativnu težinu lanca sabiranjem težina svih blokova (6.2.2).
+        /// Kumulativna težina = suma(2^difficulty) za sve blokove u lancu.
+        /// 
+        /// Primer:
+        /// Lanac sa 3 bloka: difficulty [1, 2, 3]
+        /// Težine: [2, 4, 8]
+        /// Kumulativna težina = 2 + 4 + 8 = 14
+        /// </summary>
+        /// <param name="chain">Lista blokova u lancu</param>
+        /// <returns>Kumulativna težina lanca (suma 2^difficulty za sve blokove)</returns>
+        public static BigInteger CalculateChainWeight(IReadOnlyList<Block> chain)
+        {
+            if (chain == null)
+            {
+                throw new ArgumentNullException(nameof(chain));
+            }
+
+            if (chain.Count == 0)
+            {
+                return BigInteger.Zero;
+            }
+
+            // Saberi težine svih blokova u lancu
+            BigInteger totalWeight = BigInteger.Zero;
+            foreach (var block in chain)
+            {
+                totalWeight += CalculateBlockWeight(block);
+            }
+
+            return totalWeight;
+        }
+
+        /// <summary>
+        /// Izračunava kumulativnu težinu lanca koristeći Blockchain objekat (6.2.2).
+        /// </summary>
+        /// <param name="blockchain">Blockchain objekat</param>
+        /// <returns>Kumulativna težina lanca</returns>
+        public static BigInteger CalculateChainWeight(Blockchain blockchain)
+        {
+            if (blockchain == null)
+            {
+                throw new ArgumentNullException(nameof(blockchain));
+            }
+
+            return CalculateChainWeight(blockchain.Chain);
         }
     }
 }
