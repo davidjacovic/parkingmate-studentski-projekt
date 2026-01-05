@@ -41,9 +41,14 @@ namespace ParkingMate.Blockchain
             // TestMpiMasterWorker.RunTest();
             // return;
 
-            // Test MPI sinhronizacije i prekida (5.3.1)
+            // Test MPI sinhronizacije i prekida (5.3.1, 5.3.2, 5.3.3)
             // Otkomentariši sledeću liniju da testiraš MPI sinhronizaciju:
-            TestMpiSynchronization.RunTest();
+            // TestMpiSynchronization.RunTest();
+            // return;
+
+            // Test dinamičke težine (6.1.1)
+            // Otkomentariši sledeću liniju da testiraš time-based algoritam:
+            TestDynamicDifficulty.RunTest();
             return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
