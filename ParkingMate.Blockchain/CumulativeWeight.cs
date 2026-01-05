@@ -177,6 +177,86 @@ namespace ParkingMate.Blockchain
         {
             return CompareChains(blockchain1, blockchain2) == ChainComparisonResult.FirstHeavier;
         }
+
+        /// <summary>
+        /// Biramo najteži lanac iz liste lanaca na osnovu kumulativne težine (6.2.4).
+        /// Ako postoji više lanaca sa najvećom težinom, bira se prvi takav lanac.
+        /// </summary>
+        /// <param name="chains">Lista lanaca za poređenje</param>
+        /// <returns>Najteži lanac (ili null ako je lista prazna)</returns>
+        public static IReadOnlyList<Block>? SelectHeaviestChain(IReadOnlyList<IReadOnlyList<Block>> chains)
+        {
+            if (chains == null)
+            {
+                throw new ArgumentNullException(nameof(chains));
+            }
+
+            if (chains.Count == 0)
+            {
+                return null;
+            }
+
+            IReadOnlyList<Block> heaviestChain = chains[0];
+            BigInteger maxWeight = CalculateChainWeight(heaviestChain);
+
+            // Pronađi lanac sa najvećom težinom
+            for (int i = 1; i < chains.Count; i++)
+            {
+                if (chains[i] == null)
+                {
+                    continue; // Preskoči null lanac
+                }
+
+                BigInteger currentWeight = CalculateChainWeight(chains[i]);
+                if (currentWeight > maxWeight)
+                {
+                    maxWeight = currentWeight;
+                    heaviestChain = chains[i];
+                }
+            }
+
+            return heaviestChain;
+        }
+
+        /// <summary>
+        /// Biramo najteži blockchain iz liste blockchain-ova na osnovu kumulativne težine (6.2.4).
+        /// Ako postoji više blockchain-ova sa najvećom težinom, bira se prvi takav blockchain.
+        /// </summary>
+        /// <param name="blockchains">Lista blockchain-ova za poređenje</param>
+        /// <returns>Najteži blockchain (ili null ako je lista prazna)</returns>
+        public static Blockchain? SelectHeaviestBlockchain(IReadOnlyList<Blockchain> blockchains)
+        {
+            if (blockchains == null)
+            {
+                throw new ArgumentNullException(nameof(blockchains));
+            }
+
+            if (blockchains.Count == 0)
+            {
+                return null;
+            }
+
+            Blockchain heaviestBlockchain = blockchains[0];
+            BigInteger maxWeight = CalculateChainWeight(heaviestBlockchain);
+
+            // Pronađi blockchain sa najvećom težinom
+            for (int i = 1; i < blockchains.Count; i++)
+            {
+                if (blockchains[i] == null)
+                {
+                    continue; // Preskoči null blockchain
+                }
+
+                BigInteger currentWeight = CalculateChainWeight(blockchains[i]);
+                if (currentWeight > maxWeight)
+                {
+                    maxWeight = currentWeight;
+                    heaviestBlockchain = blockchains[i];
+                }
+            }
+
+            return heaviestBlockchain;
+        }
     }
 }
 
