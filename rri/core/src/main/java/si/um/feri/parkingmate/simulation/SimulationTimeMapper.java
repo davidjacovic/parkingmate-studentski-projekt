@@ -1,3 +1,4 @@
+// SimulationTimeMapper.java (ažurirano)
 package si.um.feri.parkingmate.simulation;
 
 public class SimulationTimeMapper {

@@ -58,7 +58,19 @@ public class SimulationScreen extends BaseScreen {
     private Texture markerPartialTexture;
     private Texture markerFullTexture;
     private Texture markerUnknownTexture;
+    private Texture concertButtonTexture;
+    private Texture restartButtonTexture;
+    private float crowdButtonSize = 48f;
+    private float crowdButtonX, crowdButtonY;
+    private float crowdButtonSpacing = 55f;
+    private Texture restartSimulationTexture;
+    private float restartSimulationSize = 48f;
+    private float restartSimulationX, restartSimulationY;
 
+    private float originalSimulationTime = 8.0f * 60f;
+    private List<Marker> originalMarkersState = new ArrayList<>();
+
+    private boolean isCrowdSimulationActive = false;
     private Texture closeButtonTexture;
     private float closeButtonSize = 48f;
     private float closeButtonMargin = 15f;
@@ -94,6 +106,8 @@ public class SimulationScreen extends BaseScreen {
     private float simulationUpdateTimer = 0f;
     private static final float SIMULATION_UPDATE_INTERVAL = 0.5f;
     private static final float SLOW_CLOCK_UPDATE_INTERVAL = 0.2f;
+
+
     public SimulationScreen(ParkingMate game) {
         this.game = game;
         this.markers = new ArrayList<>();
@@ -106,6 +120,7 @@ public class SimulationScreen extends BaseScreen {
         initializeSimulationClock();
         initializeSpeedButtons();
         initializeSimulationButton();
+        initializeRestartButton();
     }
     private void drawSimulationButton() {
         if (spriteBatch == null) return;
@@ -198,7 +213,271 @@ public class SimulationScreen extends BaseScreen {
 
         loadParkingLocationsFromAPI();
     }
+    private void initializeRestartButton() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING RESTART BUTTON ===");
 
+        try {
+            restartSimulationTexture = new Texture(Gdx.files.internal("ui/restart_icon.png"));
+        } catch (Exception e) {
+            createDefaultRestartButton();
+        }
+
+        updateRestartButtonPosition();
+    }
+    private void saveInitialState() {
+        originalSimulationTime = simulationTime;
+
+        originalMarkersState.clear();
+        for (Marker marker : markers) {
+            Marker copy = new Marker(
+                new Geolocation(marker.getPosition().lat, marker.getPosition().lng),
+                marker.getType(),
+                marker.getState(),
+                marker.getId(),
+                marker.getName(),
+                marker.getTotalSpots(),
+                marker.getAvailableSpots(),
+                marker.getPricePerHour()
+            );
+            originalMarkersState.add(copy);
+        }
+
+        Gdx.app.log("SimulationScreen", "Initial state saved. Markers: " + originalMarkersState.size());
+    }
+    private void resetSimulation() {
+        Gdx.app.log("SimulationScreen", "=== RESETTING SIMULATION ===");
+
+        isSimulationRunning = false;
+        isClockPaused = false;
+
+        simulationTime = 8.0f * 60f;
+        timeSpeedMultiplier = 1f;
+
+        if (!originalMarkersState.isEmpty()) {
+            markers.clear();
+            for (Marker original : originalMarkersState) {
+                Marker restored = new Marker(
+                    new Geolocation(original.getPosition().lat, original.getPosition().lng),
+                    original.getType(),
+                    original.getState(),
+                    original.getId(),
+                    original.getName(),
+                    original.getTotalSpots(),
+                    original.getAvailableSpots(),
+                    original.getPricePerHour()
+                );
+                markers.add(restored);
+            }
+            Gdx.app.log("SimulationScreen", "Markers restored: " + markers.size());
+        }
+
+        Gdx.app.log("SimulationScreen", "Simulation reset to initial state (08:00)");
+    }
+    private void drawRestartButton() {
+        if (spriteBatch == null || restartSimulationTexture == null) return;
+
+        updateRestartButtonPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        spriteBatch.draw(restartSimulationTexture, restartSimulationX, restartSimulationY,
+            restartSimulationSize, restartSimulationSize);
+
+        spriteBatch.end();
+    }
+    private void updateRestartButtonPosition() {
+        restartSimulationX = closeButtonMargin;
+        restartSimulationY = Gdx.graphics.getHeight() - restartSimulationSize - closeButtonMargin - 220f;
+    }
+    private void initializeCrowdSimulation() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING CROWD SIMULATION ===");
+
+        // Dugme za pokretanje koncert simulacije
+        try {
+            concertButtonTexture = new Texture(Gdx.files.internal("ui/concert_icon.png"));
+        } catch (Exception e) {
+            createDefaultConcertButton();
+        }
+
+        // Dugme za restart
+        try {
+            restartButtonTexture = new Texture(Gdx.files.internal("ui/restart_icon.png"));
+        } catch (Exception e) {
+            createDefaultRestartButton();
+        }
+
+        updateCrowdButtonsPosition();
+    }
+    private void updateCrowdButtonsPosition() {
+        // Pomerite malo više (smanjite broj 220f na 270f ili slično)
+        crowdButtonX = closeButtonMargin;
+        crowdButtonY = Gdx.graphics.getHeight() - crowdButtonSize - closeButtonMargin - 270f;
+    }
+
+    private void drawCrowdSimulationButtons() {
+        if (spriteBatch == null) return;
+
+        updateCrowdButtonsPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        float currentX = crowdButtonX;
+
+        // Dugme za koncert simulaciju
+        if (concertButtonTexture != null) {
+            spriteBatch.draw(concertButtonTexture, currentX, crowdButtonY, crowdButtonSize, crowdButtonSize);
+            currentX += crowdButtonSpacing;
+        }
+
+        // Dugme za restart (vidljivo samo kada je aktivna koncert simulacija)
+        if (isCrowdSimulationActive && restartButtonTexture != null) {
+            spriteBatch.draw(restartButtonTexture, currentX, crowdButtonY, crowdButtonSize, crowdButtonSize);
+        }
+
+        spriteBatch.end();
+    }
+    private void activateCrowdSimulation() {
+        Gdx.app.log("SimulationScreen", "=== ACTIVATING CROWD SIMULATION ===");
+
+        // Sačuvaj originalno stanje
+        originalSimulationTime = simulationTime;
+        saveOriginalMarkersState();
+
+        // Postavi vreme na početak koncerta (npr. 18:00)
+        simulationTime = 18.0f * 60f;
+
+        // Označi da je aktivna koncert simulacija
+        isCrowdSimulationActive = true;
+
+        // Apliciraj efekte gužve na markere
+        applyCrowdEffects();
+
+        Gdx.app.log("SimulationScreen", "Crowd simulation activated! Time set to 18:00");
+    }
+    private void applyCrowdEffects() {
+        Gdx.app.log("SimulationScreen", "Applying crowd effects to markers");
+
+        for (Marker marker : markers) {
+            int total = marker.getTotalSpots();
+            if (total == 0) continue;
+
+            // Za koncert, većina parkinga će biti puna
+            // 70% šanse da bude FULL, 25% PARTIAL, 5% FREE
+            float random = MathUtils.random();
+
+            if (random < 0.70f) {
+                // FULL - samo 0-10% mesta slobodno
+                int available = MathUtils.random(0, Math.max(1, (int)(total * 0.1f)));
+                marker.setAvailableSpots(available);
+                marker.setState(Marker.MarkerState.FULL);
+            } else if (random < 0.95f) {
+                // PARTIAL - 10-40% mesta slobodno
+                int available = MathUtils.random(
+                    Math.max(1, (int)(total * 0.1f)),
+                    Math.max(2, (int)(total * 0.4f))
+                );
+                marker.setAvailableSpots(available);
+                marker.setState(Marker.MarkerState.PARTIAL);
+            } else {
+                // FREE - 40-80% mesta slobodno (retko)
+                int available = MathUtils.random(
+                    Math.max(1, (int)(total * 0.4f)),
+                    Math.max(2, (int)(total * 0.8f))
+                );
+                marker.setAvailableSpots(available);
+                marker.setState(Marker.MarkerState.FREE);
+            }
+        }
+    }
+    private void updateCrowdSimulation(float delta) {
+        if (!isCrowdSimulationActive || !isSimulationRunning) return;
+
+        // Dodatni efekti tokom koncerta
+        // Tokom koncerta (18:00-22:00) parkingi polako postaju sve puniji
+        int currentHour = ((int)simulationTime / 60) % 24;
+
+        if (currentHour >= 18 && currentHour < 22) {
+            // Na svakih 5 sim sekundi, smanji broj slobodnih mesta
+            simulationUpdateTimer += delta;
+            if (simulationUpdateTimer >= 5f) {
+                for (Marker marker : markers) {
+                    int available = marker.getAvailableSpots();
+                    if (available > 0 && MathUtils.random() < 0.3f) {
+                        // Nasumično oslobodi ili zauzmi mesto
+                        if (MathUtils.random() < 0.7f) {
+                            // Veća šansa za zauzimanje tokom koncerta
+                            available = Math.max(0, available - MathUtils.random(1, 3));
+                        } else {
+                            // Manja šansa za oslobađanje
+                            available = Math.min(marker.getTotalSpots(),
+                                available + MathUtils.random(0, 1));
+                        }
+                        marker.setAvailableSpots(available);
+                        marker.updateStateFromSpots();
+                    }
+                }
+                simulationUpdateTimer = 0f;
+            }
+        }
+    }
+    private boolean isConcertButtonClicked(float screenX, float screenY) {
+        updateCrowdButtonsPosition();
+        return screenX >= crowdButtonX && screenX <= crowdButtonX + crowdButtonSize &&
+            screenY >= crowdButtonY && screenY <= crowdButtonY + crowdButtonSize;
+    }
+
+    private boolean isRestartButtonClicked(float screenX, float screenY) {
+        updateRestartButtonPosition();
+        return screenX >= restartSimulationX &&
+            screenX <= restartSimulationX + restartSimulationSize &&
+            screenY >= restartSimulationY &&
+            screenY <= restartSimulationY + restartSimulationSize;
+    }
+
+    private void saveOriginalMarkersState() {
+        originalMarkersState.clear();
+        for (Marker marker : markers) {
+            // Napravi deep copy markera
+            Marker copy = new Marker(
+                new Geolocation(marker.getPosition().lat, marker.getPosition().lng),
+                marker.getType(),
+                marker.getState(),
+                marker.getId(),
+                marker.getName(),
+                marker.getTotalSpots(),
+                marker.getAvailableSpots(),
+                marker.getPricePerHour()
+            );
+            originalMarkersState.add(copy);
+        }
+    }
+    private void resetToOriginalState() {
+        Gdx.app.log("SimulationScreen", "=== RESETTING TO ORIGINAL STATE ===");
+
+        // Vrati vreme na originalno
+        simulationTime = originalSimulationTime;
+
+        // Vrati markere na originalno stanje
+        markers.clear();
+        for (Marker original : originalMarkersState) {
+            Marker restored = new Marker(
+                new Geolocation(original.getPosition().lat, original.getPosition().lng),
+                original.getType(),
+                original.getState(),
+                original.getId(),
+                original.getName(),
+                original.getTotalSpots(),
+                original.getAvailableSpots(),
+                original.getPricePerHour()
+            );
+            markers.add(restored);
+        }
+
+        // Deaktiviraj koncert simulaciju
+        isCrowdSimulationActive = false;
+
+        Gdx.app.log("SimulationScreen", "Simulation reset to original state");
+    }
     private void initializeSimulationClock() {
         Gdx.app.log("SimulationScreen", "=== INITIALIZING SIMULATION CLOCK ===");
 
@@ -209,7 +488,53 @@ public class SimulationScreen extends BaseScreen {
         }
         updateClockPosition();
     }
+    private void createDefaultConcertButton() {
+        Pixmap pixmap = new Pixmap((int)crowdButtonSize, (int)crowdButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.8f, 0.2f, 0.8f, 1f); // Ljubičasta boja za koncert
+        pixmap.fillCircle((int)crowdButtonSize/2, (int)crowdButtonSize/2, (int)crowdButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
 
+        // Simbol note za muziku
+        int centerX = (int)crowdButtonSize/2;
+        int centerY = (int)crowdButtonSize/2;
+
+        // Krug na dnu note
+        pixmap.fillCircle(centerX, (int)(centerY*1.1f), (int)(crowdButtonSize*0.15f));
+
+        // Stab note
+        pixmap.fillRectangle(centerX - 2, (int)(centerY*0.3f), 4, (int)(centerY*0.7f));
+
+        // Zastavica note
+        int[] xPoints = {centerX + 4, centerX + 20, centerX + 4};
+        int[] yPoints = {(int)(centerY*0.3f), (int)(centerY*0.4f), (int)(centerY*0.5f)};
+        pixmap.fillTriangle(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2]);
+
+        concertButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    private void createDefaultRestartButton() {
+        Pixmap pixmap = new Pixmap((int)restartSimulationSize, (int)restartSimulationSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.2f, 0.6f, 0.9f, 1f); // Plava boja za restart
+        pixmap.fillCircle((int)restartSimulationSize/2, (int)restartSimulationSize/2, (int)restartSimulationSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        // Strelica u krug za restart
+        int centerX = (int)restartSimulationSize/2;
+        int centerY = (int)restartSimulationSize/2;
+        int radius = (int)(restartSimulationSize * 0.3f);
+
+        // Krug
+        pixmap.drawCircle(centerX, centerY, radius);
+
+        // Strelica
+        int[] arrowX = {centerX - radius/2, centerX - radius/2, centerX + radius/2};
+        int[] arrowY = {centerY - radius/3, centerY + radius/3, centerY};
+        pixmap.fillTriangle(arrowX[0], arrowY[0], arrowX[1], arrowY[1], arrowX[2], arrowY[2]);
+
+        restartSimulationTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
     private void initializeSpeedButtons() {
         Gdx.app.log("SimulationScreen", "=== INITIALIZING SPEED BUTTONS ===");
 
@@ -496,16 +821,20 @@ public class SimulationScreen extends BaseScreen {
                         }
                     }
                     Gdx.app.log("SimulationScreen", "Added " + markers.size() + " markers to simulation map");
+
+                    // DODAJTE OVO - sačuvaj početno stanje kada se učitaju markeri
+                    saveInitialState();
                 });
             } catch (Exception e) {
                 Gdx.app.error("SimulationScreen", "Failed to load parking locations", e);
                 Gdx.app.postRunnable(() -> {
                     initializeTestMarkers();
+                    // DODAJTE OVO - sačuvaj početno stanje i za test markere
+                    saveInitialState();
                 });
             }
         }).start();
     }
-
     private Marker convertParkingToMarker(Parking parking) {
         if (parking == null || parking.getLocation() == null) {
             return null;
@@ -558,8 +887,10 @@ public class SimulationScreen extends BaseScreen {
             Marker.MarkerState.FULL,
             "test-3", "Street Parking South", 20, 0, 1.5f
         ));
-    }
 
+        // DODAJTE OVO - sačuvaj početno stanje
+        saveInitialState();
+    }
     private void setupCamera() {
         camera.setToOrtho(false, MapConstants.MAP_WIDTH, MapConstants.MAP_HEIGHT);
         camera.position.set(MapConstants.MAP_WIDTH / 2f, MapConstants.MAP_HEIGHT / 2f, 0);
@@ -594,6 +925,12 @@ public class SimulationScreen extends BaseScreen {
                 if (isClockAreaClicked(screenX, gdxY)) {
                     isClockPaused = !isClockPaused;
                     Gdx.app.log("SimulationScreen", "Clock " + (isClockPaused ? "PAUSED" : "RESUMED") + " via click");
+                    return true;
+                }
+
+                // DODAJTE OVO - provera za restart dugme
+                if (isRestartButtonClicked(screenX, gdxY)) {
+                    resetSimulation();
                     return true;
                 }
 
@@ -824,8 +1161,8 @@ public class SimulationScreen extends BaseScreen {
             updateSimulation(delta);
         }
 
+        // OVO JE NEOPHODNO ZA CLEAR EKRANA
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if (tiledMapRenderer != null && tiledMap != null) {
             camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
@@ -839,6 +1176,7 @@ public class SimulationScreen extends BaseScreen {
             drawSpeedButtons();
             drawSimulationButton();
             drawStabilityInfo();
+            drawRestartButton(); // DODAJTE OVO
         }
     }
     private void drawMarkers() {
@@ -1109,6 +1447,12 @@ public class SimulationScreen extends BaseScreen {
         if (markerUnknownTexture != null) {
             markerUnknownTexture.dispose();
         }
+        if (concertButtonTexture != null) {
+            concertButtonTexture.dispose();
+        }
+        if (restartButtonTexture != null) {
+            restartButtonTexture.dispose();
+        }
         if (font != null) {
             font.dispose();
         }
@@ -1133,6 +1477,10 @@ public class SimulationScreen extends BaseScreen {
         if (pauseButtonTexture != null) {
             pauseButtonTexture.dispose();
         }
+        if (restartSimulationTexture != null) {
+            restartSimulationTexture.dispose();
+        }
+
     }
 
     private class SimulationGestureListener implements GestureDetector.GestureListener {
@@ -1184,6 +1532,7 @@ public class SimulationScreen extends BaseScreen {
         updateCloseButtonPosition();
         updateSpeedButtonsPosition();
         updatePlayButtonPosition();
+        updateRestartButtonPosition();
         Gdx.app.log("SimulationScreen", "Screen resized to: " + width + "x" + height);
     }
 }
