@@ -676,6 +676,34 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    private void applyTimeBasedBehavior() {
+        DayPhase phase = SimulationTimeMapper.getDayPhase(simulationTime);
+
+        for (Marker marker : markers) {
+            int available = marker.getAvailableSpots();
+            int total = marker.getTotalSpots();
+
+            if (total == 0) continue;
+
+            switch (phase) {
+                case MORNING:
+                    available -= 1; // dolasci
+                    break;
+                case DAY:
+                    // skoro stabilno
+                    available += MathUtils.random(-1, 1);
+                    break;
+                case NIGHT:
+                    available += 1; // odlasci
+                    break;
+            }
+
+            available = MathUtils.clamp(available, 0, total);
+            marker.setAvailableSpots(available);
+        }
+    }
+
+
     private void handleKeyboardInput() {
         if (Gdx.input.isKeyPressed(Input.Keys.Q) || Gdx.input.isKeyPressed(Input.Keys.PLUS)) {
             camera.zoom -= 0.02f;
