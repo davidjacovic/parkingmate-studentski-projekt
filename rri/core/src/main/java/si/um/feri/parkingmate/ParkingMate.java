@@ -10,6 +10,6 @@ public class ParkingMate extends Game {
 
     @Override
     public void create() {
-        setScreen(new SimulationScreen(this));
+        setScreen(new MapScreen(this));
     }
 }
