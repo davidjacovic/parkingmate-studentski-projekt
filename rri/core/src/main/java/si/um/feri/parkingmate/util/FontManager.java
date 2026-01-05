@@ -12,6 +12,11 @@ public class FontManager {
         }
         return font;
     }
+    public static BitmapFont getFont(int size) {
+        BitmapFont font = new BitmapFont();
+        font.getData().setScale(size / 24f);
+        return font;
+    }
 
     private static void createFont() {
         try {
