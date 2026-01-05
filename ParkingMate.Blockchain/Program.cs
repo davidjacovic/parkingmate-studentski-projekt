@@ -53,7 +53,12 @@ namespace ParkingMate.Blockchain
 
             // Test parametara dinamičke težine (6.1.2)
             // Otkomentariši sledeću liniju da testiraš CLI parametre:
-            TestDynamicDifficultyParams.RunTest();
+            // TestDynamicDifficultyParams.RunTest();
+            // return;
+
+            // Test integracije dinamičke težine u mining proces (6.1.3)
+            // Otkomentariši sledeću liniju da testiraš integraciju:
+            TestDynamicDifficultyIntegration.RunTest();
             return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
@@ -91,8 +96,12 @@ namespace ParkingMate.Blockchain
 
             // Dobij broj niti (CLI override ili automatska detekcija)
             int threadCount = cliArgs.GetThreadCount();
-            uint difficulty = cliArgs.GetDifficulty();
+            uint initialDifficulty = cliArgs.GetDifficulty();
             int blocksToMine = cliArgs.GetBlocksToMine();
+            
+            // Dobij parametre za dinamičku difficulty (6.1.3)
+            long blockIntervalSeconds = cliArgs.GetBlockIntervalSeconds();
+            uint adjustmentInterval = cliArgs.GetAdjustmentInterval();
 
             // Prikaži informacije o konfiguraciji
             Console.WriteLine("=== Konfiguracija rudarjenja ===");
@@ -107,11 +116,14 @@ namespace ParkingMate.Blockchain
                 Console.WriteLine($"  Dostupno logičkih procesora: {ThreadedMiner.GetAvailableProcessorCount()}");
                 Console.WriteLine($"  Dostupno fizičkih jezgara: {ThreadedMiner.GetPhysicalProcessorCount()}");
             }
-            Console.WriteLine($"Težina: {difficulty}");
+            Console.WriteLine($"Početna težina: {initialDifficulty}");
             Console.WriteLine($"Broj blokova za rudarenje: {blocksToMine}");
+            Console.WriteLine($"Block interval: {blockIntervalSeconds} sekundi (6.1.3)");
+            Console.WriteLine($"Adjustment interval: {adjustmentInterval} blokova (6.1.3)");
             Console.WriteLine();
 
-            var blockchain = new Blockchain();
+            // Kreiraj blockchain sa parametrima za dinamičku difficulty (6.1.3)
+            var blockchain = new Blockchain(blockIntervalSeconds, adjustmentInterval);
 
             // Napomena: Trenutna implementacija blockchain.AddBlock koristi single-threaded mining
             // U budućim verzijama, ovo može biti zamenjeno multi-threaded mining-om koristeći ThreadedMiner
@@ -120,18 +132,29 @@ namespace ParkingMate.Blockchain
             Console.WriteLine($"Konfigurisano {threadCount} niti će biti dostupno za multi-threaded mining u budućim verzijama.");
             Console.WriteLine();
 
+            // Trenutna difficulty vrednost (počinje sa početnom difficulty, zatim se dinamički prilagođava)
+            uint currentDifficulty = initialDifficulty;
+
             for (int i = 1; i <= blocksToMine; i++)
             {
+                // Izračunaj difficulty za sledeći blok (6.1.3)
+                currentDifficulty = blockchain.GetNextDifficulty(currentDifficulty);
+                
+                if (i > 1 && DynamicDifficulty.ShouldAdjustDifficulty(blockchain.Chain.Count, adjustmentInterval))
+                {
+                    Console.WriteLine($"  [Difficulty prilagođena na: {currentDifficulty}]");
+                }
+
                 var block = new Block(
                     index: 0,
                     data: $"Auto-mined block #{i}",
                     timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                     previousHash: "",
-                    difficulty: difficulty,
+                    difficulty: currentDifficulty,
                     nonce: 0
                 );
 
-                Console.WriteLine($"\nMining block {i}...");
+                Console.WriteLine($"\nMining block {i} (difficulty: {currentDifficulty})...");
                 blockchain.AddBlock(block);
             }
 
