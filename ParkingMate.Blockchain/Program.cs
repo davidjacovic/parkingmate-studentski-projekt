@@ -48,7 +48,12 @@ namespace ParkingMate.Blockchain
 
             // Test dinamičke težine (6.1.1)
             // Otkomentariši sledeću liniju da testiraš time-based algoritam:
-            TestDynamicDifficulty.RunTest();
+            // TestDynamicDifficulty.RunTest();
+            // return;
+
+            // Test parametara dinamičke težine (6.1.2)
+            // Otkomentariši sledeću liniju da testiraš CLI parametre:
+            TestDynamicDifficultyParams.RunTest();
             return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)

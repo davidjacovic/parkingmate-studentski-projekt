@@ -15,6 +15,8 @@ namespace ParkingMate.Blockchain
         public bool UseMpi { get; set; }
         public int? MpiSize { get; set; }
         public int? MpiRank { get; set; }
+        public long? BlockIntervalSeconds { get; set; } // 6.1.2: Ciljano vreme između blokova u sekundama
+        public uint? AdjustmentInterval { get; set; }   // 6.1.2: Broj blokova nakon kojih se prilagođava difficulty
 
         /// <summary>
         /// Parsira command-line argumente
@@ -139,6 +141,46 @@ namespace ParkingMate.Blockchain
                         }
                         break;
 
+                    case "--block-interval":
+                    case "-bi":
+                        if (i + 1 < args.Length)
+                        {
+                            if (long.TryParse(args[i + 1], out long blockInterval) && blockInterval > 0)
+                            {
+                                result.BlockIntervalSeconds = blockInterval;
+                                i++; // Preskoči vrednost
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Greška: '{args[i + 1]}' nije validan block interval. Koristi pozitivan ceo broj (sekunde).");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Greška: '{arg}' zahteva vrednost (block interval u sekundama).");
+                        }
+                        break;
+
+                    case "--adjustment-interval":
+                    case "-ai":
+                        if (i + 1 < args.Length)
+                        {
+                            if (uint.TryParse(args[i + 1], out uint adjustmentInterval) && adjustmentInterval > 0)
+                            {
+                                result.AdjustmentInterval = adjustmentInterval;
+                                i++; // Preskoči vrednost
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Greška: '{args[i + 1]}' nije validan adjustment interval. Koristi pozitivan ceo broj (broj blokova).");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Greška: '{arg}' zahteva vrednost (adjustment interval - broj blokova).");
+                        }
+                        break;
+
                     case "--help":
                     case "-h":
                     case "/?":
@@ -176,6 +218,15 @@ namespace ParkingMate.Blockchain
             Console.WriteLine("  -b, --blocks <broj>     Broj blokova za rudarenje");
             Console.WriteLine("                         Default: 30");
             Console.WriteLine("                         Primer: -b 10 ili --blocks 50");
+            Console.WriteLine();
+            Console.WriteLine("Dinamička težina (6.1.2):");
+            Console.WriteLine("  -bi, --block-interval <sekunde> Ciljano vreme između blokova u sekundama");
+            Console.WriteLine("                         Default: 600 (10 minuta)");
+            Console.WriteLine("                         Primer: -bi 300 ili --block-interval 1200");
+            Console.WriteLine();
+            Console.WriteLine("  -ai, --adjustment-interval <broj> Broj blokova nakon kojih se prilagođava difficulty");
+            Console.WriteLine("                         Default: 10");
+            Console.WriteLine("                         Primer: -ai 5 ili --adjustment-interval 20");
             Console.WriteLine();
             Console.WriteLine("  -h, --help              Prikaži ovu help poruku");
             Console.WriteLine();
@@ -240,6 +291,24 @@ namespace ParkingMate.Blockchain
         public int GetBlocksToMine()
         {
             return BlocksToMine ?? 30; // Default: 30
+        }
+
+        /// <summary>
+        /// Dobija block interval u sekundama (6.1.2)
+        /// </summary>
+        /// <returns>Ciljano vreme između blokova u sekundama</returns>
+        public long GetBlockIntervalSeconds()
+        {
+            return BlockIntervalSeconds ?? 600; // Default: 600 sekundi (10 minuta)
+        }
+
+        /// <summary>
+        /// Dobija adjustment interval - broj blokova nakon kojih se prilagođava difficulty (6.1.2)
+        /// </summary>
+        /// <returns>Broj blokova nakon kojih se prilagođava difficulty</returns>
+        public uint GetAdjustmentInterval()
+        {
+            return AdjustmentInterval ?? 10; // Default: 10 blokova
         }
     }
 }
