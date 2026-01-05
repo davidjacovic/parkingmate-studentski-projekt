@@ -4,17 +4,39 @@ using System;
 
 namespace ParkingMate.Blockchain
 {
+    /// <summary>
+    /// Blockchain klasa sa integracijom dinamičke difficulty (6.1.3).
+    /// </summary>
     public class Blockchain
     {
         private readonly List<Block> chain;
+        private readonly long blockIntervalSeconds;
+        private readonly uint adjustmentInterval;
 
-        public Blockchain()
+        /// <summary>
+        /// Konstruktor za Blockchain sa podrškom za dinamičku difficulty (6.1.3).
+        /// </summary>
+        /// <param name="blockIntervalSeconds">Ciljano vreme između blokova u sekundama (default: 600)</param>
+        /// <param name="adjustmentInterval">Broj blokova nakon kojih se prilagođava difficulty (default: 10)</param>
+        public Blockchain(long blockIntervalSeconds = 600, uint adjustmentInterval = 10)
         {
+            this.blockIntervalSeconds = blockIntervalSeconds;
+            this.adjustmentInterval = adjustmentInterval;
             chain = new List<Block>();
             chain.Add(CreateGenesisBlock());
         }
 
         public IReadOnlyList<Block> Chain => chain;
+        
+        /// <summary>
+        /// Vraća block interval u sekundama (6.1.3).
+        /// </summary>
+        public long BlockIntervalSeconds => blockIntervalSeconds;
+        
+        /// <summary>
+        /// Vraća adjustment interval (6.1.3).
+        /// </summary>
+        public uint AdjustmentInterval => adjustmentInterval;
 
         private Block CreateGenesisBlock()
         {
@@ -35,6 +57,30 @@ namespace ParkingMate.Blockchain
         {
             return chain[^1];
         }
+
+        /// <summary>
+        /// Izračunava difficulty za sledeći blok koristeći dinamičku difficulty logiku (6.1.3).
+        /// </summary>
+        /// <param name="currentDifficulty">Trenutna difficulty vrednost</param>
+        /// <returns>Nova difficulty vrednost za sledeći blok</returns>
+        public uint GetNextDifficulty(uint currentDifficulty)
+        {
+            // Proveri da li je vreme za prilagođavanje difficulty-ja
+            if (!DynamicDifficulty.ShouldAdjustDifficulty(chain.Count, adjustmentInterval))
+            {
+                // Nije vreme za prilagođavanje, vraća trenutnu difficulty
+                return currentDifficulty;
+            }
+
+            // Prilagođi difficulty koristeći time-based algoritam
+            return DynamicDifficulty.CalculateDifficulty(
+                chain,
+                currentDifficulty,
+                blockIntervalSeconds,
+                adjustmentInterval
+            );
+        }
+
         public void AddBlock(Block newBlock)
         {
             var latest = GetLatestBlock();
