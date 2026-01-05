@@ -22,7 +22,6 @@ import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 
 import org.json.JSONObject;
 
@@ -59,7 +58,19 @@ public class SimulationScreen extends BaseScreen {
     private Texture markerPartialTexture;
     private Texture markerFullTexture;
     private Texture markerUnknownTexture;
+    private Texture concertButtonTexture;
+    private Texture restartButtonTexture;
+    private float crowdButtonSize = 48f;
+    private float crowdButtonX, crowdButtonY;
+    private float crowdButtonSpacing = 55f;
+    private Texture restartSimulationTexture;
+    private float restartSimulationSize = 48f;
+    private float restartSimulationX, restartSimulationY;
 
+    private float originalSimulationTime = 8.0f * 60f;
+    private List<Marker> originalMarkersState = new ArrayList<>();
+
+    private boolean isCrowdSimulationActive = false;
     private Texture closeButtonTexture;
     private float closeButtonSize = 48f;
     private float closeButtonMargin = 15f;
@@ -74,31 +85,92 @@ public class SimulationScreen extends BaseScreen {
     private boolean isClockPaused = false;
     private Texture clockIconTexture;
     private float clockUpdateTimer = 0f;
-    private static final float CLOCK_UPDATE_INTERVAL = 0.1f;
+    private Texture concertPlayButtonTexture;
+    private Texture concertPauseButtonTexture;
+    private Texture concertRestartButtonTexture;
+    private float concertButtonSize = 48f;
+    private float concertPlayButtonX, concertPlayButtonY;
+    private float concertRestartButtonX, concertRestartButtonY;
+    private float concertButtonSpacing = 55f;
+
+    private boolean isConcertSimulationRunning = false;
+    private boolean isConcertSimulationActive = false;
+    private float concertSimulationTime = 18.0f * 60f;
+    private List<Marker> concertOriginalMarkersState = new ArrayList<>();
 
     private static final String API_BASE_URL = "http://localhost:3002";
-
+    private static final float STOZICE_ARENA_LAT = 46.0753f;
+    private static final float STOZICE_ARENA_LNG = 14.5140f;
+    private static final float TIVOLI_HALL_LAT = 46.0514f;
+    private static final float TIVOLI_HALL_LNG = 14.4964f;
+    private static final float CRNUC_HALL_LAT = 46.0642f;
+    private static final float CRNUC_HALL_LNG = 14.5190f;
+    private float concertStartTime = 18.0f * 60f;
     private Texture slowButtonTexture;
     private Texture normalButtonTexture;
     private Texture fastButtonTexture;
     private float speedButtonSize = 48f;
-    private float speedButtonMargin = 15f;
     private float speedButtonX, speedButtonY;
     private float speedButtonSpacing = 55f;
 
+    private Texture playButtonTexture;
+    private Texture pauseButtonTexture;
+    private float playButtonSize = 48f;
+    private float playButtonX, playButtonY;
+
+    private boolean isSimulationRunning = false;
+    private float simulationUpdateTimer = 0f;
+    private static final float SIMULATION_UPDATE_INTERVAL = 0.5f;
+    private static final float SLOW_CLOCK_UPDATE_INTERVAL = 0.2f;
+
+    /**
+     * Constructor for SimulationScreen.
+     */
     public SimulationScreen(ParkingMate game) {
         this.game = game;
         this.markers = new ArrayList<>();
         this.parkingService = new ParkingService(API_BASE_URL);
     }
 
+    /**
+     * Initializes all simulation components when screen is shown.
+     */
     @Override
     public void show() {
         initializeSimulationMap();
         initializeSimulationClock();
         initializeSpeedButtons();
+        initializeSimulationButton();
+        initializeRestartButton();
+        initializeConcertSimulation();
     }
 
+    /**
+     * Renders the simulation play/pause button.
+     */
+    private void drawSimulationButton() {
+        if (spriteBatch == null) return;
+
+        updatePlayButtonPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        if (isSimulationRunning) {
+            if (pauseButtonTexture != null) {
+                spriteBatch.draw(pauseButtonTexture, playButtonX, playButtonY, playButtonSize, playButtonSize);
+            }
+        } else {
+            if (playButtonTexture != null) {
+                spriteBatch.draw(playButtonTexture, playButtonX, playButtonY, playButtonSize, playButtonSize);
+            }
+        }
+
+        spriteBatch.end();
+    }
+
+    /**
+     * Initializes the simulation map with tiles and markers.
+     */
     private void initializeSimulationMap() {
         if (Keys.GEOAPIFY == null || Keys.GEOAPIFY.isEmpty()) {
             Gdx.app.error("SimulationScreen", "Geoapify API key is not set!");
@@ -172,6 +244,732 @@ public class SimulationScreen extends BaseScreen {
         loadParkingLocationsFromAPI();
     }
 
+    /**
+     * Initializes concert simulation buttons and textures.
+     */
+    private void initializeConcertSimulation() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING CONCERT SIMULATION ===");
+        try {
+            concertPlayButtonTexture = new Texture(Gdx.files.internal("ui/play_button.png"));
+        } catch (Exception e) {
+            createDefaultConcertPlayButton();
+        }
+        try {
+            concertPauseButtonTexture = new Texture(Gdx.files.internal("ui/pause_button.png"));
+        } catch (Exception e) {
+            createDefaultConcertPauseButton();
+        }
+        try {
+            concertRestartButtonTexture = new Texture(Gdx.files.internal("ui/restart_icon.png"));
+        } catch (Exception e) {
+            createDefaultConcertRestartButton();
+        }
+
+        updateConcertButtonsPosition();
+    }
+
+    /**
+     * Initializes the restart button for normal simulation.
+     */
+    private void initializeRestartButton() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING RESTART BUTTON ===");
+
+        try {
+            restartSimulationTexture = new Texture(Gdx.files.internal("ui/restart_icon.png"));
+        } catch (Exception e) {
+            createDefaultRestartButton();
+        }
+
+        updateRestartButtonPosition();
+    }
+
+    /**
+     * Saves the initial state of markers for reset functionality.
+     */
+    private void saveInitialState() {
+        originalSimulationTime = simulationTime;
+
+        originalMarkersState.clear();
+        for (Marker marker : markers) {
+            Marker copy = new Marker(
+                new Geolocation(marker.getPosition().lat, marker.getPosition().lng),
+                marker.getType(),
+                marker.getState(),
+                marker.getId(),
+                marker.getName(),
+                marker.getTotalSpots(),
+                marker.getAvailableSpots(),
+                marker.getPricePerHour()
+            );
+            originalMarkersState.add(copy);
+        }
+
+        Gdx.app.log("SimulationScreen", "Initial state saved. Markers: " + originalMarkersState.size());
+    }
+
+    /**
+     * Resets the normal simulation to its initial state.
+     */
+    private void resetSimulation() {
+        Gdx.app.log("SimulationScreen", "=== RESETTING SIMULATION ===");
+
+        isSimulationRunning = false;
+        isClockPaused = false;
+
+        simulationTime = 8.0f * 60f;
+        timeSpeedMultiplier = 1f;
+
+        if (!originalMarkersState.isEmpty()) {
+            markers.clear();
+            for (Marker original : originalMarkersState) {
+                Marker restored = new Marker(
+                    new Geolocation(original.getPosition().lat, original.getPosition().lng),
+                    original.getType(),
+                    original.getState(),
+                    original.getId(),
+                    original.getName(),
+                    original.getTotalSpots(),
+                    original.getAvailableSpots(),
+                    original.getPricePerHour()
+                );
+                markers.add(restored);
+            }
+            Gdx.app.log("SimulationScreen", "Markers restored: " + markers.size());
+        }
+
+        Gdx.app.log("SimulationScreen", "Simulation reset to initial state (08:00)");
+    }
+
+    /**
+     * Renders the restart button for normal simulation.
+     */
+    private void drawRestartButton() {
+        if (spriteBatch == null || restartSimulationTexture == null) return;
+
+        updateRestartButtonPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        spriteBatch.draw(restartSimulationTexture, restartSimulationX, restartSimulationY,
+            restartSimulationSize, restartSimulationSize);
+
+        spriteBatch.end();
+    }
+
+    /**
+     * Creates a default purple play button for concert simulation.
+     */
+    private void createDefaultConcertPlayButton() {
+        Pixmap pixmap = new Pixmap((int)concertButtonSize, (int)concertButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.8f, 0.2f, 0.8f, 1f);
+        pixmap.fillCircle((int)concertButtonSize/2, (int)concertButtonSize/2, (int)concertButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        int triangleSize = (int)(concertButtonSize * 0.4);
+        int[] xPoints = {(int)(concertButtonSize*0.4), (int)(concertButtonSize*0.4), (int)(concertButtonSize*0.7)};
+        int[] yPoints = {(int)(concertButtonSize*0.35), (int)(concertButtonSize*0.65), (int)(concertButtonSize*0.5)};
+        pixmap.fillTriangle(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2]);
+
+        concertPlayButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Creates a default purple pause button for concert simulation.
+     */
+    private void createDefaultConcertPauseButton() {
+        Pixmap pixmap = new Pixmap((int)concertButtonSize, (int)concertButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.8f, 0.2f, 0.8f, 1f);
+        pixmap.fillCircle((int)concertButtonSize/2, (int)concertButtonSize/2, (int)concertButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        int barWidth = (int)(concertButtonSize * 0.15f);
+        int barHeight = (int)(concertButtonSize * 0.4f);
+
+        pixmap.fillRectangle(
+            (int)(concertButtonSize * 0.35f) - barWidth/2,
+            (int)(concertButtonSize * 0.5f) - barHeight/2,
+            barWidth,
+            barHeight
+        );
+
+        pixmap.fillRectangle(
+            (int)(concertButtonSize * 0.65f) - barWidth/2,
+            (int)(concertButtonSize * 0.5f) - barHeight/2,
+            barWidth,
+            barHeight
+        );
+
+        concertPauseButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Creates a default purple restart button for concert simulation.
+     */
+    private void createDefaultConcertRestartButton() {
+        Pixmap pixmap = new Pixmap((int)concertButtonSize, (int)concertButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.8f, 0.2f, 0.8f, 1f);
+        pixmap.fillCircle((int)concertButtonSize/2, (int)concertButtonSize/2, (int)concertButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        int centerX = (int)concertButtonSize/2;
+        int centerY = (int)concertButtonSize/2;
+        int radius = (int)(concertButtonSize * 0.3f);
+
+        pixmap.drawCircle(centerX, centerY, radius);
+
+        int[] arrowX = {centerX - radius/2, centerX - radius/2, centerX + radius/2};
+        int[] arrowY = {centerY - radius/3, centerY + radius/3, centerY};
+        pixmap.fillTriangle(arrowX[0], arrowY[0], arrowX[1], arrowY[1], arrowX[2], arrowY[2]);
+
+        concertRestartButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Updates the clock position on screen.
+     */
+    private void updateClockPosition() {
+        clockX = closeButtonMargin;
+        clockY = Gdx.graphics.getHeight() - clockHeight - closeButtonMargin - 70f;
+    }
+
+    /**
+     * Updates the speed buttons position on screen.
+     */
+    private void updateSpeedButtonsPosition() {
+        speedButtonX = closeButtonMargin;
+        speedButtonY = clockY - speedButtonSize - 10f;
+    }
+
+    /**
+     * Updates the play button position on screen.
+     */
+    private void updatePlayButtonPosition() {
+        playButtonX = closeButtonMargin;
+        playButtonY = speedButtonY - playButtonSize - 20f;
+    }
+
+    /**
+     * Updates the restart button position on screen.
+     */
+    private void updateRestartButtonPosition() {
+        restartSimulationX = playButtonX + playButtonSize + 10f;
+        restartSimulationY = playButtonY;
+    }
+
+    /**
+     * Updates the concert simulation buttons position on screen.
+     */
+    private void updateConcertButtonsPosition() {
+        concertPlayButtonX = closeButtonMargin;
+        concertPlayButtonY = playButtonY - concertButtonSize - 60f;
+        concertRestartButtonX = concertPlayButtonX + concertButtonSpacing;
+        concertRestartButtonY = concertPlayButtonY;
+    }
+
+    /**
+     * Renders concert simulation buttons (play/pause/restart).
+     */
+    private void drawConcertSimulationButtons() {
+        if (spriteBatch == null) return;
+
+        updateConcertButtonsPosition();
+        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
+        spriteBatch.begin();
+
+        if (!isConcertSimulationActive) {
+            if (concertPlayButtonTexture != null) {
+                spriteBatch.draw(concertPlayButtonTexture, concertPlayButtonX, concertPlayButtonY,
+                    concertButtonSize, concertButtonSize);
+
+                if (font != null) {
+                    font.setColor(new Color(0.8f, 0.2f, 0.8f, 1f));
+                    String startText = "🎵 POKRENI KONCERT";
+                    font.draw(spriteBatch, startText, concertPlayButtonX, concertPlayButtonY - 10f);
+
+                    font.setColor(Color.LIGHT_GRAY);
+                    String timeText = "⏰ 18:00 - 22:00";
+                    font.draw(spriteBatch, timeText, concertPlayButtonX, concertPlayButtonY - 40f);
+                }
+            }
+        } else {
+            if (isConcertSimulationRunning) {
+                if (concertPauseButtonTexture != null) {
+                    spriteBatch.draw(concertPauseButtonTexture, concertPlayButtonX, concertPlayButtonY,
+                        concertButtonSize, concertButtonSize);
+                }
+            } else {
+                if (concertPlayButtonTexture != null) {
+                    spriteBatch.draw(concertPlayButtonTexture, concertPlayButtonX, concertPlayButtonY,
+                        concertButtonSize, concertButtonSize);
+                }
+            }
+
+            if (concertRestartButtonTexture != null) {
+                spriteBatch.draw(concertRestartButtonTexture, concertRestartButtonX, concertRestartButtonY,
+                    concertButtonSize, concertButtonSize);
+            }
+
+            if (font != null) {
+                font.setColor(new Color(0.8f, 0.2f, 0.8f, 1f));
+                String concertTitle = "🎵 KONCERT SIMULACIJA";
+                font.draw(spriteBatch, concertTitle, concertPlayButtonX, concertPlayButtonY - 10f);
+
+                font.setColor(Color.LIGHT_GRAY);
+                String concertTime = formatConcertTime(concertSimulationTime);
+                font.draw(spriteBatch, "⏰ " + concertTime, concertPlayButtonX, concertPlayButtonY - 40f);
+            }
+        }
+
+        spriteBatch.end();
+    }
+
+    /**
+     * Formats concert time from minutes to HH:MM format.
+     */
+    private String formatConcertTime(float totalMinutes) {
+        int hours = ((int) totalMinutes / 60) % 24;
+        int minutes = (int) totalMinutes % 60;
+        return String.format("%02d:%02d", hours, minutes);
+    }
+
+    /**
+     * Updates crowd simulation buttons position.
+     */
+    private void updateCrowdButtonsPosition() {
+        crowdButtonX = closeButtonMargin;
+        crowdButtonY = Gdx.graphics.getHeight() - crowdButtonSize - closeButtonMargin - 270f;
+    }
+
+    /**
+     * Applies crowd effects to markers for concert simulation.
+     */
+    private void applyCrowdEffects() {
+        Gdx.app.log("SimulationScreen", "Applying crowd effects to markers");
+
+        for (Marker marker : markers) {
+            int total = marker.getTotalSpots();
+            if (total == 0) continue;
+            float random = MathUtils.random();
+
+            if (random < 0.70f) {
+                int available = MathUtils.random(0, Math.max(1, (int)(total * 0.1f)));
+                marker.setAvailableSpots(available);
+                marker.setState(Marker.MarkerState.FULL);
+            } else if (random < 0.95f) {
+                int available = MathUtils.random(
+                    Math.max(1, (int)(total * 0.1f)),
+                    Math.max(2, (int)(total * 0.4f))
+                );
+                marker.setAvailableSpots(available);
+                marker.setState(Marker.MarkerState.PARTIAL);
+            } else {
+                int available = MathUtils.random(
+                    Math.max(1, (int)(total * 0.4f)),
+                    Math.max(2, (int)(total * 0.8f))
+                );
+                marker.setAvailableSpots(available);
+                marker.setState(Marker.MarkerState.FREE);
+            }
+        }
+    }
+
+    /**
+     * Updates concert simulation logic including time and markers.
+     */
+    private void updateConcertSimulation(float delta) {
+        if (!isConcertSimulationActive || !isConcertSimulationRunning) return;
+
+        concertSimulationTime += (timeSpeedMultiplier * delta * 30f);
+        if (concertSimulationTime >= 24 * 60f) {
+            concertSimulationTime -= 24 * 60f;
+        }
+        updateMarkersDuringConcert(delta);
+        logConcertTraffic();
+    }
+
+    /**
+     * Updates markers during concert based on time of day.
+     */
+    private void updateMarkersDuringConcert(float delta) {
+        int currentHour = ((int)concertSimulationTime / 60) % 24;
+        int currentMinute = (int)concertSimulationTime % 60;
+        float timeSinceStart = concertSimulationTime - concertStartTime;
+        if (currentHour >= 17 && currentHour < 18) {
+            updatePreConcertParking(delta);
+        } else if (currentHour >= 18 && currentHour < 19) {
+            updateConcertFirstHour(delta, timeSinceStart);
+        } else if (currentHour >= 19 && currentHour < 20) {
+            updateConcertPeakHour(delta);
+        } else if (currentHour >= 20 && currentHour < 22) {
+            updateDuringConcert(delta);
+        } else if (currentHour >= 22 || currentHour < 6) {
+            updatePostConcert(delta);
+        }
+    }
+
+    /**
+     * Updates parking status one hour before concert starts.
+     */
+    private void updatePreConcertParking(float delta) {
+        for (Marker marker : markers) {
+            int total = marker.getTotalSpots();
+            if (total == 0) continue;
+
+            float distanceToArena = getDistanceToNearestArena(marker);
+            float occupancyChance = getOccupancyChanceBasedOnDistance(distanceToArena, 0.3f, 0.1f);
+
+            if (MathUtils.random() < occupancyChance) {
+                int available = marker.getAvailableSpots();
+                if (available > 0) {
+                    int spotsToTake = distanceToArena < 0.01f ? MathUtils.random(2, 4) : MathUtils.random(1, 2);
+                    available = Math.max(0, available - spotsToTake);
+                    marker.setAvailableSpots(available);
+                    marker.updateStateFromSpots();
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates parking status during first hour of concert.
+     */
+    private void updateConcertFirstHour(float delta, float timeSinceStart) {
+        for (Marker marker : markers) {
+            int total = marker.getTotalSpots();
+            if (total == 0) continue;
+
+            float distanceToArena = getDistanceToNearestArena(marker);
+            float progress = timeSinceStart / 60f;
+
+            if (distanceToArena < 0.015f) {
+                if (MathUtils.random() < 0.8f * progress) {
+                    int available = marker.getAvailableSpots();
+                    if (available > 0) {
+                        available = Math.max(0, available - MathUtils.random(3, 6));
+                        marker.setAvailableSpots(available);
+                        marker.updateStateFromSpots();
+
+                        if (available <= total * 0.1f) {
+                            marker.setState(Marker.MarkerState.FULL);
+                        }
+                    }
+                }
+            } else if (distanceToArena < 0.03f) {
+                if (MathUtils.random() < 0.5f * progress) {
+                    int available = marker.getAvailableSpots();
+                    if (available > 0) {
+                        available = Math.max(0, available - MathUtils.random(1, 3));
+                        marker.setAvailableSpots(available);
+                        marker.updateStateFromSpots();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates parking status during peak concert hour.
+     */
+    private void updateConcertPeakHour(float delta) {
+        for (Marker marker : markers) {
+            int total = marker.getTotalSpots();
+            if (total == 0) continue;
+
+            float distanceToArena = getDistanceToNearestArena(marker);
+
+            if (distanceToArena < 0.01f) {
+                if (MathUtils.random() < 0.9f && marker.getState() != Marker.MarkerState.FULL) {
+                    int available = MathUtils.random(0, Math.max(1, (int)(total * 0.05f)));
+                    marker.setAvailableSpots(available);
+                    marker.setState(Marker.MarkerState.FULL);
+                }
+            } else if (distanceToArena < 0.02f) {
+                if (MathUtils.random() < 0.7f) {
+                    int available = marker.getAvailableSpots();
+                    if (available > total * 0.3f) {
+                        available = Math.max(0, available - MathUtils.random(2, 5));
+                        marker.setAvailableSpots(available);
+                        marker.updateStateFromSpots();
+                    }
+                }
+            } else if (distanceToArena < 0.03f) {
+                if (MathUtils.random() < 0.4f) {
+                    int available = marker.getAvailableSpots();
+                    if (available > 0) {
+                        available = Math.max(0, available - MathUtils.random(0, 2));
+                        marker.setAvailableSpots(available);
+                        marker.updateStateFromSpots();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates parking status during concert (stable period).
+     */
+    private void updateDuringConcert(float delta) {
+        for (Marker marker : markers) {
+            if (MathUtils.random() < 0.1f) {
+                int total = marker.getTotalSpots();
+                if (total == 0) continue;
+
+                int available = marker.getAvailableSpots();
+                if (MathUtils.random() < 0.3f && available < total) {
+                    available = Math.max(0, available - 1);
+                } else if (MathUtils.random() < 0.1f && available > 0) {
+                    available = Math.min(total, available + 1);
+                }
+
+                marker.setAvailableSpots(available);
+                marker.updateStateFromSpots();
+            }
+        }
+    }
+
+    /**
+     * Updates parking status after concert ends.
+     */
+    private void updatePostConcert(float delta) {
+        for (Marker marker : markers) {
+            int total = marker.getTotalSpots();
+            if (total == 0) continue;
+
+            float distanceToArena = getDistanceToNearestArena(marker);
+            float emptyChance = getEmptyChanceBasedOnDistance(distanceToArena);
+
+            if (MathUtils.random() < emptyChance) {
+                int available = marker.getAvailableSpots();
+                if (available < total) {
+                    int spotsToFree = distanceToArena < 0.01f ? MathUtils.random(3, 8) : MathUtils.random(1, 4);
+                    available = Math.min(total, available + spotsToFree);
+                    marker.setAvailableSpots(available);
+                    marker.updateStateFromSpots();
+                }
+            }
+        }
+    }
+
+    /**
+     * Calculates distance to the nearest concert arena.
+     */
+    private float getDistanceToNearestArena(Marker marker) {
+        float lat = (float)marker.getPosition().lat;
+        float lng = (float)marker.getPosition().lng;
+
+        float dist1 = calculateDistance(STOZICE_ARENA_LAT, STOZICE_ARENA_LNG, lat, lng);
+        float dist2 = calculateDistance(TIVOLI_HALL_LAT, TIVOLI_HALL_LNG, lat, lng);
+        float dist3 = calculateDistance(CRNUC_HALL_LAT, CRNUC_HALL_LNG, lat, lng);
+
+        return Math.min(dist1, Math.min(dist2, dist3));
+    }
+
+    /**
+     * Gets occupancy chance based on distance from arena.
+     */
+    private float getOccupancyChanceBasedOnDistance(float distance, float maxChance, float minChance) {
+        if (distance < 0.01f) return maxChance;
+        if (distance < 0.02f) return maxChance * 0.7f;
+        if (distance < 0.03f) return maxChance * 0.4f;
+        return minChance;
+    }
+
+    /**
+     * Gets empty chance based on distance from arena.
+     */
+    private float getEmptyChanceBasedOnDistance(float distance) {
+        if (distance < 0.01f) return 0.4f;
+        if (distance < 0.02f) return 0.3f;
+        if (distance < 0.03f) return 0.2f;
+        return 0.1f;
+    }
+
+    /**
+     * Resets concert simulation to initial state.
+     */
+    private void resetConcertSimulation() {
+        Gdx.app.log("SimulationScreen", "=== RESETTING CONCERT SIMULATION ===");
+        isConcertSimulationRunning = false;
+        concertSimulationTime = 18.0f * 60f;
+        applyConcertEffects();
+
+        Gdx.app.log("SimulationScreen", "Concert simulation reset to 18:00");
+    }
+
+    /**
+     * Checks if concert play button was clicked.
+     */
+    private boolean isConcertPlayButtonClicked(float screenX, float screenY) {
+        updateConcertButtonsPosition();
+        return screenX >= concertPlayButtonX && screenX <= concertPlayButtonX + concertButtonSize &&
+            screenY >= concertPlayButtonY && screenY <= concertPlayButtonY + concertButtonSize;
+    }
+
+    /**
+     * Checks if concert restart button was clicked.
+     */
+    private boolean isConcertRestartButtonClicked(float screenX, float screenY) {
+        if (!isConcertSimulationActive) return false;
+
+        updateConcertButtonsPosition();
+        return screenX >= concertRestartButtonX && screenX <= concertRestartButtonX + concertButtonSize &&
+            screenY >= concertRestartButtonY && screenY <= concertRestartButtonY + concertButtonSize;
+    }
+
+    /**
+     * Checks if normal simulation restart button was clicked.
+     */
+    private boolean isRestartButtonClicked(float screenX, float screenY) {
+        updateRestartButtonPosition();
+        return screenX >= restartSimulationX &&
+            screenX <= restartSimulationX + restartSimulationSize &&
+            screenY >= restartSimulationY &&
+            screenY <= restartSimulationY + restartSimulationSize;
+    }
+
+    /**
+     * Activates concert simulation mode.
+     */
+    private void activateConcertSimulation() {
+        Gdx.app.log("SimulationScreen", "=== ACTIVATING CONCERT SIMULATION ===");
+        isSimulationRunning = false;
+        saveOriginalMarkersState();
+        concertSimulationTime = 18.0f * 60f;
+        isConcertSimulationActive = true;
+        isConcertSimulationRunning = false;
+        applyConcertEffects();
+
+        Gdx.app.log("SimulationScreen", "Concert simulation activated! Time set to 18:00");
+    }
+
+    /**
+     * Applies initial concert effects to all markers.
+     */
+    private void applyConcertEffects() {
+        Gdx.app.log("SimulationScreen", "Applying concert effects to markers");
+
+        for (Marker marker : markers) {
+            int total = marker.getTotalSpots();
+            if (total == 0) continue;
+            float distanceToStozice = calculateDistance(STOZICE_ARENA_LAT, STOZICE_ARENA_LNG,
+                (float)marker.getPosition().lat, (float)marker.getPosition().lng);
+            float distanceToTivoli = calculateDistance(TIVOLI_HALL_LAT, TIVOLI_HALL_LNG,
+                (float)marker.getPosition().lat, (float)marker.getPosition().lng);
+            float distanceToCrnuc = calculateDistance(CRNUC_HALL_LAT, CRNUC_HALL_LNG,
+                (float)marker.getPosition().lat, (float)marker.getPosition().lng);
+            float minDistance = Math.min(distanceToStozice, Math.min(distanceToTivoli, distanceToCrnuc));
+            setOccupancyBasedOnDistance(marker, total, minDistance);
+        }
+    }
+
+    /**
+     * Sets parking occupancy based on distance from arena.
+     */
+    private void setOccupancyBasedOnDistance(Marker marker, int total, float distance) {
+        float fullProbability = getFullProbabilityBasedOnDistance(distance);
+
+        float random = MathUtils.random();
+
+        if (random < fullProbability) {
+            int available = MathUtils.random(0, Math.max(1, (int)(total * 0.1f)));
+            marker.setAvailableSpots(available);
+            marker.setState(Marker.MarkerState.FULL);
+            Gdx.app.log("SimulationScreen", "Parking near arena: " + marker.getName() + " - FULL (" + available + "/" + total + ")");
+        } else if (random < fullProbability + 0.2f) {
+            int available = MathUtils.random(
+                Math.max(1, (int)(total * 0.1f)),
+                Math.max(2, (int)(total * 0.4f))
+            );
+            marker.setAvailableSpots(available);
+            marker.setState(Marker.MarkerState.PARTIAL);
+        } else {
+            int available = MathUtils.random(
+                Math.max(1, (int)(total * 0.4f)),
+                Math.max(2, (int)(total * 0.8f))
+            );
+            marker.setAvailableSpots(available);
+            marker.setState(Marker.MarkerState.FREE);
+        }
+    }
+
+    /**
+     * Logs current concert traffic statistics.
+     */
+    private void logConcertTraffic() {
+        int currentHour = ((int)concertSimulationTime / 60) % 24;
+        int currentMinute = (int)concertSimulationTime % 60;
+
+        if (currentMinute == 0) {
+            int fullCount = 0;
+            int partialCount = 0;
+            int freeCount = 0;
+
+            for (Marker marker : markers) {
+                switch (marker.getState()) {
+                    case FULL: fullCount++; break;
+                    case PARTIAL: partialCount++; break;
+                    case FREE: freeCount++; break;
+                }
+            }
+
+            Gdx.app.log("ConcertSimulation",
+                String.format("Vreme: %02d:%02d | FULL: %d | PARTIAL: %d | FREE: %d",
+                    currentHour, currentMinute, fullCount, partialCount, freeCount));
+        }
+    }
+
+    /**
+     * Calculates Euclidean distance between two geographic points.
+     */
+    private float calculateDistance(float lat1, float lng1, float lat2, float lng2) {
+        float latDiff = lat1 - lat2;
+        float lngDiff = lng1 - lng2;
+        return (float)Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+    }
+
+    /**
+     * Gets full probability based on distance from arena.
+     */
+    private float getFullProbabilityBasedOnDistance(float distance) {
+        if (distance < 0.005f) {
+            return 0.95f;
+        } else if (distance < 0.01f) {
+            return 0.85f;
+        } else if (distance < 0.02f) {
+            return 0.60f;
+        } else if (distance < 0.03f) {
+            return 0.30f;
+        } else {
+            return 0.10f;
+        }
+    }
+
+    /**
+     * Saves original markers state for concert simulation.
+     */
+    private void saveOriginalMarkersState() {
+        concertOriginalMarkersState.clear();
+        for (Marker marker : markers) {
+            Marker copy = new Marker(
+                new Geolocation(marker.getPosition().lat, marker.getPosition().lng),
+                marker.getType(),
+                marker.getState(),
+                marker.getId(),
+                marker.getName(),
+                marker.getTotalSpots(),
+                marker.getAvailableSpots(),
+                marker.getPricePerHour()
+            );
+            concertOriginalMarkersState.add(copy);
+        }
+    }
+
+    /**
+     * Initializes the simulation clock display.
+     */
     private void initializeSimulationClock() {
         Gdx.app.log("SimulationScreen", "=== INITIALIZING SIMULATION CLOCK ===");
 
@@ -183,6 +981,31 @@ public class SimulationScreen extends BaseScreen {
         updateClockPosition();
     }
 
+    /**
+     * Creates a default blue restart button for normal simulation.
+     */
+    private void createDefaultRestartButton() {
+        Pixmap pixmap = new Pixmap((int)restartSimulationSize, (int)restartSimulationSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.2f, 0.6f, 0.9f, 1f);
+        pixmap.fillCircle((int)restartSimulationSize/2, (int)restartSimulationSize/2, (int)restartSimulationSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+        int centerX = (int)restartSimulationSize/2;
+        int centerY = (int)restartSimulationSize/2;
+        int radius = (int)(restartSimulationSize * 0.3f);
+
+        pixmap.drawCircle(centerX, centerY, radius);
+
+        int[] arrowX = {centerX - radius/2, centerX - radius/2, centerX + radius/2};
+        int[] arrowY = {centerY - radius/3, centerY + radius/3, centerY};
+        pixmap.fillTriangle(arrowX[0], arrowY[0], arrowX[1], arrowY[1], arrowX[2], arrowY[2]);
+
+        restartSimulationTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Initializes speed control buttons (slow/normal/fast).
+     */
     private void initializeSpeedButtons() {
         Gdx.app.log("SimulationScreen", "=== INITIALIZING SPEED BUTTONS ===");
 
@@ -207,6 +1030,9 @@ public class SimulationScreen extends BaseScreen {
         updateSpeedButtonsPosition();
     }
 
+    /**
+     * Creates a default green slow speed button.
+     */
     private void createDefaultSlowButton() {
         Pixmap pixmap = new Pixmap((int)speedButtonSize, (int)speedButtonSize, Pixmap.Format.RGBA8888);
         pixmap.setColor(0.2f, 0.6f, 0.2f, 1f);
@@ -219,6 +1045,9 @@ public class SimulationScreen extends BaseScreen {
         pixmap.dispose();
     }
 
+    /**
+     * Creates a default blue normal speed button.
+     */
     private void createDefaultNormalButton() {
         Pixmap pixmap = new Pixmap((int)speedButtonSize, (int)speedButtonSize, Pixmap.Format.RGBA8888);
         pixmap.setColor(0.2f, 0.4f, 0.8f, 1f);
@@ -232,6 +1061,9 @@ public class SimulationScreen extends BaseScreen {
         pixmap.dispose();
     }
 
+    /**
+     * Creates a default red fast speed button.
+     */
     private void createDefaultFastButton() {
         Pixmap pixmap = new Pixmap((int)speedButtonSize, (int)speedButtonSize, Pixmap.Format.RGBA8888);
         pixmap.setColor(0.8f, 0.2f, 0.2f, 1f);
@@ -248,21 +1080,86 @@ public class SimulationScreen extends BaseScreen {
         pixmap.dispose();
     }
 
-    private void updateClockPosition() {
-        clockX = closeButtonMargin;
-        clockY = Gdx.graphics.getHeight() - clockHeight - closeButtonMargin - 70f;
-    }
-
+    /**
+     * Updates close button position on screen.
+     */
     private void updateCloseButtonPosition() {
         closeButtonX = Gdx.graphics.getWidth() - closeButtonSize - closeButtonMargin;
         closeButtonY = Gdx.graphics.getHeight() - closeButtonSize - closeButtonMargin;
     }
 
-    private void updateSpeedButtonsPosition() {
-        speedButtonX = closeButtonMargin;
-        speedButtonY = Gdx.graphics.getHeight() - speedButtonSize - closeButtonMargin - 120f;
+    /**
+     * Initializes the simulation play/pause button.
+     */
+    private void initializeSimulationButton() {
+        Gdx.app.log("SimulationScreen", "=== INITIALIZING SIMULATION BUTTON ===");
+
+        try {
+            playButtonTexture = new Texture(Gdx.files.internal("ui/play_button.png"));
+        } catch (Exception e) {
+            createDefaultPlayButton();
+        }
+
+        try {
+            pauseButtonTexture = new Texture(Gdx.files.internal("ui/pause_button.png"));
+        } catch (Exception e) {
+            createDefaultPauseButton();
+        }
+
+        updatePlayButtonPosition();
     }
 
+    /**
+     * Creates a default green play button for normal simulation.
+     */
+    private void createDefaultPlayButton() {
+        Pixmap pixmap = new Pixmap((int)playButtonSize, (int)playButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.2f, 0.7f, 0.2f, 1f);
+        pixmap.fillCircle((int)playButtonSize/2, (int)playButtonSize/2, (int)playButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        int triangleSize = (int)(playButtonSize * 0.4);
+        int[] xPoints = {(int)(playButtonSize*0.4), (int)(playButtonSize*0.4), (int)(playButtonSize*0.7)};
+        int[] yPoints = {(int)(playButtonSize*0.35), (int)(playButtonSize*0.65), (int)(playButtonSize*0.5)};
+        pixmap.fillTriangle(xPoints[0], yPoints[0], xPoints[1], yPoints[1], xPoints[2], yPoints[2]);
+
+        playButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Creates a default orange pause button for normal simulation.
+     */
+    private void createDefaultPauseButton() {
+        Pixmap pixmap = new Pixmap((int)playButtonSize, (int)playButtonSize, Pixmap.Format.RGBA8888);
+        pixmap.setColor(0.8f, 0.6f, 0.2f, 1f);
+        pixmap.fillCircle((int)playButtonSize/2, (int)playButtonSize/2, (int)playButtonSize/2 - 5);
+        pixmap.setColor(Color.WHITE);
+
+        int barWidth = (int)(playButtonSize * 0.15f);
+        int barHeight = (int)(playButtonSize * 0.4f);
+
+        pixmap.fillRectangle(
+            (int)(playButtonSize * 0.35f) - barWidth/2,
+            (int)(playButtonSize * 0.5f) - barHeight/2,
+            barWidth,
+            barHeight
+        );
+
+        pixmap.fillRectangle(
+            (int)(playButtonSize * 0.65f) - barWidth/2,
+            (int)(playButtonSize * 0.5f) - barHeight/2,
+            barWidth,
+            barHeight
+        );
+
+        pauseButtonTexture = new Texture(pixmap);
+        pixmap.dispose();
+    }
+
+    /**
+     * Creates a default clock icon texture.
+     */
     private void createDefaultClockIcon() {
         Pixmap pixmap = new Pixmap(64, 64, Pixmap.Format.RGBA8888);
         pixmap.setColor(1f, 0.8f, 0f, 1f);
@@ -277,17 +1174,23 @@ public class SimulationScreen extends BaseScreen {
         pixmap.dispose();
     }
 
+    /**
+     * Formats simulation time from minutes to HH:MM format.
+     */
     private String formatSimulationTime(float totalMinutes) {
         int hours = ((int) totalMinutes / 60) % 24;
         int minutes = (int) totalMinutes % 60;
         return String.format("%02d:%02d", hours, minutes);
     }
 
+    /**
+     * Updates simulation time based on speed multiplier.
+     */
     private void updateSimulationTime(float delta) {
         if (isClockPaused) return;
         clockUpdateTimer += delta;
-        if (clockUpdateTimer >= CLOCK_UPDATE_INTERVAL) {
-            simulationTime += (timeSpeedMultiplier * CLOCK_UPDATE_INTERVAL * 60f);
+        if (clockUpdateTimer >= SLOW_CLOCK_UPDATE_INTERVAL) {
+            simulationTime += (timeSpeedMultiplier * SLOW_CLOCK_UPDATE_INTERVAL * 30f);
             if (simulationTime >= 24 * 60f) {
                 simulationTime -= 24 * 60f;
             }
@@ -295,6 +1198,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Renders the simulation clock display.
+     */
     private void drawSimulationClock() {
         if (spriteBatch == null || font == null) return;
         updateClockPosition();
@@ -310,6 +1216,9 @@ public class SimulationScreen extends BaseScreen {
         spriteBatch.end();
     }
 
+    /**
+     * Renders speed control buttons.
+     */
     private void drawSpeedButtons() {
         if (spriteBatch == null) return;
         updateSpeedButtonsPosition();
@@ -335,6 +1244,9 @@ public class SimulationScreen extends BaseScreen {
         spriteBatch.end();
     }
 
+    /**
+     * Initializes the close button to exit simulation.
+     */
     private void initializeCloseButton() {
         Gdx.app.log("SimulationScreen", "=== INITIALIZING CLOSE BUTTON ===");
         try {
@@ -346,6 +1258,9 @@ public class SimulationScreen extends BaseScreen {
         Gdx.app.log("SimulationScreen", "Close button at: " + closeButtonX + ", " + closeButtonY);
     }
 
+    /**
+     * Creates a default red close button.
+     */
     private void createDefaultCloseButton() {
         Pixmap pixmap = new Pixmap((int)closeButtonSize, (int)closeButtonSize, Pixmap.Format.RGBA8888);
         pixmap.setColor(1f, 0.2f, 0.2f, 1f);
@@ -363,10 +1278,16 @@ public class SimulationScreen extends BaseScreen {
         pixmap.dispose();
     }
 
+    /**
+     * Loads font for UI text rendering.
+     */
     private void loadFont() {
         font = FontManager.getFont(32);
     }
 
+    /**
+     * Loads marker textures for different parking states.
+     */
     private void loadMarkerTextures() {
         try {
             markerFreeTexture = new Texture(Gdx.files.internal("markers/marker_free.png"));
@@ -390,6 +1311,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Loads parking locations from API and converts them to markers.
+     */
     private void loadParkingLocationsFromAPI() {
         new Thread(() -> {
             try {
@@ -407,16 +1331,21 @@ public class SimulationScreen extends BaseScreen {
                         }
                     }
                     Gdx.app.log("SimulationScreen", "Added " + markers.size() + " markers to simulation map");
+                    saveInitialState();
                 });
             } catch (Exception e) {
                 Gdx.app.error("SimulationScreen", "Failed to load parking locations", e);
                 Gdx.app.postRunnable(() -> {
                     initializeTestMarkers();
+                    saveInitialState();
                 });
             }
         }).start();
     }
 
+    /**
+     * Converts a Parking object to a Marker for display.
+     */
     private Marker convertParkingToMarker(Parking parking) {
         if (parking == null || parking.getLocation() == null) {
             return null;
@@ -450,6 +1379,9 @@ public class SimulationScreen extends BaseScreen {
         return marker;
     }
 
+    /**
+     * Initializes test markers for development when API fails.
+     */
     private void initializeTestMarkers() {
         markers.add(new Marker(
             new Geolocation(46.0569, 14.5058),
@@ -469,8 +1401,12 @@ public class SimulationScreen extends BaseScreen {
             Marker.MarkerState.FULL,
             "test-3", "Street Parking South", 20, 0, 1.5f
         ));
+        saveInitialState();
     }
 
+    /**
+     * Sets up the camera for map viewing.
+     */
     private void setupCamera() {
         camera.setToOrtho(false, MapConstants.MAP_WIDTH, MapConstants.MAP_HEIGHT);
         camera.position.set(MapConstants.MAP_WIDTH / 2f, MapConstants.MAP_HEIGHT / 2f, 0);
@@ -480,6 +1416,9 @@ public class SimulationScreen extends BaseScreen {
         camera.update();
     }
 
+    /**
+     * Sets up input handlers for gestures and button clicks.
+     */
     private void setupInputHandlers() {
         gestureDetector = new GestureDetector(new SimulationGestureListener());
         InputAdapter inputAdapter = new InputAdapter() {
@@ -490,19 +1429,46 @@ public class SimulationScreen extends BaseScreen {
                 camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
                 return true;
             }
+
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
 
-                if (isCloseButtonClicked(screenX, gdxY)) {
-                    Gdx.app.log("SimulationScreen", "Close button clicked - returning to map");
-                    returnToMapScreen();
+                if (isPlayButtonClicked(screenX, gdxY)) {
+                    isSimulationRunning = !isSimulationRunning;
+                    Gdx.app.log("SimulationScreen", "Normal simulation " +
+                        (isSimulationRunning ? "STARTED" : "PAUSED"));
+                    return true;
+                }
+                if (!isConcertSimulationActive && isConcertPlayButtonClicked(screenX, gdxY)) {
+                    activateConcertSimulation();
+                    Gdx.app.log("SimulationScreen", "Concert simulation ACTIVATED via button");
+                    return true;
+                }
+
+                if (isConcertPlayButtonClicked(screenX, gdxY)) {
+                    if (!isConcertSimulationActive) {
+                        activateConcertSimulation();
+                    }
+                    isConcertSimulationRunning = !isConcertSimulationRunning;
+                    Gdx.app.log("SimulationScreen", "Concert simulation " +
+                        (isConcertSimulationRunning ? "STARTED" : "PAUSED"));
+                    return true;
+                }
+
+                if (isConcertRestartButtonClicked(screenX, gdxY)) {
+                    resetConcertSimulation();
                     return true;
                 }
 
                 if (isClockAreaClicked(screenX, gdxY)) {
                     isClockPaused = !isClockPaused;
                     Gdx.app.log("SimulationScreen", "Clock " + (isClockPaused ? "PAUSED" : "RESUMED") + " via click");
+                    return true;
+                }
+
+                if (isRestartButtonClicked(screenX, gdxY)) {
+                    resetSimulation();
                     return true;
                 }
 
@@ -533,43 +1499,239 @@ public class SimulationScreen extends BaseScreen {
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
 
+    /**
+     * Checks if clock area was clicked to pause/resume.
+     */
     private boolean isClockAreaClicked(float screenX, float screenY) {
         updateClockPosition();
         return screenX >= clockX && screenX <= clockX + clockWidth && screenY >= clockY && screenY <= clockY + clockHeight;
     }
 
-    private boolean isCloseButtonClicked(float screenX, float screenY) {
-        updateCloseButtonPosition();
-        return screenX >= closeButtonX && screenX <= closeButtonX + closeButtonSize && screenY >= closeButtonY && screenY <= closeButtonY + closeButtonSize;
-    }
-
+    /**
+     * Checks if slow speed button was clicked.
+     */
     private boolean isSlowButtonClicked(float screenX, float screenY) {
         updateSpeedButtonsPosition();
         float buttonX = speedButtonX;
         return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
     }
 
+    /**
+     * Checks if normal speed button was clicked.
+     */
     private boolean isNormalButtonClicked(float screenX, float screenY) {
         updateSpeedButtonsPosition();
         float buttonX = speedButtonX + speedButtonSpacing;
         return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
     }
 
+    /**
+     * Checks if fast speed button was clicked.
+     */
     private boolean isFastButtonClicked(float screenX, float screenY) {
         updateSpeedButtonsPosition();
         float buttonX = speedButtonX + speedButtonSpacing * 2;
         return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
     }
 
+    /**
+     * Returns to the main map screen.
+     */
     private void returnToMapScreen() {
         Gdx.app.log("SimulationScreen", "Returning to MapScreen");
         game.setScreen(new MapScreen(game));
     }
 
+    /**
+     * Updates normal simulation logic.
+     */
+    private void updateSimulation(float delta) {
+        if (!isSimulationRunning) return;
+
+        simulationUpdateTimer += delta;
+        if (simulationUpdateTimer >= SIMULATION_UPDATE_INTERVAL) {
+            applyTimeBasedBehavior();
+            updateMarkersBasedOnTime();
+            simulationUpdateTimer = 0f;
+        }
+    }
+
+    /**
+     * Checks if play button was clicked.
+     */
+    private boolean isPlayButtonClicked(float screenX, float screenY) {
+        updatePlayButtonPosition();
+        return screenX >= playButtonX && screenX <= playButtonX + playButtonSize &&
+            screenY >= playButtonY && screenY <= playButtonY + playButtonSize;
+    }
+
+    /**
+     * Updates markers based on time of day for normal simulation.
+     */
+    private void updateMarkersBasedOnTime() {
+        if (!isSimulationRunning) return;
+
+        DayPhase phase = SimulationTimeMapper.getDayPhase(simulationTime);
+
+        if (phase == DayPhase.DAYTIME) {
+            applySmoothDaytimeChanges();
+        } else {
+            applyNormalTimeBasedChanges(phase);
+        }
+    }
+
+    /**
+     * Applies smooth daytime changes to markers for stable period.
+     */
+    private void applySmoothDaytimeChanges() {
+        for (Marker marker : markers) {
+            int available = marker.getAvailableSpots();
+            int total = marker.getTotalSpots();
+
+            if (total == 0) continue;
+
+            float currentRatio = (float) available / total;
+
+            float targetRatio = getDaytimeTargetRatio();
+
+            int change = calculateSmoothChange(currentRatio, targetRatio, total);
+
+            available += change;
+            available = MathUtils.clamp(available, 0, total);
+
+            marker.setAvailableSpots(available);
+
+            updateMarkerState(marker);
+        }
+    }
+
+    /**
+     * Gets target occupancy ratio for daytime period.
+     */
+    private float getDaytimeTargetRatio() {
+        return 0.4f + (MathUtils.random() * 0.3f);
+    }
+
+    /**
+     * Calculates smooth change in parking spots for daytime.
+     */
+    private int calculateSmoothChange(float currentRatio, float targetRatio, int total) {
+        float difference = targetRatio - currentRatio;
+
+        if (Math.abs(difference) < 0.1f) {
+            return MathUtils.random(-1, 1);
+        }
+
+        int maxChange = (int)(total * 0.05f);
+        maxChange = Math.max(1, Math.min(3, maxChange));
+
+        int change = (int)(difference * total * 0.1f);
+
+        change = MathUtils.clamp(change, -maxChange, maxChange);
+
+        if (MathUtils.random() < 0.4f) {
+            change = MathUtils.random(-1, 1);
+        }
+
+        return change;
+    }
+
+    /**
+     * Applies normal time-based changes to markers.
+     */
+    private void applyNormalTimeBasedChanges(DayPhase phase) {
+        float arrivalMultiplier = SimulationTimeMapper.getArrivalMultiplier(phase);
+
+        for (Marker marker : markers) {
+            int available = marker.getAvailableSpots();
+            int total = marker.getTotalSpots();
+
+            if (total == 0) continue;
+
+            float baseChange = calculateBaseChange(phase);
+
+            float adjustedChange = baseChange * arrivalMultiplier;
+
+            float randomFactor = MathUtils.random(-0.5f, 0.5f);
+            float finalChange = adjustedChange + randomFactor;
+
+            available -= Math.round(finalChange);
+
+            available = MathUtils.clamp(available, 0, total);
+
+            if (finalChange < 0 && (phase == DayPhase.MORNING_RUSH ||
+                phase == DayPhase.AFTERNOON_RUSH)) {
+                if (available > 0) {
+                    available -= MathUtils.random(0, 2);
+                    available = Math.max(available, 0);
+                }
+            }
+
+            marker.setAvailableSpots(available);
+
+            updateMarkerState(marker);
+        }
+    }
+
+    /**
+     * Calculates base change in parking spots based on day phase.
+     */
+    private float calculateBaseChange(DayPhase phase) {
+        switch (phase) {
+            case MORNING_RUSH:
+                return 3.0f;
+            case DAYTIME:
+                return 1.0f;
+            case AFTERNOON_RUSH:
+                return 2.5f;
+            case EVENING:
+                return -1.0f;
+            case NIGHT:
+                return -2.0f;
+            default:
+                return 0.5f;
+        }
+    }
+
+    /**
+     * Updates marker state based on available spots.
+     */
+    private void updateMarkerState(Marker marker) {
+        int total = marker.getTotalSpots();
+        int available = marker.getAvailableSpots();
+
+        if (total == 0) {
+            marker.setState(Marker.MarkerState.UNKNOWN);
+            return;
+        }
+
+        float occupancyRatio = (float) available / total;
+
+        if (occupancyRatio >= 0.6f) {
+            marker.setState(Marker.MarkerState.FREE);
+        } else if (occupancyRatio >= 0.2f) {
+            marker.setState(Marker.MarkerState.PARTIAL);
+        } else {
+            marker.setState(Marker.MarkerState.FULL);
+        }
+    }
+
+    /**
+     * Main render method called every frame.
+     */
     @Override
     public void render(float delta) {
         handleKeyboardInput();
-        updateSimulationTime(delta);
+
+        if (isSimulationRunning) {
+            updateSimulationTime(delta);
+            updateSimulation(delta);
+        }
+
+        if (isConcertSimulationActive && isConcertSimulationRunning) {
+            updateConcertSimulation(delta);
+        }
+
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -583,9 +1745,15 @@ public class SimulationScreen extends BaseScreen {
             drawUI();
             drawSimulationClock();
             drawSpeedButtons();
+            drawSimulationButton();
+            drawRestartButton();
+            drawConcertSimulationButtons();
         }
     }
 
+    /**
+     * Draws all markers on the map.
+     */
     private void drawMarkers() {
         if (beginTile == null || markers == null) {
             return;
@@ -599,6 +1767,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Draws markers using texture images.
+     */
     private void drawMarkersWithTextures() {
         spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
@@ -617,6 +1788,9 @@ public class SimulationScreen extends BaseScreen {
         spriteBatch.end();
     }
 
+    /**
+     * Draws markers using colored shapes.
+     */
     private void drawMarkersWithShapes() {
         if (shapeRenderer == null) return;
         shapeRenderer.setProjectionMatrix(camera.combined);
@@ -635,10 +1809,16 @@ public class SimulationScreen extends BaseScreen {
         shapeRenderer.end();
     }
 
+    /**
+     * Draws UI elements.
+     */
     private void drawUI() {
         drawCloseButton();
     }
 
+    /**
+     * Draws the close button to exit simulation.
+     */
     private void drawCloseButton() {
         if (spriteBatch == null || closeButtonTexture == null) return;
         updateCloseButtonPosition();
@@ -648,6 +1828,9 @@ public class SimulationScreen extends BaseScreen {
         spriteBatch.end();
     }
 
+    /**
+     * Gets texture for marker state.
+     */
     private Texture getTextureForState(Marker.MarkerState state) {
         switch (state) {
             case FREE:
@@ -662,6 +1845,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Gets color for marker state.
+     */
     private Color getColorForState(Marker.MarkerState state) {
         switch (state) {
             case FREE:
@@ -676,6 +1862,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Applies time-based behavior to markers for normal simulation.
+     */
     private void applyTimeBasedBehavior() {
         DayPhase phase = SimulationTimeMapper.getDayPhase(simulationTime);
 
@@ -685,25 +1874,87 @@ public class SimulationScreen extends BaseScreen {
 
             if (total == 0) continue;
 
+            int baseChange = 0;
+            boolean smallChangeOnly = false;
+
             switch (phase) {
-                case MORNING:
-                    available -= 1; // dolasci
+                case MORNING_RUSH:
+                    baseChange = -MathUtils.random(3, 6);
                     break;
-                case DAY:
-                    // skoro stabilno
-                    available += MathUtils.random(-1, 1);
+
+                case DAYTIME:
+                    baseChange = calculateDaytimeChange(marker, available, total);
+                    smallChangeOnly = true;
                     break;
+
+                case AFTERNOON_RUSH:
+                    baseChange = -MathUtils.random(2, 5);
+                    break;
+
+                case EVENING:
+                    baseChange = MathUtils.random(0, 2);
+                    smallChangeOnly = true;
+                    break;
+
                 case NIGHT:
-                    available += 1; // odlasci
+                    baseChange = MathUtils.random(1, 3);
                     break;
             }
 
+            if (smallChangeOnly) {
+                baseChange = applyStabilityConstraints(baseChange, available, total);
+            }
+
+            available += baseChange;
             available = MathUtils.clamp(available, 0, total);
+
             marker.setAvailableSpots(available);
+
+            updateMarkerState(marker);
         }
     }
 
+    /**
+     * Calculates daytime change for a specific marker.
+     */
+    private int calculateDaytimeChange(Marker marker, int available, int total) {
+        float occupancyRatio = (float) available / total;
 
+        if (occupancyRatio > 0.8f) {
+            return MathUtils.random(-2, 0);
+        } else if (occupancyRatio > 0.4f) {
+            return MathUtils.random(-1, 1);
+        } else {
+            return MathUtils.random(0, 1);
+        }
+    }
+
+    /**
+     * Applies stability constraints to prevent extreme changes.
+     */
+    private int applyStabilityConstraints(int change, int available, int total) {
+        if (change > 0 && available >= total * 0.9f) {
+            change = Math.min(change, 1);
+        }
+
+        if (change < 0 && available <= total * 0.1f) {
+            change = Math.max(change, -1);
+        }
+
+        if (Math.abs(change) > 2) {
+            change = change > 0 ? 1 : -1;
+        }
+
+        if (MathUtils.random() < 0.3f) {
+            change = 0;
+        }
+
+        return change;
+    }
+
+    /**
+     * Handles keyboard input for camera and simulation control.
+     */
     private void handleKeyboardInput() {
         if (Gdx.input.isKeyPressed(Input.Keys.Q) || Gdx.input.isKeyPressed(Input.Keys.PLUS)) {
             camera.zoom -= 0.02f;
@@ -757,6 +2008,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Clamps camera position to stay within map boundaries.
+     */
     private void clampCameraPosition() {
         float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
         float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
@@ -772,6 +2026,9 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Disposes all resources when screen is closed.
+     */
     @Override
     public void dispose() {
         if (tiledMap != null) {
@@ -799,8 +2056,24 @@ public class SimulationScreen extends BaseScreen {
         if (markerFullTexture != null) {
             markerFullTexture.dispose();
         }
+        if (concertPlayButtonTexture != null) {
+            concertPlayButtonTexture.dispose();
+        }
+        if (concertPauseButtonTexture != null) {
+            concertPauseButtonTexture.dispose();
+        }
+        if (concertRestartButtonTexture != null) {
+            concertRestartButtonTexture.dispose();
+        }
+
         if (markerUnknownTexture != null) {
             markerUnknownTexture.dispose();
+        }
+        if (concertButtonTexture != null) {
+            concertButtonTexture.dispose();
+        }
+        if (restartButtonTexture != null) {
+            restartButtonTexture.dispose();
         }
         if (font != null) {
             font.dispose();
@@ -820,8 +2093,20 @@ public class SimulationScreen extends BaseScreen {
         if (fastButtonTexture != null) {
             fastButtonTexture.dispose();
         }
+        if (playButtonTexture != null) {
+            playButtonTexture.dispose();
+        }
+        if (pauseButtonTexture != null) {
+            pauseButtonTexture.dispose();
+        }
+        if (restartSimulationTexture != null) {
+            restartSimulationTexture.dispose();
+        }
     }
 
+    /**
+     * Gesture listener for map navigation.
+     */
     private class SimulationGestureListener implements GestureDetector.GestureListener {
         @Override
         public boolean touchDown(float x, float y, int pointer, int button) {
@@ -864,12 +2149,18 @@ public class SimulationScreen extends BaseScreen {
         }
     }
 
+    /**
+     * Handles screen resize events.
+     */
     @Override
     public void resize(int width, int height) {
         super.resize(width, height);
         updateClockPosition();
         updateCloseButtonPosition();
         updateSpeedButtonsPosition();
+        updatePlayButtonPosition();
+        updateRestartButtonPosition();
+        updateConcertButtonsPosition();
         Gdx.app.log("SimulationScreen", "Screen resized to: " + width + "x" + height);
     }
 }
