@@ -91,6 +91,92 @@ namespace ParkingMate.Blockchain
 
             return CalculateChainWeight(blockchain.Chain);
         }
+
+        /// <summary>
+        /// Rezultat poređenja dva blockchain lanca na osnovu kumulativne težine (6.2.3).
+        /// </summary>
+        public enum ChainComparisonResult
+        {
+            FirstHeavier,   // Prvi lanac je teži
+            SecondHeavier,  // Drugi lanac je teži
+            Equal           // Lanci imaju jednaku težinu
+        }
+
+        /// <summary>
+        /// Poredi dva blockchain lanca na osnovu njihove kumulativne težine (6.2.3).
+        /// </summary>
+        /// <param name="chain1">Prvi blockchain lanac</param>
+        /// <param name="chain2">Drugi blockchain lanac</param>
+        /// <returns>Rezultat poređenja: FirstHeavier, SecondHeavier, ili Equal</returns>
+        public static ChainComparisonResult CompareChains(IReadOnlyList<Block> chain1, IReadOnlyList<Block> chain2)
+        {
+            if (chain1 == null)
+            {
+                throw new ArgumentNullException(nameof(chain1));
+            }
+            if (chain2 == null)
+            {
+                throw new ArgumentNullException(nameof(chain2));
+            }
+
+            BigInteger weight1 = CalculateChainWeight(chain1);
+            BigInteger weight2 = CalculateChainWeight(chain2);
+
+            if (weight1 > weight2)
+            {
+                return ChainComparisonResult.FirstHeavier;
+            }
+            else if (weight2 > weight1)
+            {
+                return ChainComparisonResult.SecondHeavier;
+            }
+            else
+            {
+                return ChainComparisonResult.Equal;
+            }
+        }
+
+        /// <summary>
+        /// Poredi dva blockchain lanca koristeći Blockchain objekte (6.2.3).
+        /// </summary>
+        /// <param name="blockchain1">Prvi blockchain</param>
+        /// <param name="blockchain2">Drugi blockchain</param>
+        /// <returns>Rezultat poređenja: FirstHeavier, SecondHeavier, ili Equal</returns>
+        public static ChainComparisonResult CompareChains(Blockchain blockchain1, Blockchain blockchain2)
+        {
+            if (blockchain1 == null)
+            {
+                throw new ArgumentNullException(nameof(blockchain1));
+            }
+            if (blockchain2 == null)
+            {
+                throw new ArgumentNullException(nameof(blockchain2));
+            }
+
+            return CompareChains(blockchain1.Chain, blockchain2.Chain);
+        }
+
+        /// <summary>
+        /// Proverava da li je prvi lanac teži od drugog (6.2.3).
+        /// </summary>
+        /// <param name="chain1">Prvi blockchain lanac</param>
+        /// <param name="chain2">Drugi blockchain lanac</param>
+        /// <returns>True ako je prvi lanac teži, inače false</returns>
+        public static bool IsFirstChainHeavier(IReadOnlyList<Block> chain1, IReadOnlyList<Block> chain2)
+        {
+            return CompareChains(chain1, chain2) == ChainComparisonResult.FirstHeavier;
+        }
+
+        /// <summary>
+        /// Proverava da li je prvi blockchain teži od drugog (6.2.3).
+        /// </summary>
+        /// <param name="blockchain1">Prvi blockchain</param>
+        /// <param name="blockchain2">Drugi blockchain</param>
+        /// <returns>True ako je prvi blockchain teži, inače false</returns>
+        public static bool IsFirstChainHeavier(Blockchain blockchain1, Blockchain blockchain2)
+        {
+            return CompareChains(blockchain1, blockchain2) == ChainComparisonResult.FirstHeavier;
+        }
     }
 }
 
