@@ -86,6 +86,7 @@ const reviewsRouter = require('./routes/reviewsRoutes');
 const paymentRouter = require('./routes/paymentRoutes');
 const parkingLocationRouter = require('./routes/parkingLocationRoutes');
 const parkingImageRouter = require('./routes/parkingImageRoutes');
+const mlRouter = require('./routes/mlRoutes');
 
 
 // View engine setup
@@ -112,6 +113,7 @@ app.use('/reviews', reviewsRouter);
 app.use('/payments', authenticateToken, paymentRouter);
 app.use('/parkingLocations', parkingLocationRouter);
 app.use('/api/parking-images', parkingImageRouter);
+app.use('/api/ml', mlRouter);
 
 // Catch 404 and forward to error handler
 app.use(function(req, res, next) {
