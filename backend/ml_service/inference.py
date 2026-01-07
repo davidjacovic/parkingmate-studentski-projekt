@@ -111,8 +111,10 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_thresh
                     })
         
         # Task 3.3.2: Determine which parking spots are occupied
+        # Task 3.3.3: Prepare coordinates for parking spots
         occupied_spots = []
         free_spots = []
+        spots_with_status = []
         
         for spot_idx, spot in enumerate(parking_spots):
             is_occupied = False
@@ -127,6 +129,15 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_thresh
                 
                 if iou >= iou_threshold:
                     is_occupied = True
+            
+            # Task 3.3.3: Store spot with coordinates and status
+            spot_info = {
+                "index": spot_idx,
+                "coordinates": spot["bbox"],  # [x_center, y_center, width, height]
+                "is_occupied": is_occupied,
+                "confidence": spot["confidence"]
+            }
+            spots_with_status.append(spot_info)
             
             if is_occupied:
                 occupied_spots.append(spot_idx)
@@ -145,6 +156,7 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_thresh
             "parking_spots": parking_spots,
             "free_spot_indices": free_spots,
             "occupied_spot_indices": occupied_spots,
+            "spots_with_coordinates": spots_with_status,  # Task 3.3.3: Coordinates with status
             "analysis_metadata": {
                 "confidence_threshold": confidence_threshold,
                 "iou_threshold": iou_threshold,

@@ -1,5 +1,5 @@
 /**
- * ML Inference Service - Task 3.3.1 + 3.3.2
+ * ML Inference Service - Task 3.3.1 + 3.3.2 + 3.3.3
  * Wrapper service for calling Python YOLO inference
  */
 
@@ -103,17 +103,34 @@ class MLInferenceService {
     }
 
     /**
-     * Format analysis result for API response - Task 3.3.2
-     * Returns number of free and occupied spaces
+     * Format analysis result for API response - Task 3.3.2 + 3.3.3
+     * Returns number of free and occupied spaces, and coordinates of parking spots
      * @param {Object} analysisResult - Raw analysis result from Python script
-     * @returns {Object} Formatted result with freeSpaces and occupiedSpaces
+     * @returns {Object} Formatted result with freeSpaces, occupiedSpaces, and spotsCoordinates
      */
     formatResult(analysisResult) {
+        // Task 3.3.3: Extract coordinates for all parking spots
+        // Format: [[x_center, y_center, width, height], ...]
+        const spotsCoordinates = [];
+        
+        if (analysisResult.spots_with_coordinates) {
+            analysisResult.spots_with_coordinates.forEach(spot => {
+                // Coordinates are already in format [x_center, y_center, width, height]
+                spotsCoordinates.push(spot.coordinates);
+            });
+        } else if (analysisResult.parking_spots) {
+            // Fallback: extract from parking_spots if spots_with_coordinates not available
+            analysisResult.parking_spots.forEach(spot => {
+                spotsCoordinates.push(spot.bbox);
+            });
+        }
+        
         return {
             totalSpots: analysisResult.total_spots || 0,
             freeSpaces: analysisResult.free_spaces || 0,
             occupiedSpaces: analysisResult.occupied_spaces || 0,
             totalCars: analysisResult.total_cars || 0,
+            spotsCoordinates: spotsCoordinates,  // Task 3.3.3: Coordinates of parking spots
             allDetections: analysisResult.all_detections || [],
             metadata: analysisResult.analysis_metadata || {}
         };
