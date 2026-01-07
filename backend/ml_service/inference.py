@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ML Inference Service for Parking Detection - Task 3.3.1
+ML Inference Service for Parking Detection - Task 3.3.1 + 3.3.2
 Uses YOLO model to detect cars and parking spots in images
 """
 
@@ -15,7 +15,45 @@ CLASS_MAPPING = {
     "1": "parking_spot"
 }
 
-def analyze_parking(image_path, model_path, confidence_threshold=0.5):
+def calculate_iou(box1, box2):
+    """
+    Calculate Intersection over Union (IoU) between two bounding boxes.
+    Boxes are in format: [x_center, y_center, width, height] (normalized)
+    """
+    # Convert to [x1, y1, x2, y2] format
+    def to_corners(box):
+        x_center, y_center, width, height = box
+        x1 = x_center - width / 2
+        y1 = y_center - height / 2
+        x2 = x_center + width / 2
+        y2 = y_center + height / 2
+        return [x1, y1, x2, y2]
+    
+    box1_corners = to_corners(box1)
+    box2_corners = to_corners(box2)
+    
+    # Calculate intersection
+    x1_inter = max(box1_corners[0], box2_corners[0])
+    y1_inter = max(box1_corners[1], box2_corners[1])
+    x2_inter = min(box1_corners[2], box2_corners[2])
+    y2_inter = min(box1_corners[3], box2_corners[3])
+    
+    if x2_inter < x1_inter or y2_inter < y1_inter:
+        return 0.0
+    
+    intersection = (x2_inter - x1_inter) * (y2_inter - y1_inter)
+    
+    # Calculate union
+    area1 = (box1_corners[2] - box1_corners[0]) * (box1_corners[3] - box1_corners[1])
+    area2 = (box2_corners[2] - box2_corners[0]) * (box2_corners[3] - box2_corners[1])
+    union = area1 + area2 - intersection
+    
+    if union == 0:
+        return 0.0
+    
+    return intersection / union
+
+def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_threshold=0.3):
     """
     Analyze parking image using YOLO model.
     
@@ -23,6 +61,7 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5):
         image_path: Path to the image file
         model_path: Path to the YOLO model file (best.pt)
         confidence_threshold: Minimum confidence for detections
+        iou_threshold: IoU threshold for determining if a car occupies a parking spot
     
     Returns:
         Dictionary with analysis results
@@ -71,16 +110,44 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5):
                         "confidence": confidence
                     })
         
-        # Prepare result - basic detection results only
+        # Task 3.3.2: Determine which parking spots are occupied
+        occupied_spots = []
+        free_spots = []
+        
+        for spot_idx, spot in enumerate(parking_spots):
+            is_occupied = False
+            best_iou = 0.0
+            best_car_idx = -1
+            
+            for car_idx, car in enumerate(cars):
+                iou = calculate_iou(spot["bbox"], car["bbox"])
+                if iou > best_iou:
+                    best_iou = iou
+                    best_car_idx = car_idx
+                
+                if iou >= iou_threshold:
+                    is_occupied = True
+            
+            if is_occupied:
+                occupied_spots.append(spot_idx)
+            else:
+                free_spots.append(spot_idx)
+        
+        # Prepare result
         result = {
             "success": True,
             "total_spots": len(parking_spots),
+            "free_spaces": len(free_spots),
+            "occupied_spaces": len(occupied_spots),
             "total_cars": len(cars),
             "all_detections": detections,
             "cars": cars,
             "parking_spots": parking_spots,
+            "free_spot_indices": free_spots,
+            "occupied_spot_indices": occupied_spots,
             "analysis_metadata": {
                 "confidence_threshold": confidence_threshold,
+                "iou_threshold": iou_threshold,
                 "image_path": image_path
             }
         }
@@ -97,12 +164,12 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5):
 def main():
     """
     Main entry point for the inference service.
-    Reads arguments from command line: image_path model_path [confidence_threshold]
+    Reads arguments from command line: image_path model_path [confidence_threshold] [iou_threshold]
     """
     if len(sys.argv) < 3:
         print(json.dumps({
             "success": False,
-            "error": "Usage: inference.py <image_path> <model_path> [confidence_threshold]"
+            "error": "Usage: inference.py <image_path> <model_path> [confidence_threshold] [iou_threshold]"
         }))
         sys.exit(1)
     
@@ -110,6 +177,7 @@ def main():
     image_path = sys.argv[1].strip('"')
     model_path = sys.argv[2].strip('"')
     confidence_threshold = float(sys.argv[3]) if len(sys.argv) > 3 else 0.5
+    iou_threshold = float(sys.argv[4]) if len(sys.argv) > 4 else 0.3
     
     # Normalize paths for cross-platform compatibility
     image_path = os.path.normpath(image_path)
@@ -131,7 +199,7 @@ def main():
         sys.exit(1)
     
     # Run analysis
-    result = analyze_parking(image_path, model_path, confidence_threshold)
+    result = analyze_parking(image_path, model_path, confidence_threshold, iou_threshold)
     
     # Output JSON result
     print(json.dumps(result, indent=2))

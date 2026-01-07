@@ -125,3 +125,4 @@ curl -X POST http://localhost:3002/api/ml/analyze \
 - Model fajl (`best.pt`) mora biti na putanji `backend/models/best.pt`
 - Za Windows, možda treba postaviti `PYTHON_EXECUTABLE=python` u `.env` fajlu
 
+
