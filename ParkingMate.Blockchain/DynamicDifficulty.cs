@@ -13,16 +13,14 @@ namespace ParkingMate.Blockchain
         /// <summary>
         /// Izračunava novu difficulty vrednost na osnovu vremena potrebnog za mining poslednjih N blokova.
         /// 
-        /// Algoritam:
-        /// 1. Uzima poslednjih 'adjustmentInterval' blokova (ili sve dostupne blokove ako je lanac kraći)
-        /// 2. Računa ukupno vreme između prvog i poslednjeg bloka u intervalu
-        /// 3. Upoređuje sa ciljanim vremenom (adjustmentInterval * blockIntervalSeconds)
-        /// 4. Prilagođava difficulty na osnovu omjera stvarnog i ciljanog vremena
+        /// Algoritam prema specifikaciji:
+        /// prilagoditvani blok = Veriga blokov[dolžina verige - interval popravka]
+        /// pričakovani čas = čas ustvarjanja bloka * interval popravka
+        /// dejanski čas = časovna značka zadnjega bloka - časovna značka prilagoditvenega bloka
         /// 
-        /// Formula: newDifficulty = currentDifficulty * (actualTime / targetTime)
-        /// 
-        /// Ako je mining bio brži od ciljanog vremena -> povećava se difficulty
-        /// Ako je mining bio sporiji od ciljanog vremena -> smanjuje se difficulty
+        /// if ( dejanski čas < (pričakovani čas / 2) ) return težavnost prilagoditvenega bloka + 1 
+        /// else if ( dejanski čas > (pričakovani čas * 2) ) return težavnost prilagoditvenega bloka - 1
+        /// else return težavnost prilagoditvenega bloka
         /// </summary>
         /// <param name="chain">Lista blokova u lancu</param>
         /// <param name="currentDifficulty">Trenutna difficulty vrednost</param>
@@ -46,38 +44,86 @@ namespace ParkingMate.Blockchain
                 return currentDifficulty;
             }
 
-            // Uzmi poslednjih 'adjustmentInterval' blokova (ili sve ako je lanac kraći)
-            int blocksToConsider = Math.Min((int)adjustmentInterval, chain.Count - 1);
+            // Prema specifikaciji:
+            // prilagoditvani blok = Veriga blokov[dolžina verige - interval popravka]
+            // pričakovani čas = čas ustvarjanja bloka * interval popravka
+            // dejanski čas = časovna značka zadnjega bloka - časovna značka prilagoditvenega bloka
             
-            // Prvi blok u intervalu (najstariji)
-            Block firstBlock = chain[chain.Count - blocksToConsider - 1];
-            // Poslednji blok u intervalu (najnoviji)
+            // Pronađi prilagoditveni blok (blok na poziciji chain.Count - adjustmentInterval)
+            // Napomena: Genesis blok (index 0) se ne računa u interval, tako da uzimamo blokove posle genesis bloka
+            int adjustmentBlockIndex = chain.Count - (int)adjustmentInterval - 1;
+            
+            // Proveri da li postoji dovoljno blokova (mora biti bar 1 blok posle genesis bloka)
+            if (adjustmentBlockIndex < 1)
+            {
+                // Nema dovoljno blokova za prilagođavanje (genesis blok se ne računa)
+                return currentDifficulty;
+            }
+            
+            Block adjustmentBlock = chain[adjustmentBlockIndex];
             Block lastBlock = chain[chain.Count - 1];
-
-            // Izračunaj ukupno vreme između prvog i poslednjeg bloka (u sekundama)
-            long actualTimeSeconds = lastBlock.Timestamp - firstBlock.Timestamp;
-
+            
+            // Pričakovani čas = čas ustvarjanja bloka * interval popravka
+            long expectedTimeSeconds = blockIntervalSeconds * adjustmentInterval;
+            
+            // Dejanski čas = časovna značka zadnjega bloka - časovna značka prilagoditvenega bloka
+            long actualTimeSeconds = lastBlock.Timestamp - adjustmentBlock.Timestamp;
+            
             // Ako je vreme 0 ili negativno, ne prilagođavaj difficulty
             if (actualTimeSeconds <= 0)
             {
+                Console.WriteLine($"[Difficulty] Ne prilagođava se: actualTimeSeconds={actualTimeSeconds} (mora biti > 0)");
                 return currentDifficulty;
             }
-
-            // Ciljano vreme za mining 'blocksToConsider' blokova
-            long targetTimeSeconds = blocksToConsider * blockIntervalSeconds;
-
-            // Izračunaj omjer ciljanog i stvarnog vremena
-            // Formula: newDifficulty = currentDifficulty * (targetTime / actualTime)
-            // Ako je mining bio brži (actualTime < targetTime), timeRatio > 1.0, difficulty se povećava
-            // Ako je mining bio sporiji (actualTime > targetTime), timeRatio < 1.0, difficulty se smanjuje
-            double timeRatio = (double)targetTimeSeconds / actualTimeSeconds;
-
-            // Prilagođi difficulty na osnovu omjera
-            double newDifficultyDouble = currentDifficulty * timeRatio;
-
-            // Zaokruži na najbliži ceo broj
-            uint newDifficulty = (uint)Math.Round(newDifficultyDouble);
-
+            
+            // Koristimo difficulty poslednjeg bloka u intervalu (ne prilagoditvenog bloka)
+            // jer je to difficulty koja je korišćena za mining blokova u intervalu
+            uint baseDifficulty = lastBlock.Difficulty;
+            
+            // Debug: Prikaži informacije o prilagođavanju
+            Console.WriteLine($"[Difficulty Debug] Analiza po specifikaciji:");
+            Console.WriteLine($"  Prilagoditveni blok: Index {adjustmentBlock.Index}, Difficulty {adjustmentBlock.Difficulty}");
+            Console.WriteLine($"  Poslednji blok: Index {lastBlock.Index}, Difficulty {lastBlock.Difficulty}");
+            Console.WriteLine($"  Pričakovani čas: {expectedTimeSeconds}s ({adjustmentInterval} blokova × {blockIntervalSeconds}s po bloku)");
+            Console.WriteLine($"  Dejanski čas: {actualTimeSeconds}s (od bloka {adjustmentBlock.Index} do {lastBlock.Index})");
+            Console.WriteLine($"  Bazna difficulty za prilagođavanje: {baseDifficulty} (difficulty poslednjeg bloka)");
+            Console.WriteLine($"  Poređenje:");
+            Console.WriteLine($"    - 2x brži ili brži: {actualTimeSeconds}s <= {expectedTimeSeconds / 2}s? {(actualTimeSeconds <= (expectedTimeSeconds / 2) ? "DA" : "NE")}");
+            Console.WriteLine($"    - 2x sporiji ili sporiji: {actualTimeSeconds}s >= {expectedTimeSeconds * 2}s? {(actualTimeSeconds >= (expectedTimeSeconds * 2) ? "DA" : "NE")}");
+            
+            // Prema specifikaciji:
+            // if ( dejanski čas < (pričakovani čas / 2) ) return težavnost prilagoditvenega bloka + 1 
+            // else if ( dejanski čas > (pričakovani čas * 2) ) return težavnost prilagoditvenega bloka - 1
+            // else return težavnost prilagoditvenega bloka
+            // 
+            // Napomena: Koristimo difficulty poslednjeg bloka kao baznu, jer je to difficulty koja je korišćena za mining
+            
+            uint newDifficulty;
+            
+            // Provera: da li je mining bio 2x brži ili brži (<= polovina pričakovanog vremena)
+            if (actualTimeSeconds <= (expectedTimeSeconds / 2))
+            {
+                // Mining je bio 2x brži ili brži - povećaj difficulty za 1
+                newDifficulty = baseDifficulty + 1;
+                Console.WriteLine($"  Mining je bio 2x brži ili brži ({actualTimeSeconds}s <= {expectedTimeSeconds / 2}s)");
+                Console.WriteLine($"  Difficulty povećana: {baseDifficulty} → {newDifficulty} (+1)");
+            }
+            // Provera: da li je mining bio 2x sporiji ili sporiji (>= duplo pričakovano vreme)
+            else if (actualTimeSeconds >= (expectedTimeSeconds * 2))
+            {
+                // Mining je bio 2x sporiji ili sporiji - smanji difficulty za 1
+                newDifficulty = baseDifficulty > 1 ? baseDifficulty - 1 : 1;
+                Console.WriteLine($"  Mining je bio 2x sporiji ili sporiji ({actualTimeSeconds}s >= {expectedTimeSeconds * 2}s)");
+                Console.WriteLine($"  Difficulty smanjena: {baseDifficulty} → {newDifficulty} (-1)");
+            }
+            else
+            {
+                // Mining je bio u normalnom opsegu - zadrži difficulty
+                newDifficulty = baseDifficulty;
+                Console.WriteLine($"  Mining je bio u normalnom opsegu");
+                Console.WriteLine($"  Difficulty ostaje ista: {newDifficulty}");
+            }
+            
             // Osiguraj minimum difficulty od 1
             if (newDifficulty < 1)
             {
