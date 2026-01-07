@@ -63,8 +63,13 @@ namespace ParkingMate.Blockchain
 
             // Test izračunavanja kumulativne težine (6.2.1)
             // Otkomentariši sledeću liniju da testiraš izračunavanje 2^difficulty:
-            TestCumulativeWeight.RunTest();
-            return;
+            // TestCumulativeWeight.RunTest();
+            // return;
+
+            // Test validacije timestamp-a (2.3)
+            // Otkomentariši sledeću liniju da testiraš validaciju timestamp-a:
+            // TestTimestampValidation.RunTest();
+            // return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
             var mpi = MpiEnvironment.Instance;
@@ -127,14 +132,11 @@ namespace ParkingMate.Blockchain
             Console.WriteLine($"Adjustment interval: {adjustmentInterval} blokova (6.1.3)");
             Console.WriteLine();
 
-            // Kreiraj blockchain sa parametrima za dinamičku difficulty (6.1.3)
-            var blockchain = new Blockchain(blockIntervalSeconds, adjustmentInterval);
+            // Kreiraj blockchain sa parametrima za dinamičku difficulty (6.1.3) i multi-threaded mining (EPIC 4)
+            var blockchain = new Blockchain(blockIntervalSeconds, adjustmentInterval, threadCount);
 
-            // Napomena: Trenutna implementacija blockchain.AddBlock koristi single-threaded mining
-            // U budućim verzijama, ovo može biti zamenjeno multi-threaded mining-om koristeći ThreadedMiner
-            // sa threadCount niti
-            Console.WriteLine($"Napomena: Trenutno se koristi single-threaded mining.");
-            Console.WriteLine($"Konfigurisano {threadCount} niti će biti dostupno za multi-threaded mining u budućim verzijama.");
+            // EPIC 4: Multi-threaded mining je integrisan u Blockchain.AddBlock()
+            Console.WriteLine($"Korišćenje multi-threaded mining-a sa {threadCount} niti (EPIC 4)");
             Console.WriteLine();
 
             // Trenutna difficulty vrednost (počinje sa početnom difficulty, zatim se dinamički prilagođava)
