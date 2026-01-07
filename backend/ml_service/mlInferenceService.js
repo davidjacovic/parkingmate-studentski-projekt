@@ -1,5 +1,5 @@
 /**
- * ML Inference Service - Task 3.3.1
+ * ML Inference Service - Task 3.3.1 + 3.3.2
  * Wrapper service for calling Python YOLO inference
  */
 
@@ -15,8 +15,9 @@ class MLInferenceService {
         this.modelPath = process.env.ML_MODEL_PATH || path.join(__dirname, '..', 'models', 'best.pt');
         // Python executable - try python3 first, then python
         this.pythonExecutable = process.env.PYTHON_EXECUTABLE || 'python3';
-        // Default confidence threshold
+        // Default thresholds
         this.confidenceThreshold = parseFloat(process.env.ML_CONFIDENCE_THRESHOLD || '0.5');
+        this.iouThreshold = parseFloat(process.env.ML_IOU_THRESHOLD || '0.3');
     }
 
     /**
@@ -54,9 +55,10 @@ class MLInferenceService {
 
             // Use provided options or defaults
             const confidenceThreshold = options.confidenceThreshold || this.confidenceThreshold;
+            const iouThreshold = options.iouThreshold || this.iouThreshold;
 
             // Build command
-            const command = `${this.pythonExecutable} "${this.pythonScriptPath}" "${imagePath}" "${this.modelPath}" ${confidenceThreshold}`;
+            const command = `${this.pythonExecutable} "${this.pythonScriptPath}" "${imagePath}" "${this.modelPath}" ${confidenceThreshold} ${iouThreshold}`;
 
             // Execute Python script
             const result = await this.executeCommand(command);
@@ -98,6 +100,23 @@ class MLInferenceService {
                 resolve(stdout);
             });
         });
+    }
+
+    /**
+     * Format analysis result for API response - Task 3.3.2
+     * Returns number of free and occupied spaces
+     * @param {Object} analysisResult - Raw analysis result from Python script
+     * @returns {Object} Formatted result with freeSpaces and occupiedSpaces
+     */
+    formatResult(analysisResult) {
+        return {
+            totalSpots: analysisResult.total_spots || 0,
+            freeSpaces: analysisResult.free_spaces || 0,
+            occupiedSpaces: analysisResult.occupied_spaces || 0,
+            totalCars: analysisResult.total_cars || 0,
+            allDetections: analysisResult.all_detections || [],
+            metadata: analysisResult.analysis_metadata || {}
+        };
     }
 }
 

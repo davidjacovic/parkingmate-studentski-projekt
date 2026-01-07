@@ -1,5 +1,5 @@
 /**
- * ML Analysis Controller - Task 3.3.1
+ * ML Analysis Controller - Task 3.3.1 + 3.3.2
  * Handles ML inference requests for parking image analysis
  */
 
@@ -42,16 +42,20 @@ exports.analyzeImage = async (req, res) => {
 
         // Optional parameters
         const options = {
-            confidenceThreshold: req.body.confidenceThreshold ? parseFloat(req.body.confidenceThreshold) : undefined
+            confidenceThreshold: req.body.confidenceThreshold ? parseFloat(req.body.confidenceThreshold) : undefined,
+            iouThreshold: req.body.iouThreshold ? parseFloat(req.body.iouThreshold) : undefined
         };
 
         // Run ML analysis
         const analysisResult = await mlInferenceService.analyzeImage(imagePath, options);
 
+        // Task 3.3.2: Format result to return free and occupied spaces
+        const formattedResult = mlInferenceService.formatResult(analysisResult);
+
         // Return result
         res.json({
             success: true,
-            data: analysisResult
+            data: formattedResult
         });
 
     } catch (error) {

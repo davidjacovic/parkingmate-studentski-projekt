@@ -76,3 +76,4 @@ curl -X POST http://localhost:3002/api/ml/analyze \
 - Nema još formatiranja koordinata (3.3.3)
 - Nema još logovanja (3.3.4)
 
+
