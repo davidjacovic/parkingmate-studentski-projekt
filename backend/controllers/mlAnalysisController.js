@@ -1,5 +1,5 @@
 /**
- * ML Analysis Controller - Task 3.3.1 + 3.3.2 + 3.3.3
+ * ML Analysis Controller - Task 3.3.1 + 3.3.2 + 3.3.3 + 3.3.4
  * Handles ML inference requests for parking image analysis
  */
 
@@ -51,6 +51,9 @@ exports.analyzeImage = async (req, res) => {
 
         // Task 3.3.2: Format result to return free and occupied spaces
         const formattedResult = mlInferenceService.formatResult(analysisResult);
+
+        // Task 3.3.4: Log analysis results
+        await mlInferenceService.logAnalysis(imagePath, formattedResult, analysisResult);
 
         // Return result
         res.json({

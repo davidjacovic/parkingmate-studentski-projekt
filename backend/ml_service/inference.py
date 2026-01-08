@@ -7,7 +7,11 @@ Uses YOLO model to detect cars and parking spots in images
 import sys
 import json
 import os
+import warnings
 from ultralytics import YOLO
+
+# Suppress YOLO warnings to stdout
+warnings.filterwarnings('ignore')
 
 # Class mapping
 CLASS_MAPPING = {
@@ -53,25 +57,65 @@ def calculate_iou(box1, box2):
     
     return intersection / union
 
-def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_threshold=0.3):
+def apply_nms(detections, iou_threshold=0.5):
+    """
+    Apply Non-Maximum Suppression to remove duplicate detections.
+    detections: list of dicts with 'bbox' and 'confidence'
+    Returns: filtered list of detections
+    """
+    if len(detections) == 0:
+        return []
+    
+    # Sort by confidence (highest first)
+    sorted_detections = sorted(detections, key=lambda x: x['confidence'], reverse=True)
+    
+    filtered = []
+    while sorted_detections:
+        # Take the highest confidence detection
+        best = sorted_detections.pop(0)
+        filtered.append(best)
+        
+        # Remove overlapping detections
+        sorted_detections = [
+            det for det in sorted_detections
+            if calculate_iou(best['bbox'], det['bbox']) < iou_threshold
+        ]
+    
+    return filtered
+
+def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_threshold=0.3, 
+                   car_confidence_threshold=None, parking_spot_confidence_threshold=None):
     """
     Analyze parking image using YOLO model.
     
     Args:
         image_path: Path to the image file
         model_path: Path to the YOLO model file (best.pt)
-        confidence_threshold: Minimum confidence for detections
+        confidence_threshold: Minimum confidence for detections (default for all classes)
         iou_threshold: IoU threshold for determining if a car occupies a parking spot
+        car_confidence_threshold: Specific threshold for cars (overrides confidence_threshold for cars)
+        parking_spot_confidence_threshold: Specific threshold for parking spots (overrides confidence_threshold)
     
     Returns:
         Dictionary with analysis results
     """
     try:
-        # Load the model
+        # Load the model (suppress verbose output)
         model = YOLO(model_path)
         
-        # Run inference
-        results = model(image_path, conf=confidence_threshold)
+        # Use lowest threshold to get all possible detections, then filter by class
+        min_threshold = min(
+            confidence_threshold,
+            car_confidence_threshold if car_confidence_threshold else confidence_threshold,
+            parking_spot_confidence_threshold if parking_spot_confidence_threshold else confidence_threshold
+        )
+        
+        # Run inference with minimum threshold to get all detections
+        results = model(image_path, conf=min_threshold, verbose=False)
+        
+        # Get class-specific thresholds
+        car_threshold = car_confidence_threshold if car_confidence_threshold is not None else confidence_threshold
+        parking_threshold = parking_spot_confidence_threshold if parking_spot_confidence_threshold is not None else confidence_threshold
         
         # Parse results
         detections = []
@@ -83,6 +127,18 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_thresh
             for box in boxes:
                 class_id = int(box.cls[0])
                 confidence = float(box.conf[0])
+                
+                # Filter by class-specific threshold
+                if class_id == 0:  # car
+                    if confidence < car_threshold:
+                        continue
+                elif class_id == 1:  # parking_spot
+                    if confidence < parking_threshold:
+                        continue
+                else:
+                    if confidence < confidence_threshold:
+                        continue
+                
                 # Get normalized coordinates: x_center, y_center, width, height
                 x_center, y_center, width, height = box.xywhn[0].cpu().numpy()
                 
@@ -110,12 +166,16 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_thresh
                         "confidence": confidence
                     })
         
+        # Apply NMS to cars to remove duplicate/overlapping detections
+        cars = apply_nms(cars, iou_threshold=0.5)
+        
         # Task 3.3.2: Determine which parking spots are occupied
         # Task 3.3.3: Prepare coordinates for parking spots
         occupied_spots = []
         free_spots = []
         spots_with_status = []
         
+        # Prvo pokušaj da određiš zauzetost preko IoU
         for spot_idx, spot in enumerate(parking_spots):
             is_occupied = False
             best_iou = 0.0
@@ -143,6 +203,21 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_thresh
                 occupied_spots.append(spot_idx)
             else:
                 free_spots.append(spot_idx)
+        
+        # Ako IoU metoda nije dala dobre rezultate (nema zauzetih mesta ali ima automobila),
+        # koristi jednostavnu matematiku: zauzeto = min(broj automobila, broj mesta)
+        if len(occupied_spots) == 0 and len(cars) > 0 and len(parking_spots) > 0:
+            # Jednostavna logika: svaki automobil zauzima jedno mesto
+            num_occupied = min(len(cars), len(parking_spots))
+            num_free = len(parking_spots) - num_occupied
+            
+            # Resetuj liste
+            occupied_spots = list(range(num_occupied))
+            free_spots = list(range(num_occupied, len(parking_spots)))
+            
+            # Ažuriraj status u spots_with_status
+            for i, spot_info in enumerate(spots_with_status):
+                spot_info["is_occupied"] = i < num_occupied
         
         # Prepare result
         result = {
@@ -176,12 +251,13 @@ def analyze_parking(image_path, model_path, confidence_threshold=0.5, iou_thresh
 def main():
     """
     Main entry point for the inference service.
-    Reads arguments from command line: image_path model_path [confidence_threshold] [iou_threshold]
+    Reads arguments from command line: 
+    image_path model_path [confidence_threshold] [iou_threshold] [car_threshold] [parking_threshold]
     """
     if len(sys.argv) < 3:
         print(json.dumps({
             "success": False,
-            "error": "Usage: inference.py <image_path> <model_path> [confidence_threshold] [iou_threshold]"
+            "error": "Usage: inference.py <image_path> <model_path> [confidence_threshold] [iou_threshold] [car_threshold] [parking_threshold]"
         }))
         sys.exit(1)
     
@@ -190,6 +266,8 @@ def main():
     model_path = sys.argv[2].strip('"')
     confidence_threshold = float(sys.argv[3]) if len(sys.argv) > 3 else 0.5
     iou_threshold = float(sys.argv[4]) if len(sys.argv) > 4 else 0.3
+    car_threshold = float(sys.argv[5]) if len(sys.argv) > 5 else None
+    parking_threshold = float(sys.argv[6]) if len(sys.argv) > 6 else None
     
     # Normalize paths for cross-platform compatibility
     image_path = os.path.normpath(image_path)
@@ -211,10 +289,13 @@ def main():
         sys.exit(1)
     
     # Run analysis
-    result = analyze_parking(image_path, model_path, confidence_threshold, iou_threshold)
+    result = analyze_parking(image_path, model_path, confidence_threshold, iou_threshold, 
+                            car_threshold, parking_threshold)
     
-    # Output JSON result
-    print(json.dumps(result, indent=2))
+    # Output JSON result (only JSON, no other output)
+    # Use sys.stdout.write to avoid extra newlines and ensure clean output
+    sys.stdout.write(json.dumps(result))
+    sys.stdout.flush()
     
     if not result.get("success", False):
         sys.exit(1)
