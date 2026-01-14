@@ -37,5 +37,10 @@ class PhotoDetailActivity : AppCompatActivity() {
         } else {
             binding.tvInfo.text = "No data for this image"
         }
+
+        // Dugme za nazad
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
     }
 }

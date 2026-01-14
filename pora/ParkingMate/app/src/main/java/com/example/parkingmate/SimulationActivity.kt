@@ -68,6 +68,11 @@ class SimulationActivity : AppCompatActivity() {
         binding.recyclerView.adapter = adapter
         updateEmptyState()
 
+        // Dugme za nazad
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         // Dugme za dodavanje nove simulacije
         binding.fabAddSimulation.setOnClickListener {
             val intent = Intent(this, SimulationDetailActivity::class.java)
@@ -322,7 +327,7 @@ class SimulationActivity : AppCompatActivity() {
                 runOnUiThread {
                     Toast.makeText(
                         this,
-                        "Automatski poslat dogodak: ${eventType.name}",
+                        "Automatically sent event: ${eventType.name}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
