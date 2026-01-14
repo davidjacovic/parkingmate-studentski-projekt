@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.*
@@ -20,6 +21,8 @@ class EventAdapter(
         val tvMessage: TextView = itemView.findViewById(R.id.tvMessage)
         val tvLocation: TextView = itemView.findViewById(R.id.tvLocation)
         val tvTimestamp: TextView = itemView.findViewById(R.id.tvTimestamp)
+        val tvStatusBadge: TextView = itemView.findViewById(R.id.tvStatusBadge)
+        val tvBlockchainBadge: TextView = itemView.findViewById(R.id.tvBlockchainBadge)
     }
 
     // Kreira novi ViewHolder
@@ -42,8 +45,22 @@ class EventAdapter(
         // Postavlja topic
         holder.tvTopic.text = event.topic
 
-        // Postavlja event type
+        // Postavlja event type sa bojom na osnovu tipa dogodka
         holder.tvEventType.text = event.eventType.name
+        when (event.eventType) {
+            EventType.PARKING_FULL -> {
+                // Crvena boja za ekstremne dogodke (parking pun)
+                holder.tvEventType.setBackgroundResource(R.drawable.badge_event_full)
+            }
+            EventType.LOW_AVAILABILITY -> {
+                // Narandžasta boja za posebne dogodke (niska dostupnost)
+                holder.tvEventType.setBackgroundResource(R.drawable.badge_event_low)
+            }
+            EventType.PARKING_AVAILABLE -> {
+                // Zelena boja za normalne dogodke (parking dostupan)
+                holder.tvEventType.setBackgroundResource(R.drawable.badge_event_available)
+            }
+        }
 
         // Postavlja message
         holder.tvMessage.text = event.message
@@ -55,6 +72,34 @@ class EventAdapter(
         val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
         val date = Date(event.timestamp)
         holder.tvTimestamp.text = dateFormat.format(date)
+
+        // Postavlja status badge sa bojom
+        holder.tvStatusBadge.text = event.status
+        when (event.status) {
+            "PENDING" -> {
+                holder.tvStatusBadge.setBackgroundResource(R.drawable.badge_status_pending) // Žuto
+                holder.tvStatusBadge.visibility = View.VISIBLE
+            }
+            "PROCESSED" -> {
+                holder.tvStatusBadge.setBackgroundResource(R.drawable.badge_status_processed) // Zeleno
+                holder.tvStatusBadge.visibility = View.VISIBLE
+            }
+            "BLOCKCHAIN_RECORDED" -> {
+                holder.tvStatusBadge.setBackgroundResource(R.drawable.badge_status_blockchain) // Plavo
+                holder.tvStatusBadge.visibility = View.VISIBLE
+            }
+            else -> {
+                holder.tvStatusBadge.visibility = View.GONE
+            }
+        }
+
+        // Postavlja blockchain badge ako postoji blockchainHash
+        if (event.blockchainHash != null && event.blockchainHash.isNotEmpty()) {
+            holder.tvBlockchainBadge.visibility = View.VISIBLE
+            holder.tvBlockchainBadge.setBackgroundResource(R.drawable.badge_blockchain) // Plavo
+        } else {
+            holder.tvBlockchainBadge.visibility = View.GONE
+        }
     }
 
     // Vraća broj dogodkov u listi
