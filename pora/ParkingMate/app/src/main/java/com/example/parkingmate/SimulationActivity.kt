@@ -23,7 +23,14 @@ class SimulationActivity : AppCompatActivity() {
 
     private val simulations = mutableListOf<Simulation>()
 
-    private var lastEventType: EventType? = null
+    // Mapa za praćenje poslednjeg dogodka po simulaciji (sprečava duplikate)
+    private val lastEventTypeBySimulation = mutableMapOf<String, EventType?>()
+    
+    // Mapa za praćenje vremena poslednjeg slanja dogodka po simulaciji (sprečava previše česta slanja)
+    private val lastEventSentTimeBySimulation = mutableMapOf<String, Long>()
+    
+    // Minimalno vreme između slanja istog tipa dogodka (5 minuta)
+    private val MIN_EVENT_INTERVAL_MS = 5 * 60 * 1000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +54,9 @@ class SimulationActivity : AppCompatActivity() {
             },
             onDeleteClicked = { simulation ->
                 if (simulation.isActive) stopSimulationInterval(simulation)
+                // Očisti praćenje dogodaka kada se simulacija obriše
+                lastEventTypeBySimulation.remove(simulation.id)
+                lastEventSentTimeBySimulation.remove(simulation.id)
                 adapter.removeSimulation(simulation)
                 dataManager.deleteSimulation(simulation)
                 updateEmptyState()
@@ -78,6 +88,9 @@ class SimulationActivity : AppCompatActivity() {
                 startSimulationInterval(updated)
             } else {
                 stopSimulationInterval(updated)
+                // Očisti praćenje dogodaka kada se simulacija zaustavi
+                lastEventTypeBySimulation.remove(updated.id)
+                lastEventSentTimeBySimulation.remove(updated.id)
             }
 
             val message = if (isActive) "Simulation activated" else "Simulation deactivated"
@@ -89,8 +102,11 @@ class SimulationActivity : AppCompatActivity() {
     private fun startSimulationInterval(simulation: Simulation) {
         if (simulationHandler == null) simulationHandler = Handler(Looper.getMainLooper())
 
+        Log.d("SIMULATION", "Pokretanje simulacije: ${simulation.name}, interval: ${simulation.interval}")
+
         val runnable = object : Runnable {
             override fun run() {
+                Log.d("SIMULATION", "Izvršavanje koraka simulacije: ${simulation.name}")
                 saveSimulationStep(simulation)
                 simulationHandler?.postDelayed(this, getIntervalMillis(simulation.interval))
             }
@@ -98,6 +114,7 @@ class SimulationActivity : AppCompatActivity() {
 
         activeSimulationsRunnables[simulation.id] = runnable
         simulationHandler?.post(runnable)
+        Log.d("SIMULATION", "Simulacija pokrenuta: ${simulation.name}")
     }
 
     // Zaustavlja periodično slanje podataka za simulaciju
@@ -119,6 +136,8 @@ class SimulationActivity : AppCompatActivity() {
 
     // Izvršava jedan korak simulacije - ažurira brojač i šalje podatke
     private fun saveSimulationStep(simulation: Simulation) {
+        Log.d("SIMULATION", "saveSimulationStep za: ${simulation.name}")
+        
         val index = simulations.indexOfFirst { it.id == simulation.id }
         if (index != -1) {
             val updated = simulation.copy(
@@ -128,33 +147,63 @@ class SimulationActivity : AppCompatActivity() {
             simulations[index] = updated
             dataManager.updateSimulation(updated)
             adapter.notifyItemChanged(index)
+        } else {
+            Log.e("SIMULATION", "Simulacija nije pronađena u listi: ${simulation.name}, ID: ${simulation.id}")
         }
 
-        sendSimulatedDataToBackend(simulation.value, simulation.location, simulation.type)
+        sendSimulatedDataToBackend(simulation)
     }
 
     // Šalje simulirane podatke o parking mestima na server
-    private fun sendSimulatedDataToBackend(value: String, location: String, type: SimulationType) {
-        val coords = location.split(",")
+    private fun sendSimulatedDataToBackend(simulation: Simulation) {
+        val coords = simulation.location.split(",")
         if (coords.size != 2) return
 
         val lat = coords[0].trim().toDoubleOrNull() ?: 0.0
         val lon = coords[1].trim().toDoubleOrNull() ?: 0.0
-        val numValue = value.toIntOrNull() ?: 0
+        val numValue = simulation.value.toIntOrNull() ?: 0
         var totalSpots = 0
         var freeSpaces = 0
         var occupiedSpaces = 0
 
         // Postavlja vrednosti u zavisnosti od tipa simulacije
-        when (type) {
-            SimulationType.TOTAL_SPACES -> totalSpots = numValue
-            SimulationType.FREE_SPACES -> freeSpaces = numValue
-            SimulationType.OCCUPIED_SPACES -> occupiedSpaces = numValue
+        when (simulation.type) {
+            SimulationType.TOTAL_SPACES -> {
+                totalSpots = numValue
+                // Ako nije eksplicitno postavljeno, pretpostavi da su sva mesta slobodna
+                if (freeSpaces == 0 && occupiedSpaces == 0) {
+                    freeSpaces = totalSpots
+                }
+            }
+            SimulationType.FREE_SPACES -> {
+                freeSpaces = numValue
+                // Ako totalSpots nije postavljen, postavi ga na realističan broj
+                // Za detekciju LOW_AVAILABILITY (<=20%), totalSpots treba biti barem 5x freeSpaces
+                // Primer: ako je freeSpaces=2, totalSpots treba biti barem 10 da bi bilo 20% dostupnosti
+                if (totalSpots == 0) {
+                    // Postavi totalSpots na minimum 10 ili 5x freeSpaces (šta je veće)
+                    totalSpots = maxOf(10, freeSpaces * 5)
+                    Log.d("SIMULATION", "FREE_SPACES: postavljen totalSpots=$totalSpots za freeSpaces=$freeSpaces")
+                }
+            }
+            SimulationType.OCCUPIED_SPACES -> {
+                occupiedSpaces = numValue
+                // Ako totalSpots nije postavljen, koristi occupiedSpaces kao minimum
+                if (totalSpots == 0) {
+                    totalSpots = occupiedSpaces
+                    freeSpaces = 0 // Ako su sva mesta zauzeta
+                }
+            }
             SimulationType.ALL -> {
                 totalSpots = numValue
                 freeSpaces = numValue
                 occupiedSpaces = numValue
             }
+        }
+        
+        // Ako totalSpots još uvek nije postavljen, postavi ga na osnovu freeSpaces + occupiedSpaces
+        if (totalSpots == 0 && (freeSpaces > 0 || occupiedSpaces > 0)) {
+            totalSpots = freeSpaces + occupiedSpaces
         }
 
         val eventType: EventType? =
@@ -173,33 +222,71 @@ class SimulationActivity : AppCompatActivity() {
                 else -> null
             }
 
-        if (eventType != null && eventType != lastEventType) {
+        // Debug logovi
+        Log.d("SIMULATION", "Simulacija: ${simulation.name}, totalSpots: $totalSpots, freeSpaces: $freeSpaces, occupiedSpaces: $occupiedSpaces")
+        
+        // Automatsko slanje dogodka za ekstremne situacije
+        if (eventType != null) {
+            val simulationId = simulation.id
+            val lastEventType = lastEventTypeBySimulation[simulationId]
+            val lastSentTime = lastEventSentTimeBySimulation[simulationId] ?: 0L
+            val currentTime = System.currentTimeMillis()
+            
+            Log.d("SIMULATION", "Detektovan dogodak: ${eventType.name} za simulaciju: ${simulation.name}")
+            
+            // Proveri da li se dogodak promenio ili je prošlo dovoljno vremena
+            val eventChanged = eventType != lastEventType
+            val enoughTimePassed = (currentTime - lastSentTime) >= MIN_EVENT_INTERVAL_MS
+            
+            // Definiši ekstremne dogodke koji se automatski šalju
+            val isExtremeEvent = eventType == EventType.PARKING_FULL || 
+                                 eventType == EventType.LOW_AVAILABILITY
+            
+            Log.d("SIMULATION", "isExtremeEvent: $isExtremeEvent, eventChanged: $eventChanged, enoughTimePassed: $enoughTimePassed")
+            
+            // Pošalji dogodak ako:
+            // 1. Dogodak se promenio (npr. iz AVAILABLE u FULL)
+            // 2. ILI je ekstremni dogodak i prošlo je dovoljno vremena (sprečava spam)
+            if (isExtremeEvent && (eventChanged || enoughTimePassed)) {
+                Log.d("SIMULATION", "Uslovi ispunjeni - šalje se dogodak!")
+                val event = when (eventType) {
+                    EventType.PARKING_FULL -> Event(
+                        topic = "parking/full",
+                        message = "Parking is full at location $lat,$lon. Total spots: $totalSpots, Free: $freeSpaces",
+                        timestamp = currentTime,
+                        location = "$lat,$lon"
+                    )
 
-            val event = when (eventType) {
-                EventType.PARKING_FULL -> Event(
-                    topic = "parking/full",
-                    message = "Parking is full",
-                    timestamp = System.currentTimeMillis(),
-                    location = "$lat,$lon"
-                )
+                    EventType.LOW_AVAILABILITY -> {
+                        val availabilityPercent = (freeSpaces.toDouble() / totalSpots * 100).toInt()
+                        Event(
+                            topic = "parking/low-availability",
+                            message = "Low parking availability at location $lat,$lon. Only $availabilityPercent% free ($freeSpaces/$totalSpots spots available)",
+                            timestamp = currentTime,
+                            location = "$lat,$lon"
+                        )
+                    }
 
-                EventType.LOW_AVAILABILITY -> Event(
-                    topic = "parking/low-availability",
-                    message = "Low parking availability",
-                    timestamp = System.currentTimeMillis(),
-                    location = "$lat,$lon"
-                )
+                    EventType.PARKING_AVAILABLE -> Event(
+                        topic = "parking/available",
+                        message = "Parking is available at location $lat,$lon",
+                        timestamp = currentTime,
+                        location = "$lat,$lon"
+                    )
+                }
 
-                EventType.PARKING_AVAILABLE -> Event(
-                    topic = "parking/available",
-                    message = "Parking is available",
-                    timestamp = System.currentTimeMillis(),
-                    location = "$lat,$lon"
-                )
+                // Automatski pošalji dogodak na backend
+                sendEventAutomatically(event, eventType, simulationId)
+                
+                // Ažuriraj praćenje
+                lastEventTypeBySimulation[simulationId] = eventType
+                lastEventSentTimeBySimulation[simulationId] = currentTime
+                
+                Log.d("AUTO_EVENT", "Automatski poslat dogodak: ${eventType.name} za simulaciju: ${simulation.name}")
+            } else if (eventType != lastEventType) {
+                // Ažuriraj poslednji dogodak čak i ako ga ne šaljemo (za praćenje promena)
+                lastEventTypeBySimulation[simulationId] = eventType
             }
-
-            // zapamti poslednji generisani event
-            lastEventType = eventType
         }
 
 
@@ -226,6 +313,26 @@ class SimulationActivity : AppCompatActivity() {
 
     }
 
+    // Automatski šalje dogodak na backend server
+    private fun sendEventAutomatically(event: Event, eventType: EventType, simulationId: String) {
+        ApiClient.sendEvent(event, eventType) { success, errorMessage ->
+            if (success) {
+                Log.d("AUTO_EVENT", "Dogodak uspešno poslat: ${eventType.name}")
+                // Opciono: prikaži notifikaciju korisniku
+                runOnUiThread {
+                    Toast.makeText(
+                        this,
+                        "Automatski poslat dogodak: ${eventType.name}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                Log.e("AUTO_EVENT", "Greška pri slanju dogodka: $errorMessage")
+                // Ne prikazuj grešku korisniku za automatske dogodke (da ne smeta)
+            }
+        }
+    }
+
     // Prikazuje detalje simulacije u Toast poruci
     private fun showSimulationDetails(simulation: Simulation) {
         Toast.makeText(this,
@@ -240,8 +347,18 @@ class SimulationActivity : AppCompatActivity() {
         if (requestCode == ADD_SIMULATION_REQUEST && resultCode == RESULT_OK) {
             val simulation = data?.getSerializableExtra("new_simulation") as? Simulation
             simulation?.let {
-                adapter.addSimulation(it)
+                // Sačuvaj u DataManager prvo
                 dataManager.addSimulation(it)
+                
+                // Dodaj u listu (adapter koristi istu listu, tako da će se automatski ažurirati)
+                simulations.add(0, it)
+                adapter.notifyItemInserted(0)
+
+                // Ako je simulacija aktivna, pokreni interval automatski
+                if (it.isActive) {
+                    startSimulationInterval(it)
+                    Log.d("SIMULATION", "Automatski pokrenuta simulacija: ${it.name}")
+                }
 
                 binding.recyclerView.smoothScrollToPosition(0)
                 Toast.makeText(this, "Simulation added!", Toast.LENGTH_SHORT).show()

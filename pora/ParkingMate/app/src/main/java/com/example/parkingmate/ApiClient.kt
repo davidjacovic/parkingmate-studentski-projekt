@@ -1,4 +1,7 @@
+package com.example.parkingmate
+
 import android.util.Log
+import com.google.gson.Gson
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -14,10 +17,13 @@ object ApiClient {
         .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .build()
+    
+    // Gson za JSON serializaciju
+    private val gson = Gson()
 
     // URL adrese za emulator i fizički uređaj
     const val EMULATOR_URL = "http://10.0.2.2:3002"
-    const val PHONE_URL = "http://192.168.1.11:3002"
+    const val PHONE_URL = "http://192.168.0.12:3002"
 
     // Određuje bazni URL na osnovu tipa uređaja
     fun getBaseUrl(): String {
@@ -109,6 +115,43 @@ object ApiClient {
                     Log.d("UPLOAD", "Success: ${response.body?.string()}")
                 } else {
                     Log.e("UPLOAD", "Error: ${response.code}")
+                }
+            }
+        })
+    }
+
+    // Šalje dogodak na backend server
+    fun sendEvent(event: Event, eventType: EventType, callback: (Boolean, String) -> Unit) {
+        // Kreiraj JSON body koristeći Gson za pravilnu serializaciju
+        val eventData = hashMapOf<String, Any>(
+            "topic" to event.topic,
+            "message" to event.message,
+            "timestamp" to event.timestamp,
+            "location" to event.location,
+            "eventType" to eventType.name
+        )
+        val jsonBody = gson.toJson(eventData)
+
+        val body = jsonBody.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+        val request = Request.Builder()
+            .url("${getBaseUrl()}/api/events")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("SEND_EVENT", "Failed: ${e.message}")
+                callback(false, e.message ?: "Unknown error")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body?.string() ?: ""
+                if (response.isSuccessful) {
+                    Log.d("SEND_EVENT", "Success: $responseBody")
+                    callback(true, "")
+                } else {
+                    Log.e("SEND_EVENT", "Error: ${response.code} - $responseBody")
+                    callback(false, "Server error: ${response.code}")
                 }
             }
         })

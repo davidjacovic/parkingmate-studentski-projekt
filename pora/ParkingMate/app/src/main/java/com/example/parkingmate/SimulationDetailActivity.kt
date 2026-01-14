@@ -233,7 +233,9 @@ class SimulationDetailActivity : AppCompatActivity() {
     private fun stopSimulation() {
         isSimulationRunning = false
 
-        simulationHandler?.removeCallbacks(simulationRunnable!!)
+        simulationRunnable?.let {
+            simulationHandler?.removeCallbacks(it)
+        }
         simulationRunnable = null
 
         // Ponovo omogućava kontrole
@@ -351,6 +353,17 @@ class SimulationDetailActivity : AppCompatActivity() {
             return
         }
 
+        // Zaustavi lokalnu simulaciju pre čuvanja (ako je pokrenuta u ovoj aktivnosti)
+        // Ovo ne deaktivira simulaciju - samo zaustavlja lokalno izvršavanje
+        // Simulacija će se pokrenuti u SimulationActivity ako je isActive = true
+        if (isSimulationRunning) {
+            isSimulationRunning = false
+            simulationRunnable?.let {
+                simulationHandler?.removeCallbacks(it)
+            }
+            simulationRunnable = null
+        }
+        
         // Generiše naziv simulacije
         val simulationName = "${type.name.replace("_", " ")} - $location"
         val interval = String.format("%02d:%02d:%02d",
@@ -358,7 +371,7 @@ class SimulationDetailActivity : AppCompatActivity() {
             binding.npMinutes.value,
             binding.npSeconds.value)
 
-        // Kreira novu simulaciju
+        // Kreira novu simulaciju - sačuvaj status switch-a
         val newSimulation = Simulation(
             name = simulationName,
             type = type,
@@ -439,10 +452,8 @@ class SimulationDetailActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        if (isSimulationRunning) {
-            stopSimulation()
-            binding.switchActivate.isChecked = false
-        }
+        // Ne zaustavljaj simulaciju kada se aktivnost pauzira - dozvoli da se sačuva
+        // Simulacija će se preneti u SimulationActivity kada se sačuva
         map.onPause()
     }
 
