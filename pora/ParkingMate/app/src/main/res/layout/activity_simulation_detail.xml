@@ -298,20 +298,19 @@
         android:padding="8dp"
         android:scaleType="fitCenter"
         android:src="@drawable/left"
-        android:tint="?attr/colorPrimary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/btnSave"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/activationContainer" />
+        app:layout_constraintTop_toBottomOf="@+id/activationContainer"
+        app:tint="?attr/colorPrimary" />
 
     <Button
         android:id="@+id/btnSave"
         android:layout_width="200dp"
         android:layout_height="48dp"
-        android:backgroundTint="#6200EE"
+        android:backgroundTint="?attr/colorPrimary"
         android:text="SAVE"
-        android:textColor="@android:color/white"
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
