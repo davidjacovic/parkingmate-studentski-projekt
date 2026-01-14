@@ -327,7 +327,7 @@ class SimulationActivity : AppCompatActivity() {
                 runOnUiThread {
                     Toast.makeText(
                         this,
-                        "Automatski poslat dogodak: ${eventType.name}",
+                        "Automatically sent event: ${eventType.name}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }

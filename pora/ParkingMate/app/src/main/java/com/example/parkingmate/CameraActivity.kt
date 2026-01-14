@@ -109,7 +109,7 @@ class CameraActivity : AppCompatActivity() {
                 val timestampMillis = lastTimestamp ?: System.currentTimeMillis()
 
                 binding.tvData.text =
-                    "Lat: $lat\nLon: $lon\nVreme: $timestampMillis"
+                    "Lat: $lat\nLon: $lon\nTime: $timestampMillis"
 
             } else {
 
@@ -150,7 +150,7 @@ class CameraActivity : AppCompatActivity() {
                     val timestampMillis = lastTimestamp ?: System.currentTimeMillis()
 
                     binding.tvData.text =
-                        "Lat: $lastLat\nLon: $lastLon\nVreme: ${Date(timestampMillis)}"
+                        "Lat: $lastLat\nLon: $lastLon\nTime: ${Date(timestampMillis)}"
                     val parkingLocationId = "64a9b8c2f0a5c1234567890b"
 
                     // Šalje sliku i meta-podatke na server

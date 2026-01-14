@@ -14,14 +14,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <Button
+    <ImageButton
         android:id="@+id/btnBack"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Nazad"
-        android:textSize="14sp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/left"
+        android:tint="?attr/colorPrimary"
         android:background="#66000000"
-        android:textColor="@android:color/white"
+        android:contentDescription="Back"
+        android:scaleType="fitCenter"
+        android:padding="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp"
