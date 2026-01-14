@@ -46,6 +46,11 @@ class CameraActivity : AppCompatActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // Dugme za nazad
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         binding.btnCapture.setOnClickListener { takePhoto() }
 
         if (allPermissionsGranted()) {
