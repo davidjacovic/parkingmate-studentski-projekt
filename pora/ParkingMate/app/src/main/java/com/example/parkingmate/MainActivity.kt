@@ -26,10 +26,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, MessagesActivity::class.java))
         }
 
-        binding.btnAlerts.setOnClickListener {
-            startActivity(Intent(this, AlertsActivity::class.java))
-        }
-
         binding.btnSendEvent.setOnClickListener {
             startActivity(Intent(this, SendEventActivity::class.java))
         }

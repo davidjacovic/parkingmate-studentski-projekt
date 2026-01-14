@@ -256,27 +256,48 @@ class SimulationActivity : AppCompatActivity() {
                 Log.d("SIMULATION", "Uslovi ispunjeni - šalje se dogodak!")
                 val event = when (eventType) {
                     EventType.PARKING_FULL -> Event(
+                        _id = "",
                         topic = "parking/full",
                         message = "Parking is full at location $lat,$lon. Total spots: $totalSpots, Free: $freeSpaces",
                         timestamp = currentTime,
-                        location = "$lat,$lon"
+                        location = "$lat,$lon",
+                        eventType = eventType,
+                        status = "PENDING",
+                        blockchainHash = null,
+                        blockchainTimestamp = null,
+                        createdAt = null,
+                        updatedAt = null
                     )
 
                     EventType.LOW_AVAILABILITY -> {
                         val availabilityPercent = (freeSpaces.toDouble() / totalSpots * 100).toInt()
                         Event(
+                            _id = "",
                             topic = "parking/low-availability",
                             message = "Low parking availability at location $lat,$lon. Only $availabilityPercent% free ($freeSpaces/$totalSpots spots available)",
                             timestamp = currentTime,
-                            location = "$lat,$lon"
+                            location = "$lat,$lon",
+                            eventType = eventType,
+                            status = "PENDING",
+                            blockchainHash = null,
+                            blockchainTimestamp = null,
+                            createdAt = null,
+                            updatedAt = null
                         )
                     }
 
                     EventType.PARKING_AVAILABLE -> Event(
+                        _id = "",
                         topic = "parking/available",
                         message = "Parking is available at location $lat,$lon",
                         timestamp = currentTime,
-                        location = "$lat,$lon"
+                        location = "$lat,$lon",
+                        eventType = eventType,
+                        status = "PENDING",
+                        blockchainHash = null,
+                        blockchainTimestamp = null,
+                        createdAt = null,
+                        updatedAt = null
                     )
                 }
 

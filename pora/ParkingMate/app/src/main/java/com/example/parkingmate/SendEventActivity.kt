@@ -282,12 +282,19 @@ class SendEventActivity : AppCompatActivity() {
             EventType.LOW_AVAILABILITY -> "parking/low-availability"
         }
 
-        // Kreiraj Event objekat
+        // Kreiraj Event objekat (za slanje, backend će kreirati puni event)
         val event = Event(
+            _id = "", // Backend će generisati
             topic = topic,
             message = message,
             timestamp = System.currentTimeMillis(),
-            location = "$currentLat,$currentLon"
+            location = "$currentLat,$currentLon",
+            eventType = eventType,
+            status = "PENDING", // Backend će postaviti
+            blockchainHash = null,
+            blockchainTimestamp = null,
+            createdAt = null,
+            updatedAt = null
         )
 
         // Pošalji dogodak
