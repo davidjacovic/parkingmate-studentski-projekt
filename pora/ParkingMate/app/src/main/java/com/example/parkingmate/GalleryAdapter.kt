@@ -8,8 +8,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.parkingmate.databinding.ItemGalleryBinding
 import java.io.File
 
-class GalleryAdapter(private val images: List<File>) :
-    RecyclerView.Adapter<GalleryAdapter.GalleryViewHolder>() {
+class GalleryAdapter(
+    private val images: MutableList<File>,
+    private val onDeleteClick: (File, Int) -> Unit
+) : RecyclerView.Adapter<GalleryAdapter.GalleryViewHolder>() {
 
     // ViewHolder za svaku sliku u galeriji
     inner class GalleryViewHolder(val binding: ItemGalleryBinding) :
@@ -36,8 +38,23 @@ class GalleryAdapter(private val images: List<File>) :
             intent.putExtra("imagePath", file.absolutePath)
             context.startActivity(intent)
         }
+
+        // Postavlja long click listener za brisanje slike
+        holder.binding.root.setOnLongClickListener {
+            onDeleteClick(file, position)
+            true
+        }
     }
 
     // Vraća ukupan broj slika u galeriji
     override fun getItemCount() = images.size
+
+    // Uklanja sliku iz liste
+    fun removeItem(position: Int) {
+        if (position in 0 until images.size) {
+            images.removeAt(position)
+            notifyItemRemoved(position)
+            notifyItemRangeChanged(position, images.size)
+        }
+    }
 }

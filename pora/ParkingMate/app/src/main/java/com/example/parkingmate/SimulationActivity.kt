@@ -68,6 +68,11 @@ class SimulationActivity : AppCompatActivity() {
         binding.recyclerView.adapter = adapter
         updateEmptyState()
 
+        // Dugme za nazad
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         // Dugme za dodavanje nove simulacije
         binding.fabAddSimulation.setOnClickListener {
             val intent = Intent(this, SimulationDetailActivity::class.java)

@@ -5,12 +5,19 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineCenter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_end="309dp" />
+
     <Button
         android:id="@+id/btnSensors"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Sensors"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="@id/guidelineCenter"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 

@@ -188,6 +188,11 @@ class SimulationDetailActivity : AppCompatActivity() {
             }
         }
 
+        // Dugme za nazad
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         // Čuvanje simulacije
         binding.btnSave.setOnClickListener {
             saveSimulation()

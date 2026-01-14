@@ -59,6 +59,11 @@ class SendEventActivity : AppCompatActivity() {
             searchAddress()
         }
 
+        // Dugme za nazad
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         // Dugme za slanje dogodka
         binding.btnSendEvent.setOnClickListener {
             sendEvent()
@@ -296,9 +301,8 @@ class SendEventActivity : AppCompatActivity() {
 
                 if (success) {
                     Toast.makeText(this, "Dogodak uspešno poslat!", Toast.LENGTH_SHORT).show()
-                    // Očisti polja
-                    binding.etMessage.text.clear()
-                    binding.spinnerEventType.setSelection(0)
+                    // Vrati se na main screen
+                    finish()
                 } else {
                     Toast.makeText(
                         this,

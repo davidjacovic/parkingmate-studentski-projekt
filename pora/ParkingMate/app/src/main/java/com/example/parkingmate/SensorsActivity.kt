@@ -15,6 +15,11 @@ class SensorsActivity : AppCompatActivity() {
         binding = ActivitySensorsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Dugme za nazad
+        binding.btnBack.setOnClickListener {
+            finish()
+        }
+
         // Dugme za pokretanje aktivnosti kamere
         binding.btnCamera.setOnClickListener {
             startActivity(Intent(this, CameraActivity::class.java))
