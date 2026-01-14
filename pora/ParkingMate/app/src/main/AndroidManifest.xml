@@ -38,7 +38,6 @@
         <activity android:name=".SimulationActivity" android:exported="true"/>
         <activity android:name=".SimulationDetailActivity" android:exported="true"/>
         <activity android:name=".MessagesActivity" android:exported="true"/>
-        <activity android:name=".AlertsActivity" android:exported="true"/>
         <activity android:name=".CameraActivity" android:exported="true"/>
         <activity android:name=".GalleryActivity" android:exported="true"/>
         <activity android:name=".PhotoDetailActivity" android:exported="true"/>

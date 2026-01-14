@@ -14,13 +14,13 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         android:src="@drawable/left"
-        android:tint="?attr/colorPrimary"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Back"
         android:scaleType="fitCenter"
         android:padding="8dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?attr/colorPrimary" />
 
     <TextView
         android:id="@+id/tvTitle"
@@ -76,5 +76,7 @@
         android:src="@android:drawable/ic_input_add"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp"/>
+        android:layout_margin="16dp"
+        app:backgroundTint="?attr/colorPrimary"
+        app:tint="@color/black"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
