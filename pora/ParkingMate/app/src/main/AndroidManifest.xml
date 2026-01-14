@@ -42,5 +42,6 @@
         <activity android:name=".CameraActivity" android:exported="true"/>
         <activity android:name=".GalleryActivity" android:exported="true"/>
         <activity android:name=".PhotoDetailActivity" android:exported="true"/>
+        <activity android:name=".SendEventActivity" android:exported="true"/>
     </application>
 </manifest>
