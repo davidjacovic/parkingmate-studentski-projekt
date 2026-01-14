@@ -139,7 +139,7 @@ class SendEventActivity : AppCompatActivity() {
     private fun searchAddress() {
         val addressStr = binding.etLocation.text.toString().trim()
         if (addressStr.isEmpty()) {
-            Toast.makeText(this, "Unesite adresu ili koordinate", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Enter address or coordinates", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -155,7 +155,7 @@ class SendEventActivity : AppCompatActivity() {
                         addMarkerAtLocation(geoPoint, "Entered location")
                         updateLocation(lat, lon)
                     } else {
-                        Toast.makeText(this, "Nevažeće koordinate", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Invalid coordinates", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: NumberFormatException) {
@@ -181,14 +181,14 @@ class SendEventActivity : AppCompatActivity() {
                         updateLocation(location.latitude, location.longitude)
                         binding.etLocation.setText(String.format(Locale.US, "%.6f, %.6f",
                             location.latitude, location.longitude))
-                        Toast.makeText(this, "Lokacija pronađena", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Location found", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(this, "Lokacija nije pronađena", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
-                    Toast.makeText(this, "Greška pri pretrazi", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Search error", Toast.LENGTH_SHORT).show()
                 }
             }
         }.start()
@@ -241,10 +241,10 @@ class SendEventActivity : AppCompatActivity() {
                 binding.etLocation.setText(String.format(Locale.US, "%.6f, %.6f",
                     location.latitude, location.longitude))
             } else {
-                Toast.makeText(this, "Lokacija nije dostupna", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Location not available", Toast.LENGTH_SHORT).show()
             }
         }.addOnFailureListener {
-            Toast.makeText(this, "Greška pri dohvatanju lokacije: ${it.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error getting location: ${it.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -252,18 +252,18 @@ class SendEventActivity : AppCompatActivity() {
         // Validacija
         val selectedType = binding.spinnerEventType.selectedItem as? String
         if (selectedType == null) {
-            Toast.makeText(this, "Izaberite tip dogodka", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Select event type", Toast.LENGTH_SHORT).show()
             return
         }
 
         val message = binding.etMessage.text.toString().trim()
         if (message.isEmpty()) {
-            Toast.makeText(this, "Unesite poruku", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Enter message", Toast.LENGTH_SHORT).show()
             return
         }
 
         if (currentLat == null || currentLon == null) {
-            Toast.makeText(this, "Dohvatite lokaciju pre slanja", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Get location before sending", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -271,7 +271,7 @@ class SendEventActivity : AppCompatActivity() {
         val eventType = try {
             EventType.valueOf(selectedType)
         } catch (e: IllegalArgumentException) {
-            Toast.makeText(this, "Nevažeći tip dogodka", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Invalid event type", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -292,21 +292,21 @@ class SendEventActivity : AppCompatActivity() {
 
         // Pošalji dogodak
         binding.btnSendEvent.isEnabled = false
-        binding.btnSendEvent.text = "Slanje..."
+        binding.btnSendEvent.text = "Sending..."
 
         ApiClient.sendEvent(event, eventType) { success, errorMessage ->
             runOnUiThread {
                 binding.btnSendEvent.isEnabled = true
-                binding.btnSendEvent.text = "Pošalji dogodak"
+                binding.btnSendEvent.text = "Send Event"
 
                 if (success) {
-                    Toast.makeText(this, "Dogodak uspešno poslat!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Event sent successfully!", Toast.LENGTH_SHORT).show()
                     // Vrati se na main screen
                     finish()
                 } else {
                     Toast.makeText(
                         this,
-                        "Greška pri slanju: $errorMessage",
+                        "Error sending: $errorMessage",
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -324,7 +324,7 @@ class SendEventActivity : AppCompatActivity() {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getCurrentLocation()
             } else {
-                Toast.makeText(this, "Dozvola za lokaciju je potrebna", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Location permission required", Toast.LENGTH_SHORT).show()
             }
         }
     }

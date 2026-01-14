@@ -42,12 +42,12 @@ class GalleryActivity : AppCompatActivity() {
     // Prikazuje dialog za potvrdu brisanja
     private fun showDeleteConfirmationDialog(file: File, position: Int) {
         AlertDialog.Builder(this)
-            .setTitle("Brisanje slike")
-            .setMessage("Da li ste sigurni da želite da obrišete ovu sliku?")
-            .setPositiveButton("Da") { _, _ ->
+            .setTitle("Delete Image")
+            .setMessage("Are you sure you want to delete this image?")
+            .setPositiveButton("Yes") { _, _ ->
                 deleteImage(file, position)
             }
-            .setNegativeButton("Ne", null)
+            .setNegativeButton("No", null)
             .show()
     }
 
@@ -56,17 +56,17 @@ class GalleryActivity : AppCompatActivity() {
         try {
             if (file.exists() && file.delete()) {
                 adapter.removeItem(position)
-                Toast.makeText(this, "Slika je obrisana", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Image deleted", Toast.LENGTH_SHORT).show()
                 
                 // Ako nema više slika, prikaži poruku
                 if (images.isEmpty()) {
                     Toast.makeText(this, "No photos saved", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                Toast.makeText(this, "Greška pri brisanju slike", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Error deleting image", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Greška: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
