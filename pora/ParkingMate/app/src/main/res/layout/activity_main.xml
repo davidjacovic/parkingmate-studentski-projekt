@@ -71,21 +71,11 @@
         android:layout_marginTop="8dp"/>
 
     <Button
-        android:id="@+id/btnAlerts"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Alerts"
-        app:layout_constraintTop_toBottomOf="@id/btnMessages"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="8dp"/>
-
-    <Button
         android:id="@+id/btnSendEvent"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="Send Event"
-        app:layout_constraintTop_toBottomOf="@id/btnAlerts"
+        app:layout_constraintTop_toBottomOf="@id/btnMessages"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="8dp"/>
