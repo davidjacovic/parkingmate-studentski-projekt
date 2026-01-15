@@ -15,7 +15,9 @@ namespace ParkingMate.Blockchain
                 CommandLineArgs.PrintHelp();
                 return;
             }
-
+            TestBlockChainValidation.RunTest();
+            return;
+            
             // Test ThreadPool implementacije (4.1.2, 4.1.3, 4.1.4)
             // Otkomentariši sledeću liniju da testiraš ThreadPool:
             // TestThreadPool.RunTest();
@@ -70,6 +72,11 @@ namespace ParkingMate.Blockchain
             // Otkomentariši sledeću liniju da testiraš validaciju timestamp-a:
             // TestTimestampValidation.RunTest();
             // return;
+
+            // Test validacije bloka i lanca (Block + Chain validation)
+            // Otkomentariši sledeću liniju da testiraš validaciju:
+            //TestBlockAndChainValidation.RunTest();
+            //return;
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
             var mpi = MpiEnvironment.Instance;
