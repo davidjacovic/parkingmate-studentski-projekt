@@ -23,7 +23,7 @@ namespace ParkingMate.Blockchain
 
             // Test skaliranja (4.1.5)
             // Otkomentariši sledeću liniju da testiraš skaliranje sa različitim brojevima niti:
-            // TestScaling.RunTest();
+            //// TestScaling.RunTest();
             // return;
 
             // Test detekcije CPU jezgara (4.2.1)
@@ -33,18 +33,18 @@ namespace ParkingMate.Blockchain
 
             // Test MPI inicijalizacije (5.1.1, 5.1.2, 5.1.3)
             // Otkomentariši sledeću liniju da testiraš MPI inicijalizaciju:
-            // TestMpiInitialization.RunTest();
+            //TestMpiInitialization.RunTest();
             // return;
 
             // Test MPI Master-Worker arhitekture (5.2.1-5.2.5)
             // Otkomentariši sledeću liniju da testiraš Master-Worker arhitekturu:
-            // TestMpiMasterWorker.RunTest();
+            //// TestMpiMasterWorker.RunTest();
             // return;
 
             // Test MPI sinhronizacije i prekida (5.3.1, 5.3.2, 5.3.3)
             // Otkomentariši sledeću liniju da testiraš MPI sinhronizaciju:
-            // TestMpiSynchronization.RunTest();
-            // return;
+            //// TestMpiSynchronization.RunTest();
+            //// return;
 
             // Test dinamičke težine (6.1.1)
             // Otkomentariši sledeću liniju da testiraš time-based algoritam:
@@ -53,13 +53,13 @@ namespace ParkingMate.Blockchain
 
             // Test parametara dinamičke težine (6.1.2)
             // Otkomentariši sledeću liniju da testiraš CLI parametre:
-            // TestDynamicDifficultyParams.RunTest();
+            //TestDynamicDifficultyParams.RunTest();
             // return;
 
             // Test integracije dinamičke težine u mining proces (6.1.3)
             // Otkomentariši sledeću liniju da testiraš integraciju:
-            // TestDynamicDifficultyIntegration.RunTest();
-            // return;
+            //TestDynamicDifficultyIntegration.RunTest();
+            //  return;
 
             // Test izračunavanja kumulativne težine (6.2.1)
             // Otkomentariši sledeću liniju da testiraš izračunavanje 2^difficulty:
@@ -70,6 +70,17 @@ namespace ParkingMate.Blockchain
             // Otkomentariši sledeću liniju da testiraš validaciju timestamp-a:
             // TestTimestampValidation.RunTest();
             // return;
+
+            // Test validacije bloka i lanca (Block + Chain validation)
+            // Otkomentariši sledeću liniju da testiraš validaciju:
+            //TestBlockAndChainValidation.RunTest();
+            //return;
+
+            // Test da mining kreira validan blok (Mining + Validation integration)
+            // Otkomentariši sledeću liniju da testiraš mining validnog bloka:
+            // TestMiningCreatesValidBlock.RunTest();
+            // return;
+
 
             // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
             var mpi = MpiEnvironment.Instance;

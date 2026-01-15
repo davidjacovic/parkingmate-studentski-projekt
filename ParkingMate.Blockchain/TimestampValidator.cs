@@ -7,26 +7,9 @@ namespace ParkingMate.Blockchain
     /// </summary>
     public static class TimestampValidator
     {
-        /// <summary>
-        /// Maksimalno dozvoljeno vreme u budućnosti (u sekundama).
-        /// Prema specifikaciji: "blok je ustrezen, če je njegova časovna značka največ 1 minuto večja od našega trenutnega časa"
-        /// Default: 1 minuta (60 sekundi).
-        /// </summary>
         public const long MaxFutureTimeSeconds = 60;
-
-        /// <summary>
-        /// Maksimalno dozvoljeno vreme u prošlosti u odnosu na prethodni blok (u sekundama).
-        /// Prema specifikaciji: "blok v verigi je ustrezen če je njegova časovna značka največ 1 minuto manjša od časovne značke prejšnjega bloka"
-        /// Default: 1 minuta (60 sekundi).
-        /// </summary>
         public const long MaxPastTimeSeconds = 60;
 
-        /// <summary>
-        /// Validira timestamp novog bloka u odnosu na trenutno vreme i prethodni blok (TASK 2.3).
-        /// </summary>
-        /// <param name="currentBlock">Trenutni blok koji se validira</param>
-        /// <param name="previousBlock">Prethodni blok u lancu</param>
-        /// <returns>True ako je timestamp validan, false inače</returns>
         public static bool IsValidTimestamp(Block currentBlock, Block previousBlock)
         {
             if (currentBlock == null)
@@ -34,43 +17,24 @@ namespace ParkingMate.Blockchain
             if (previousBlock == null)
                 throw new ArgumentNullException(nameof(previousBlock));
 
-            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            long blockTimestamp = currentBlock.Timestamp;
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long ts = currentBlock.Timestamp;
+            long prevTs = previousBlock.Timestamp;
 
-            // 1. Provera: Timestamp ne sme biti previše u budućnosti
-            if (blockTimestamp > currentTime + MaxFutureTimeSeconds)
-            {
+            // 1) Timestamp ne sme biti previše u budućnosti u odnosu na "naše trenutno vreme"
+            if (ts > now + MaxFutureTimeSeconds)
                 return false;
-            }
 
-            // 2. Provera: Timestamp mora biti veći od prethodnog bloka
-            // (blokovi moraju biti u hronološkom redosledu)
-            if (blockTimestamp <= previousBlock.Timestamp)
-            {
+            // !!! PROMENA !!! (TASK 2.3)
+            // Prema specifikaciji: blok je OK ako je njegova časovna značka najviše 1 minut MANJA od prethodnog bloka.
+            // Dakle dozvoljavamo: ts == prevTs i ts može biti malo manji (do 60s).
+            // Staro: if (ts <= prevTs) return false;  (prestrogo - ruši mining kad timestamp padne u istu sekundu)
+            if (ts < prevTs - MaxPastTimeSeconds)
                 return false;
-            }
-
-            // 3. Provera: Timestamp ne sme biti previše u prošlosti u odnosu na prethodni blok
-            // Prema specifikaciji: "blok v verigi je ustrezen če je njegova časovna značka največ 1 minuto manjša od časovne značke prejšnjega bloka"
-            // To znači da razlika između prethodnog i trenutnog bloka ne sme biti veća od 1 minute
-            // Ali pošto je blockTimestamp > previousBlock.Timestamp (provera 2), ovo proverava da li je razlika prevelika
-            long timeDifference = blockTimestamp - previousBlock.Timestamp;
-            if (timeDifference > MaxPastTimeSeconds)
-            {
-                return false;
-            }
 
             return true;
         }
 
-        /// <summary>
-        /// Validira timestamp novog bloka sa custom parametrima (TASK 2.3).
-        /// </summary>
-        /// <param name="currentBlock">Trenutni blok koji se validira</param>
-        /// <param name="previousBlock">Prethodni blok u lancu</param>
-        /// <param name="maxFutureTimeSeconds">Maksimalno dozvoljeno vreme u budućnosti</param>
-        /// <param name="maxPastTimeSeconds">Maksimalno dozvoljeno vreme u prošlosti</param>
-        /// <returns>True ako je timestamp validan, false inače</returns>
         public static bool IsValidTimestamp(
             Block currentBlock,
             Block previousBlock,
@@ -86,48 +50,34 @@ namespace ParkingMate.Blockchain
             if (maxPastTimeSeconds < 0)
                 throw new ArgumentException("maxPastTimeSeconds must be non-negative", nameof(maxPastTimeSeconds));
 
-            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            long blockTimestamp = currentBlock.Timestamp;
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long ts = currentBlock.Timestamp;
+            long prevTs = previousBlock.Timestamp;
 
-            // 1. Provera: Timestamp ne sme biti previše u budućnosti
-            if (blockTimestamp > currentTime + maxFutureTimeSeconds)
-            {
+            // 1) Timestamp ne sme biti previše u budućnosti
+            if (ts > now + maxFutureTimeSeconds)
                 return false;
-            }
 
-            // 2. Provera: Timestamp mora biti veći od prethodnog bloka
-            if (blockTimestamp <= previousBlock.Timestamp)
-            {
+            // !!! PROMENA !!! (TASK 2.3 - custom parametri)
+            // Dozvoljavamo ts == prevTs i ts >= prevTs - maxPastTimeSeconds
+            // Staro je imalo 2 greške:
+            //  - tražilo ts > prevTs (prestrogo)
+            //  - računalo timeDifference = prevTs - ts (pogrešan smer u tvojoj staroj default verziji)
+            if (ts < prevTs - maxPastTimeSeconds)
                 return false;
-            }
-
-            // 3. Provera: Timestamp ne sme biti previše u prošlosti u odnosu na prethodni blok
-            long timeDifference = previousBlock.Timestamp - blockTimestamp;
-            if (timeDifference > maxPastTimeSeconds)
-            {
-                return false;
-            }
 
             return true;
         }
 
-        /// <summary>
-        /// Validira timestamp za genesis blok (genesis blok može imati bilo koji timestamp).
-        /// </summary>
-        /// <param name="genesisBlock">Genesis blok</param>
-        /// <returns>True ako je timestamp validan, false inače</returns>
         public static bool IsValidGenesisTimestamp(Block genesisBlock)
         {
             if (genesisBlock == null)
                 throw new ArgumentNullException(nameof(genesisBlock));
 
-            // Genesis blok može imati bilo koji timestamp (čak i u prošlosti)
-            // Jedina provera je da ne sme biti previše u budućnosti
-            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            long blockTimestamp = genesisBlock.Timestamp;
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long ts = genesisBlock.Timestamp;
 
-            return blockTimestamp <= currentTime + MaxFutureTimeSeconds;
+            return ts <= now + MaxFutureTimeSeconds;
         }
     }
 }
-
