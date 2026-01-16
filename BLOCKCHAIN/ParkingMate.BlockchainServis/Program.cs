@@ -1,3 +1,5 @@
+using ParkingMate.Blockchain;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
