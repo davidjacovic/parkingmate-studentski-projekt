@@ -191,6 +191,8 @@ namespace ParkingMate.Blockchain
                     case "--run-tests":
                         // Namerno ignorišemo - Program.cs obrađuje ove flagove
                         break;
+                    case "--bench":
+                        break;
 
                     default:
                         Console.WriteLine($"Nepoznat argument: '{args[i]}'. Koristi --help za pomoć.");

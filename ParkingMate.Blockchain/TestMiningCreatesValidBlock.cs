@@ -15,13 +15,14 @@ namespace ParkingMate.Blockchain
 
             // Candidate: AddBlock će ignorisati index/prevhash i postaviti ih sam
             var candidate = new Block(
-                index: 0,
-                data: "Mined block test",
-                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                previousHash: "",
-                difficulty: 3, // spusti na 2 ako je presporo
-                nonce: 0
-            );
+    index: 0,
+    data: "Mined block test",
+    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+    previousHash: "",
+    difficulty: 1, // nebitno - AddBlock računa difficulty sam
+    nonce: 0
+);
+
 
             int before = bc.Chain.Count;
             bc.AddBlock(candidate);

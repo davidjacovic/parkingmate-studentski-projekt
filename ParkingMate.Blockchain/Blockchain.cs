@@ -48,13 +48,16 @@ namespace ParkingMate.Blockchain
 
         public Block GetLatestBlock() => chain[^1];
 
-        public uint GetNextDifficulty(uint currentDifficulty)
+        public uint GetNextDifficulty()
         {
-            if (!DynamicDifficulty.ShouldAdjustDifficulty(chain.Count, adjustmentInterval))
-                return currentDifficulty;
+            var latest = GetLatestBlock();
 
-            return DynamicDifficulty.CalculateDifficulty(chain, currentDifficulty, blockIntervalSeconds, adjustmentInterval);
+            if (!DynamicDifficulty.ShouldAdjustDifficulty(chain.Count, adjustmentInterval))
+                return latest.Difficulty;
+
+            return DynamicDifficulty.CalculateDifficulty(chain, latest.Difficulty, blockIntervalSeconds, adjustmentInterval);
         }
+
 
         // ✅ koristi se u MPI režimu (master dobije već mined block)
         public void AppendMinedBlock(Block mined)
@@ -68,16 +71,17 @@ namespace ParkingMate.Blockchain
 
             uint nextIndex = latest.Index + 1;
             string previousHash = latest.Hash;
-
-            // Po specifikaciji: ne forsiramo ts > prevTs, već validiramo +/- 60s
             long finalTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            // ✅ difficulty mora doći iz dinamičkog algoritma
+            uint nextDifficulty = GetNextDifficulty();
 
             var blockToMine = new Block(
                 index: nextIndex,
                 data: newBlock.Data,
                 timestamp: finalTimestamp,
                 previousHash: previousHash,
-                difficulty: newBlock.Difficulty,
+                difficulty: nextDifficulty,
                 nonce: 0
             );
 
@@ -96,6 +100,7 @@ namespace ParkingMate.Blockchain
 
             chain.Add(minedBlock);
         }
+
 
         private Block MineBlockSingleThreaded(Block block, out long miningTimeMs)
         {

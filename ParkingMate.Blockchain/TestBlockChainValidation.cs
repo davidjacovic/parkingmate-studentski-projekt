@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace ParkingMate.Blockchain
 {
@@ -15,10 +14,10 @@ namespace ParkingMate.Blockchain
             for (int i = 1; i <= 3; i++)
             {
                 bc.AddBlock(new Block(
-                    index: 0, // ignoriše se u AddBlock
+                    index: 0,
                     data: $"Block {i}",
                     timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    previousHash: "", // ignoriše se u AddBlock
+                    previousHash: "",
                     difficulty: 2,
                     nonce: 0
                 ));
@@ -29,7 +28,7 @@ namespace ParkingMate.Blockchain
 
             Console.WriteLine("OK: Lanac validan posle rudarenja.");
 
-            // 2) Tamper: pokvari 2. blok (index 2 u listi je treći blok; uzmi index 1 da bude prvi posle genesis)
+            // 2) Tamper
             var tampered = bc.Chain[1];
             tampered.PreviousHash = "evil";
 
@@ -39,24 +38,29 @@ namespace ParkingMate.Blockchain
             Console.WriteLine("OK: Lanac postaje nevalidan posle tamper-a.");
 
             // 3) Test TryReplaceChain (kumulativna težina)
-            // Napravi novu validnu chain listu: uzmi fresh blockchain, napravi 1 blok sa većom difficulty
-            var bc2 = new Blockchain(blockIntervalSeconds: 10, adjustmentInterval: 10, threadCount: 1);
-            bc2.AddBlock(new Block(
-                index: 0,
-                data: "Heavier chain block",
-                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                previousHash: "",
-                difficulty: 4,  // veća difficulty => veća težina
-                nonce: 0
-            ));
+            // Pošto AddBlock ignoriše prosleđenu difficulty, težinu pravimo tako što kandidat ima VIŠE BLOKOVA.
+            var candidate = new Blockchain(blockIntervalSeconds: 10, adjustmentInterval: 10, threadCount: 1);
 
-            // bc je trenutno "pokvaren" (tamperovan) pa napravi novi čist bc3 da realno testira replace
+            // kandidat: dodaj više blokova
+            for (int i = 1; i <= 5; i++)
+            {
+                candidate.AddBlock(new Block(
+                    index: 0,
+                    data: $"Candidate {i}",
+                    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    previousHash: "",
+                    difficulty: 1,
+                    nonce: 0
+                ));
+            }
+
+            // bc3: manji lanac
             var bc3 = new Blockchain(blockIntervalSeconds: 10, adjustmentInterval: 10, threadCount: 1);
-            bc3.AddBlock(new Block(0, "A", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), "", 2, 0));
+            bc3.AddBlock(new Block(0, "A", DateTimeOffset.UtcNow.ToUnixTimeSeconds(), "", 1, 0));
 
-            bool replaced = bc3.TryReplaceChain(bc2.Chain);
+            bool replaced = bc3.TryReplaceChain(candidate.Chain);
             if (!replaced)
-                throw new Exception("FAIL: TryReplaceChain treba da prihvati teži validan lanac.");
+                throw new Exception("FAIL: TryReplaceChain treba da prihvati teži (kumulativno) validan lanac.");
 
             Console.WriteLine("OK: TryReplaceChain prihvata teži validan lanac.");
             Console.WriteLine("=== PASS ===\n");

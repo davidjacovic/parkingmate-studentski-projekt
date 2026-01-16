@@ -1,216 +1,172 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
+using System.Globalization;
+using System.IO;
+using MPI;
 
 namespace ParkingMate.Blockchain
 {
-    /// <summary>
-    /// Performansni benchmark: speedup po broju "MPI procesa" (simulirano) i niti po procesu.
-    /// OVO JE BENCHMARK (nije funkcionalni test).
-    /// </summary>
     public static class TestMpiScalingBenchmark
     {
-        public class Result
+        // Podešavanja benchmark-a
+        private const int TAG_BENCH = 999;
+
+        /// <summary>
+        /// Benchmark MPI mining-a: meri vreme rudarjenja 1 bloka za više threadCount vrednosti.
+        /// Pokreće se pod MPI (mpiexec -n X).
+        ///
+        /// Rezultat: rank 0 ispisuje tabelu + snima CSV "mpi_benchmark_rank0.csv"
+        /// </summary>
+        public static void Run(Intracommunicator world, IMpiCommunication comm)
         {
-            public int Processes { get; set; }
-            public int ThreadsPerProcess { get; set; }
-            public long TimeMs { get; set; }
-            public double Speedup { get; set; }
-            public ulong Nonce { get; set; }
-            public string HashPrefix { get; set; } = "";
-        }
+            if (world == null) throw new ArgumentNullException(nameof(world));
+            if (comm == null) throw new ArgumentNullException(nameof(comm));
 
-        public static void RunTest()
-        {
-            Console.WriteLine("=== Test MPI Scaling Benchmark (performansni) ===\n");
+            // U praksi: uzmi nekoliko thread-count vrednosti (ne previše)
+            int[] threadOptions = new[] { 1, 2, 4, 8, 16 };
 
-            // Podešavanja (za demo/ppt):
-            uint difficulty = 4; // spusti na 3 ako je presporo na tvojoj mašini
-            int threadsPerProc = Math.Max(1, ThreadedMiner.GetOptimalThreadCountMaxPerformance());
+            // Težina: dovoljno velika da meriš (ali da ne traje predugo)
+            // Ako ti je prebrzo (npr. < 10ms), podigni difficulty na 4 ili 5.
+            uint difficulty = 4;
 
-            // Broj “procesa” (čvorova)
-            int[] processCounts = { 1, 2, 4, 8 };
+            // Ponovi više puta pa uzmi prosek
+            int repeats = 5;
 
-            Console.WriteLine($"difficulty={difficulty}, threadsPerProcess={threadsPerProc}\n");
+            // Rank 0 pravi template blok (svi procesi moraju da rade isti posao u svakoj iteraciji)
+            // Timestamp mora da bude validan: u master-u već imaš logiku da osigura rast vremena.
+            // Ovde ćemo to uraditi ručno na rank0, a workerima se šalje kroz NonceRangeMessage.
+            var results = new List<(int worldSize, int threads, double avgMs)>();
 
-            // Baseline je P=1
-            var results = new List<Result>();
-            long baselineMs = 0;
-
-            foreach (var p in processCounts)
+            if (world.Size == 1)
             {
-                Console.WriteLine($"--- Run: processes={p} ---");
-
-                var sw = Stopwatch.StartNew();
-                var mined = MineDistributedSimulated(processes: p, threadsPerProcess: threadsPerProc, difficulty: difficulty);
-                sw.Stop();
-
-                if (mined == null)
-                {
-                    Console.WriteLine("  ⚠ Nije pronađeno rešenje (vrlo retko na niskoj diff, ali moguće).");
-                    continue;
-                }
-
-                long ms = sw.ElapsedMilliseconds;
-                if (p == 1) baselineMs = Math.Max(1, ms);
-
-                var r = new Result
-                {
-                    Processes = p,
-                    ThreadsPerProcess = threadsPerProc,
-                    TimeMs = ms,
-                    Speedup = (baselineMs > 0) ? (double)baselineMs / Math.Max(1, ms) : 1.0,
-                    Nonce = mined.Nonce,
-                    HashPrefix = mined.Hash.Substring(0, Math.Min(12, mined.Hash.Length))
-                };
-                results.Add(r);
-
-                Console.WriteLine($"  time={ms} ms, nonce={r.Nonce:N0}, hashPrefix={r.HashPrefix}..., speedup={r.Speedup:F2}x\n");
-            }
-
-            PrintTable(results);
-
-            Console.WriteLine("Napomena: Ovo je 'simulirani MPI' benchmark (procesi=Task), dobar za grafove u prezentaciji.\n");
-        }
-
-        private static Block? MineDistributedSimulated(int processes, int threadsPerProcess, uint difficulty)
-        {
-            // Zajednički blok (svaki proces dobija kopiju)
-            var baseBlock = new Block(
-                index: 1,
-                data: $"MPI scaling benchmark P={processes}",
-                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                previousHash: "0",
-                difficulty: difficulty,
-                nonce: 0
-            );
-
-            // Podeli nonce prostor na P procesa:
-            var ranges = DivideNonceSpace(processes);
-
-            // Pokreni procese paralelno
-            var tasks = new List<Task<Block?>>(processes);
-
-            for (int rank = 0; rank < processes; rank++)
-            {
-                int localRank = rank;
-                var (start, end) = ranges[localRank];
-
-                tasks.Add(Task.Run(() =>
-                {
-                    // Svaki "proces" radi multi-thread mining u svom nonce opsegu.
-                    var copy = new Block(
-                        baseBlock.Index,
-                        baseBlock.Data,
-                        baseBlock.Timestamp,
-                        baseBlock.PreviousHash,
-                        baseBlock.Difficulty,
-                        baseBlock.Nonce
-                    );
-
-                    return MineInRangeWithThreads(copy, threadsPerProcess, start, end);
-                }));
-            }
-
-            // Čekaj prvog koji uspe
-            while (tasks.Count > 0)
-            {
-                int idx = Task.WaitAny(tasks.ToArray());
-                var finished = tasks[idx];
-                tasks.RemoveAt(idx);
-
-                var candidate = finished.Result;
-                if (candidate != null)
-                {
-                    // našli smo rešenje; ostali se mogu ignorisati (benchmark)
-                    return candidate;
-                }
-            }
-
-            return null;
-        }
-
-        private static Block? MineInRangeWithThreads(Block blockToMine, int threadCount, ulong rangeStart, ulong rangeEnd)
-        {
-            // U okviru procesa podeli njegov nonce range na niti:
-            var pool = new ThreadedMiner.MiningThreadPool(threadCount);
-            var shared = pool.SharedState;
-
-            var workers = new List<ThreadedMiner.MiningWorker>(threadCount);
-
-            // Deli [rangeStart, rangeEnd] na threadCount delova
-            ulong total = (rangeEnd > rangeStart) ? (rangeEnd - rangeStart) : 0;
-            ulong chunk = total / (ulong)threadCount;
-
-            for (int i = 0; i < threadCount; i++)
-            {
-                ulong start = rangeStart + (ulong)i * chunk;
-                ulong end = (i == threadCount - 1) ? rangeEnd : (rangeStart + (ulong)(i + 1) * chunk);
-
-                var copy = new Block(
-                    blockToMine.Index,
-                    blockToMine.Data,
-                    blockToMine.Timestamp,
-                    blockToMine.PreviousHash,
-                    blockToMine.Difficulty,
-                    0
-                );
-
-                var w = new ThreadedMiner.BlockMiningWorker(
-                    threadId: i,
-                    sharedState: shared,
-                    blockToMine: copy,
-                    startNonce: start,
-                    endNonce: end
-                );
-                workers.Add(w);
-            }
-
-            pool.StartWithWorkers(workers);
-            pool.WaitAll();
-            var found = shared.GetFoundBlock();
-            pool.Stop();
-            return found;
-        }
-
-        private static List<(ulong start, ulong end)> DivideNonceSpace(int processes)
-        {
-            // Podela kao tvoj CalculateNonceRange, ali za procese.
-            // (Isto pravilo: poslednji dobija do MaxValue)
-            var ranges = new List<(ulong, ulong)>(processes);
-            ulong max = ulong.MaxValue;
-            ulong step = max / (ulong)processes;
-
-            for (int p = 0; p < processes; p++)
-            {
-                ulong start = (ulong)p * step;
-                ulong end = (p == processes - 1) ? ulong.MaxValue : (ulong)(p + 1) * step;
-                ranges.Add((start, end));
-            }
-
-            return ranges;
-        }
-
-        private static void PrintTable(List<Result> results)
-        {
-            if (results.Count == 0)
-            {
-                Console.WriteLine("Nema rezultata.\n");
+                // Nije MPI run, ali može da posluži kao baseline local.
+                if (world.Rank == 0)
+                    Console.WriteLine("[BENCH] world.Size == 1 (no MPI). Pokreni sa mpiexec -n X za MPI benchmark.");
                 return;
             }
 
-            Console.WriteLine("=== Rezultati (baseline P=1) ===");
-            Console.WriteLine($"{"P",3} {"Threads/P",9} {"Time (ms)",10} {"Speedup",8} {"Nonce",16} {"HashPrefix",12}");
-            Console.WriteLine(new string('-', 65));
-
-            foreach (var r in results.OrderBy(x => x.Processes))
+            if (world.Rank == 0)
             {
-                Console.WriteLine($"{r.Processes,3} {r.ThreadsPerProcess,9} {r.TimeMs,10:N0} {r.Speedup,8:F2} {r.Nonce,16:N0} {r.HashPrefix,12}");
+                Console.WriteLine("=== MPI Scaling Benchmark ===");
+                Console.WriteLine($"worldSize={world.Size} (master+{world.Size - 1} workers), difficulty={difficulty}, repeats={repeats}");
+                Console.WriteLine();
             }
 
-            Console.WriteLine();
+            // Barijera da svi startuju sinhrono
+            comm.Barrier();
+
+            // Da bi timestamp pravila bila stabilna, držimo mali blockchain samo na masteru.
+            // Workerima šaljemo već izračunat template.
+            Blockchain masterChain = new Blockchain(blockIntervalSeconds: 600, adjustmentInterval: 10, threadCount: 1);
+
+            // Benchmark po broju niti
+            foreach (int threadsPerWorker in threadOptions)
+            {
+                // Preskoči prevelike vrednosti (da ne praviš 1000 threadova na malom CPU)
+                if (threadsPerWorker <= 0) continue;
+
+                // Warmup + avg
+                double sumMs = 0;
+
+                for (int r = 0; r < repeats; r++)
+                {
+                    comm.Barrier();
+
+                    if (world.Rank == 0)
+                    {
+                        var latest = masterChain.GetLatestBlock();
+                        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                        long ts = Math.Max(now, latest.Timestamp + 1);
+
+                        var template = new Block(
+                            index: latest.Index + 1,
+                            data: $"BENCH block (threads={threadsPerWorker}, rep={r})",
+                            timestamp: ts,
+                            previousHash: latest.Hash,
+                            difficulty: difficulty,
+                            nonce: 0
+                        );
+
+                        var sw = Stopwatch.StartNew();
+
+                        // Master distribuira posao i čeka rezultate
+                        Block mined = MpiMining.RunDistributedMiningAsMaster(
+                            comm,
+                            world.Size,
+                            template,
+                            threadsPerWorker: threadsPerWorker
+                        );
+
+                        sw.Stop();
+
+                        // Validacija i append (da sledeći template ima smislen previousHash/timestamp)
+                        if (!masterChain.IsValidNewBlock(mined, latest))
+                            throw new InvalidOperationException("[BENCH] Mined block invalid (timestamp/hash/pow).");
+
+                        masterChain.AppendMinedBlock(mined);
+
+                        sumMs += sw.Elapsed.TotalMilliseconds;
+                    }
+                    else
+                    {
+                        // Worker: uradi jednu rundu pa se vrati (RunAsWorker čeka STOP, pa vraća false)
+                        // NAPOMENA: master šalje STOP u svakoj rundi.
+                        bool shouldExit = MpiMining.RunAsWorker(comm, world.Rank, threadsPerWorker);
+                        if (shouldExit)
+                            throw new InvalidOperationException("[BENCH] Worker got shutdown during benchmark (unexpected).");
+                    }
+
+                    comm.Barrier();
+                }
+
+                if (world.Rank == 0)
+                {
+                    double avg = sumMs / repeats;
+                    results.Add((world.Size, threadsPerWorker, avg));
+                    Console.WriteLine($"threads/worker={threadsPerWorker,-3} avgTime={avg,8:F2} ms");
+                }
+
+                comm.Barrier();
+            }
+
+            // Po završetku benchmark-a: master pošalje shutdown da worker petlje mogu da se završe ako želiš.
+            // (Ovo je bezbedno i korisno ako posle benchmark-a završavaš program.)
+            if (world.Rank == 0)
+                MpiMining.SendShutdownToWorkers(comm, world.Size);
+
+            comm.Barrier();
+
+            if (world.Rank == 0)
+            {
+                // Računaj speedup u okviru ovog worldSize: baseline = threads=1
+                double baseline = -1;
+                foreach (var row in results)
+                    if (row.threads == 1) { baseline = row.avgMs; break; }
+
+                Console.WriteLine();
+                Console.WriteLine("CSV columns: worldSize,threadsPerWorker,avgMs,speedup_vs_threads1");
+                string csvPath = "mpi_benchmark_rank0.csv";
+
+                using var sw = new StreamWriter(csvPath);
+                sw.WriteLine("worldSize,threadsPerWorker,avgMs,speedup_vs_threads1");
+
+                foreach (var row in results)
+                {
+                    double speedup = (baseline > 0) ? (baseline / row.avgMs) : 0;
+                    sw.WriteLine(string.Join(",",
+                        row.worldSize.ToString(CultureInfo.InvariantCulture),
+                        row.threads.ToString(CultureInfo.InvariantCulture),
+                        row.avgMs.ToString("F4", CultureInfo.InvariantCulture),
+                        speedup.ToString("F4", CultureInfo.InvariantCulture)
+                    ));
+                }
+
+                Console.WriteLine($"Saved: {csvPath}");
+                Console.WriteLine();
+                Console.WriteLine("Kako za graf 'speedup vs #procesa'?");
+                Console.WriteLine("  Pokreni isti benchmark sa mpiexec -n 2,4,8... i uporedi rezultate (npr. uzmi threads=optimal).");
+            }
         }
     }
 }
