@@ -1,0 +1,6 @@
+@ParkingMate.BlockchainServis_HostAddress = http://localhost:5024
+
+GET {{ParkingMate.BlockchainServis_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
