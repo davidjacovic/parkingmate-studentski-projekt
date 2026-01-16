@@ -2,7 +2,7 @@
 
 ## Pregled
 
-Kompletan ML servis za analizu parking slika koristeći YOLO model. Servis omogućava automatsku detekciju automobila i parking mesta, određivanje zauzetosti i vraćanje koordinata.
+Kompletan ML servis za analizu parking slika koristeći YOLO model. Servis omogućava automatsku detekciju parking mesta sa statusom (prazno/zauzeto), određivanje zauzetosti i vraćanje koordinata.
 
 ---
 
@@ -11,9 +11,9 @@ Kompletan ML servis za analizu parking slika koristeći YOLO model. Servis omogu
 ### Implementirano
 
 **Python servis** (`backend/ml_service/inference.py`):
-- Učitava YOLO model (`best.pt`)
+- Učitava YOLO model (`last.pt`)
 - Pokreće inferenciju na parking slikama
-- Detektuje automobile (class 0) i parking mesta (class 1)
+- Detektuje parking mesta sa statusom: prazna (class 0: "empty") i zauzeta (class 1: "occupied")
 - Parsira YOLO rezultate (bounding box-ove, confidence scores)
 
 **Node.js wrapper** (`backend/ml_service/mlInferenceService.js`):
@@ -45,22 +45,22 @@ Kompletan ML servis za analizu parking slika koristeći YOLO model. Servis omogu
 
 ### Implementirano
 
-**Algoritam za određivanje zauzetosti** (`inference.py`, linije 172-220):
+**Algoritam za određivanje zauzetosti** (`inference.py`):
 
-1. **IoU metoda** (primarna):
-   - Izračunava Intersection over Union između svakog parking mesta i svih automobila
-   - Ako je IoU >= `iou_threshold` (default 0.3), mesto je zauzeto
-   - Inače je mesto slobodno
+Model direktno detektuje parking mesta sa statusom:
+- **Class 0: "empty"** - Prazno parking mesto
+- **Class 1: "occupied"** - Zauzeto parking mesto
 
-2. **Fallback logika** (ako IoU ne radi):
-   - Jednostavna matematika: `zauzeto = min(broj_automobila, broj_mesta)`
-   - Aktivira se kada IoU ne detektuje preklapanje
+**Logika:**
+- Model direktno vraća status svakog parking mesta
+- Nema potrebe za IoU kalkulacijom ili fallback logikom
+- Jednostavno prebrojavanje: `freeSpaces = broj "empty" detekcija`, `occupiedSpaces = broj "occupied" detekcija`
 
 **Rezultat:**
-- `totalSpots` - Ukupan broj parking mesta
-- `freeSpaces` - Broj slobodnih mesta
-- `occupiedSpaces` - Broj zauzetih mesta
-- `totalCars` - Broj detektovanih automobila
+- `totalSpots` - Ukupan broj parking mesta (empty + occupied)
+- `freeSpaces` - Broj slobodnih mesta (class 0)
+- `occupiedSpaces` - Broj zauzetih mesta (class 1)
+- `totalCars` - Za backward compatibility, jednako `occupiedSpaces`
 
 ### Funkcionalnost
 
@@ -136,14 +136,14 @@ Kompletan ML servis za analizu parking slika koristeći YOLO model. Servis omogu
 ## Za šta je kod sposoban
 
 ### 1. Analiza parking slika
-- Detektuje automobile i parking mesta na slikama
+- Detektuje parking mesta sa statusom (prazno/zauzeto) na slikama
 - Koristi YOLO model za preciznu detekciju
 - Podržava različite formate slika (JPG, PNG, itd.)
 
 ### 2. Određivanje zauzetosti
-- Automatski određuje koja parking mesta su zauzeta
-- Koristi IoU algoritam za precizno određivanje
-- Fallback logika za slučajeve kada IoU ne radi
+- Model direktno određuje status parking mesta (prazno/zauzeto)
+- Nema potrebe za dodatnom logikom - model već zna status
+- Precizno i brzo određivanje zauzetosti
 
 ### 3. Vraćanje podataka
 - Broj slobodnih i zauzetih mesta
@@ -213,9 +213,9 @@ Servis vraća sve potrebne podatke u formatu kompatibilnom sa bazom:
 
 ## Dodatne funkcionalnosti
 
-- **Class-specific thresholds**: Različiti threshold-i za automobile i parking mesta
-- **NMS (Non-Maximum Suppression)**: Uklanja duplikate automobila
-- **Fallback logika**: Jednostavna matematika kada IoU ne radi
+- **Class-specific thresholds**: Različiti threshold-i za prazna i zauzeta parking mesta
+- **NMS (Non-Maximum Suppression)**: Uklanja duplikate detekcija
+- **Direktna detekcija statusa**: Model direktno vraća status parking mesta
 - **Health check**: Provera da li je servis spreman
 - **Detaljno logovanje**: Console i file logging
 
@@ -234,7 +234,7 @@ backend/
 ├── routes/
 │   └── mlRoutes.js               # API routes
 └── models/
-    └── best.pt                    # YOLO model
+    └── last.pt                    # YOLO model (detektuje empty/occupied)
 ```
 
 ---
@@ -244,4 +244,9 @@ backend/
 **Task 3.3 je uspešno odrađen i spreman za integraciju.**
 
 Svi subtaskovi su implementirani i testirani. Kod je funkcionalan, dokumentovan i spreman za produkciju. Servis može da se integriše u postojeći backend sistem za automatsku analizu parking slika.
+
+
+
+
+
 

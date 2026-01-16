@@ -23,16 +23,16 @@ pip install -r requirements.txt
 
 ## Korak 2: Postavljanje YOLO modela
 
-Kopiraj `best.pt` fajl u `backend/models/` folder:
+Kopiraj `last.pt` fajl u `backend/models/` folder:
 
 **PowerShell:**
 ```powershell
-Copy-Item "C:\Users\keser\Downloads\best.pt" -Destination "backend\models\best.pt"
+Copy-Item "C:\Users\keser\Downloads\vid\last.pt" -Destination "backend\models\last.pt"
 ```
 
 **Ili ručno:**
-- Kopiraj `best.pt` iz `C:\Users\keser\Downloads\`
-- Paste u `backend\models\best.pt`
+- Kopiraj `last.pt` iz `C:\Users\keser\Downloads\vid\`
+- Paste u `backend\models\last.pt`
 
 ---
 
@@ -49,7 +49,7 @@ node -e "const ml = require('./ml_service/mlInferenceService'); ml.checkDependen
 
 ```bash
 cd backend
-python ml_service/inference.py "uploads/test_slika1.png" "models/best.pt" 0.5 0.3
+python ml_service/inference.py "uploads/test_slika1.png" "models/last.pt" 0.5
 ```
 
 Ovo bi trebalo da ispiše JSON sa rezultatima.
@@ -172,10 +172,9 @@ Invoke-WebRequest -Uri "http://localhost:3002/api/ml/health" | Select-Object -Ex
 ```powershell
 $body = @{
     imagePath = "test_slika1.png"
-    confidenceThreshold = 0.1
-    carThreshold = 0.12
-    parkingThreshold = 0.55
-    iouThreshold = 0.3
+    confidenceThreshold = 0.5
+    emptyThreshold = 0.4
+    occupiedThreshold = 0.6
 } | ConvertTo-Json
 
 Invoke-WebRequest -Uri "http://localhost:3002/api/ml/analyze-path" `
@@ -188,7 +187,7 @@ Invoke-WebRequest -Uri "http://localhost:3002/api/ml/analyze-path" `
 ```bash
 curl -X POST http://localhost:3002/api/ml/analyze-path ^
   -H "Content-Type: application/json" ^
-  -d "{\"imagePath\": \"test_slika1.png\", \"confidenceThreshold\": 0.1, \"carThreshold\": 0.12, \"parkingThreshold\": 0.55, \"iouThreshold\": 0.3}"
+  -d "{\"imagePath\": \"test_slika1.png\", \"confidenceThreshold\": 0.5, \"emptyThreshold\": 0.4, \"occupiedThreshold\": 0.6}"
 ```
 
 #### 4.4. Analiza slike (sa upload-om)
@@ -198,7 +197,7 @@ curl -X POST http://localhost:3002/api/ml/analyze-path ^
 - Body: `form-data`
 - Key: `image` (type: File)
 - Value: izaberi sliku
-- Opciono: dodaj parametre (`confidenceThreshold`, `carThreshold`, `parkingThreshold`, `iouThreshold`)
+- Opciono: dodaj parametre (`confidenceThreshold`, `emptyThreshold`, `occupiedThreshold`)
 
 ---
 
@@ -258,10 +257,10 @@ python -m pip install -r requirements.txt
 ### Problem: "Model file not found"
 
 **Rešenje:**
-1. Proveri da li `best.pt` postoji u `backend/models/best.pt`
+1. Proveri da li `last.pt` postoji u `backend/models/last.pt`
 2. Ili postavi environment varijablu u `.env`:
 ```env
-ML_MODEL_PATH=C:\Users\keser\Downloads\best.pt
+ML_MODEL_PATH=C:\Users\keser\Downloads\vid\last.pt
 ```
 
 ### Problem: "python3: command not found" (Windows)
@@ -283,7 +282,7 @@ PYTHON_EXECUTABLE=python
 
 **Rešenje:**
 - Smanji `confidenceThreshold` (0.2-0.3) za više detekcija
-- Koristi class-specific thresholds (`carThreshold`, `parkingThreshold`)
+- Koristi class-specific thresholds (`emptyThreshold`, `occupiedThreshold`)
 - Testiraj sa različitim slikama
 
 ---
@@ -293,18 +292,16 @@ PYTHON_EXECUTABLE=python
 ### Za opštu upotrebu:
 ```javascript
 {
-    confidenceThreshold: 0.3,
-    iouThreshold: 0.3
+    confidenceThreshold: 0.5
 }
 ```
 
-### Za test_slika1.png (3 mesta, 2 automobila):
+### Sa class-specific thresholds:
 ```javascript
 {
-    confidenceThreshold: 0.1,
-    carThreshold: 0.12,
-    parkingThreshold: 0.55,
-    iouThreshold: 0.3
+    confidenceThreshold: 0.5,
+    emptyThreshold: 0.4,      // Opciono: specifičan threshold za prazna mesta
+    occupiedThreshold: 0.6    // Opciono: specifičan threshold za zauzeta mesta
 }
 ```
 
@@ -313,7 +310,7 @@ PYTHON_EXECUTABLE=python
 ## Brzi start checklist
 
 - [ ] Instalirane Python zavisnosti (`pip install -r requirements.txt`)
-- [ ] YOLO model kopiran u `backend/models/best.pt`
+- [ ] YOLO model kopiran u `backend/models/last.pt`
 - [ ] Testirao sa `node ml_service/test_ml_service.js`
 - [ ] Proverio logove u `backend/logs/ml_analysis.log`
 - [ ] (Opciono) Pokrenuo backend server i testirao API
@@ -326,4 +323,9 @@ Nakon što je sve testirano i radi, možeš nastaviti sa:
 - **Task 4.1**: Integracija ML analize u postojeći backend
 - **Task 4.2**: Povrat rezultata aplikaciji
 - **Task 5**: Vizualizacija digitalnog dvojčka
+
+
+
+
+
 

@@ -43,7 +43,8 @@ exports.analyzeImage = async (req, res) => {
         // Optional parameters
         const options = {
             confidenceThreshold: req.body.confidenceThreshold ? parseFloat(req.body.confidenceThreshold) : undefined,
-            iouThreshold: req.body.iouThreshold ? parseFloat(req.body.iouThreshold) : undefined
+            emptyThreshold: req.body.emptyThreshold ? parseFloat(req.body.emptyThreshold) : undefined,
+            occupiedThreshold: req.body.occupiedThreshold ? parseFloat(req.body.occupiedThreshold) : undefined
         };
 
         // Run ML analysis

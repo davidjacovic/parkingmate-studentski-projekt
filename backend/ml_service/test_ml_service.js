@@ -28,13 +28,13 @@ async function testMLService() {
         console.log(`✓ Model pronađen: ${modelPath}\n`);
     } else {
         console.error(`✗ Model nije pronađen: ${modelPath}`);
-        console.log('Kopiraj best.pt u backend/models/best.pt\n');
+        console.log('Kopiraj last.pt u backend/models/last.pt\n');
         return;
     }
 
     // Test 3: Testiranje analize slike
     console.log('3. Testiranje analize slike...');
-    const testImagePath = path.join(__dirname, '..', 'uploads', 'test_slika3.png');
+    const testImagePath = path.join(__dirname, '..', 'uploads', 'test_slika1.png');
     
     if (!fs.existsSync(testImagePath)) {
         console.error(`✗ Test slika nije pronađena: ${testImagePath}`);
@@ -52,7 +52,8 @@ async function testMLService() {
         // - 0.7 = manje detekcija (ali sigurnije)
         const options = {
             confidenceThreshold: 0.3,  // Niži threshold za više detekcija
-            iouThreshold: 0.3
+            emptyThreshold: null,       // Opciono: specifičan threshold za prazna mesta
+            occupiedThreshold: null    // Opciono: specifičan threshold za zauzeta mesta
         };
         
         console.log(`Koristim confidence threshold: ${options.confidenceThreshold}`);

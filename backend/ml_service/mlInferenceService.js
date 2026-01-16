@@ -13,12 +13,11 @@ class MLInferenceService {
         // Path to the Python inference script
         this.pythonScriptPath = path.join(__dirname, 'inference.py');
         // Default model path - can be overridden via environment variable
-        this.modelPath = process.env.ML_MODEL_PATH || path.join(__dirname, '..', 'models', 'best.pt');
+        this.modelPath = process.env.ML_MODEL_PATH || path.join(__dirname, '..', 'models', 'last.pt');
         // Python executable - default to 'python' on Windows, 'python3' on Unix
         this.pythonExecutable = process.env.PYTHON_EXECUTABLE || (process.platform === 'win32' ? 'python' : 'python3');
         // Default thresholds
         this.confidenceThreshold = parseFloat(process.env.ML_CONFIDENCE_THRESHOLD || '0.5');
-        this.iouThreshold = parseFloat(process.env.ML_IOU_THRESHOLD || '0.3');
         // Log directory - Task 3.3.4
         this.logDirectory = path.join(__dirname, '..', 'logs');
         this.logFile = path.join(this.logDirectory, 'ml_analysis.log');
@@ -91,9 +90,8 @@ class MLInferenceService {
 
             // Use provided options or defaults
             const confidenceThreshold = options.confidenceThreshold || this.confidenceThreshold;
-            const iouThreshold = options.iouThreshold || this.iouThreshold;
-            const carThreshold = options.carThreshold || null;
-            const parkingThreshold = options.parkingThreshold || null;
+            const emptyThreshold = options.emptyThreshold || null;
+            const occupiedThreshold = options.occupiedThreshold || null;
 
             // Build command - use absolute paths to avoid path issues
             const absImagePath = path.isAbsolute(imagePath) ? imagePath : path.resolve(imagePath);
@@ -101,14 +99,15 @@ class MLInferenceService {
             const absScriptPath = path.isAbsolute(this.pythonScriptPath) ? this.pythonScriptPath : path.resolve(this.pythonScriptPath);
             
             // Build command with optional class-specific thresholds
-            let command = `${this.pythonExecutable} "${absScriptPath}" "${absImagePath}" "${absModelPath}" ${confidenceThreshold} ${iouThreshold}`;
-            if (carThreshold !== null) {
-                command += ` ${carThreshold}`;
-                if (parkingThreshold !== null) {
-                    command += ` ${parkingThreshold}`;
+            // New model: image_path model_path [confidence_threshold] [empty_threshold] [occupied_threshold]
+            let command = `${this.pythonExecutable} "${absScriptPath}" "${absImagePath}" "${absModelPath}" ${confidenceThreshold}`;
+            if (emptyThreshold !== null) {
+                command += ` ${emptyThreshold}`;
+                if (occupiedThreshold !== null) {
+                    command += ` ${occupiedThreshold}`;
                 }
-            } else if (parkingThreshold !== null) {
-                command += ` null ${parkingThreshold}`;
+            } else if (occupiedThreshold !== null) {
+                command += ` null ${occupiedThreshold}`;
             }
 
             // Execute Python script
@@ -233,18 +232,31 @@ class MLInferenceService {
                 // Coordinates are already in format [x_center, y_center, width, height]
                 spotsCoordinates.push(spot.coordinates);
             });
-        } else if (analysisResult.parking_spots) {
-            // Fallback: extract from parking_spots if spots_with_coordinates not available
-            analysisResult.parking_spots.forEach(spot => {
-                spotsCoordinates.push(spot.bbox);
-            });
+        } else {
+            // Fallback: extract from empty_spots and occupied_spots if spots_with_coordinates not available
+            if (analysisResult.empty_spots) {
+                analysisResult.empty_spots.forEach(spot => {
+                    spotsCoordinates.push(spot.bbox);
+                });
+            }
+            if (analysisResult.occupied_spots) {
+                analysisResult.occupied_spots.forEach(spot => {
+                    spotsCoordinates.push(spot.bbox);
+                });
+            }
+            // Legacy fallback for old model format
+            if (analysisResult.parking_spots) {
+                analysisResult.parking_spots.forEach(spot => {
+                    spotsCoordinates.push(spot.bbox);
+                });
+            }
         }
         
         return {
             totalSpots: analysisResult.total_spots || 0,
             freeSpaces: analysisResult.free_spaces || 0,
             occupiedSpaces: analysisResult.occupied_spaces || 0,
-            totalCars: analysisResult.total_cars || 0,
+            totalCars: analysisResult.total_cars || 0,  // For backward compatibility
             spotsCoordinates: spotsCoordinates,  // Task 3.3.3: Coordinates of parking spots
             allDetections: analysisResult.all_detections || [],
             metadata: analysisResult.analysis_metadata || {}
