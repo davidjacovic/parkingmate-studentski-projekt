@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Parking Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .upload-section {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+        .results.show {
+            display: block;
+        }
+        .result-item {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .error {
+            color: red;
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid red;
+            display: none;
+        }
+        .error.show {
+            display: block;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            display: none;
+        }
+        .loading.show {
+            display: block;
+        }
+        #preview {
+            max-width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+        #preview.show {
+            display: block;
+        }
+        .image-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        #canvas {
+            max-width: 100%;
+            display: none;
+        }
+        #canvas.show {
+            display: block;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        .legend-item {
+            display: inline-block;
+            margin: 0 20px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <h1>ML Parking Analiza</h1>
+    
+    <div class="upload-section">
+        <h2>Izaberi sliku</h2>
+        <input type="file" id="imageInput" accept="image/*">
+        <br>
+        <div class="image-container">
+            <img id="preview" alt="Preview">
+            <canvas id="canvas"></canvas>
+        </div>
+        <br>
+        <button id="uploadBtn" onclick="uploadImage()">Analiziraj sliku</button>
+    </div>
+    
+    <div class="loading" id="loading">
+        <p>Analiziram sliku... Molimo sačekajte.</p>
+    </div>
+    
+    <div class="error" id="error"></div>
+    
+    <div class="results" id="results">
+        <h2>Rezultati analize:</h2>
+        <div class="result-item">
+            <strong>Ukupno parking mesta:</strong> <span id="totalSpots">-</span>
+        </div>
+        <div class="result-item">
+            <strong>Prazna mesta:</strong> <span id="freeSpaces">-</span>
+        </div>
+        <div class="result-item">
+            <strong>Zauzeta mesta:</strong> <span id="occupiedSpaces">-</span>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #4CAF50; border: 2px solid #2E7D32;"></span>
+                <strong>Prazno mesto</strong>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background-color: #f44336; border: 2px solid #c62828;"></span>
+                <strong>Zauzeto mesto</strong>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3002/api/ml/analyze';
+        let currentImage = null;
+        let currentDetections = [];
+        
+        // Prikaz preview slike
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImage = e.target.result;
+                    const preview = document.getElementById('preview');
+                    preview.src = currentImage;
+                    preview.classList.add('show');
+                    // Sakrij canvas dok se ne analizira
+                    document.getElementById('canvas').classList.remove('show');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showError('Molimo izaberite sliku!');
+                return;
+            }
+            
+            // Reset UI
+            hideError();
+            hideResults();
+            showLoading();
+            document.getElementById('uploadBtn').disabled = true;
+            
+            try {
+                // Kreiraj FormData
+                const formData = new FormData();
+                formData.append('image', file);
+                // Dodaj confidence threshold (0.3 = prihvata samo detekcije sa confidence >= 30%)
+                formData.append('confidenceThreshold', '0.3');
+                
+                // Pošalji zahtev
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Prikaži rezultate
+                    document.getElementById('totalSpots').textContent = data.data.totalSpots || 0;
+                    document.getElementById('freeSpaces').textContent = data.data.freeSpaces || 0;
+                    document.getElementById('occupiedSpaces').textContent = data.data.occupiedSpaces || 0;
+                    
+                    // Sačuvaj detekcije za crtanje
+                    currentDetections = data.data.allDetections || [];
+                    
+                    // Nacrtaj bounding box-ove
+                    drawBoundingBoxes(data.data);
+                    
+                    showResults();
+                } else {
+                    showError('Greška: ' + (data.message || 'Nepoznata greška'));
+                }
+            } catch (error) {
+                showError('Greška pri slanju zahteva: ' + error.message);
+            } finally {
+                hideLoading();
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+        
+        function drawBoundingBoxes(data) {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const preview = document.getElementById('preview');
+            
+            // Sačekaj da se slika učita
+            const img = new Image();
+            img.onload = function() {
+                // Postavi dimenzije canvas-a
+                canvas.width = img.width;
+                canvas.height = img.height;
+                
+                // Nacrtaj sliku na canvas
+                ctx.drawImage(img, 0, 0);
+                
+                // Nacrtaj bounding box-ove za sve detekcije
+                if (data.allDetections && data.allDetections.length > 0) {
+                    data.allDetections.forEach(detection => {
+                        const bbox = detection.bbox;
+                        // Koordinate su u formatu: x_center, y_center, width, height (normalizovane 0-1)
+                        const x_center = bbox.x_center * canvas.width;
+                        const y_center = bbox.y_center * canvas.height;
+                        const width = bbox.width * canvas.width;
+                        const height = bbox.height * canvas.height;
+                        
+                        // Konvertuj u x1, y1, x2, y2 format
+                        const x1 = x_center - width / 2;
+                        const y1 = y_center - height / 2;
+                        
+                        // Odaberi boju na osnovu klase
+                        let color, borderColor;
+                        if (detection.class_name === 'empty') {
+                            color = 'rgba(76, 175, 80, 0.3)';  // Zelena (transparentna)
+                            borderColor = '#2E7D32';  // Tamno zelena
+                        } else if (detection.class_name === 'occupied') {
+                            color = 'rgba(244, 67, 54, 0.3)';  // Crvena (transparentna)
+                            borderColor = '#c62828';  // Tamno crvena
+                        } else {
+                            color = 'rgba(128, 128, 128, 0.3)';  // Siva
+                            borderColor = '#424242';
+                        }
+                        
+                        // Nacrtaj pravougaonik
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x1, y1, width, height);
+                        
+                        // Nacrtaj okvir
+                        ctx.strokeStyle = borderColor;
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x1, y1, width, height);
+                        
+                        // Dodaj label sa klasom i confidence-om
+                        ctx.fillStyle = borderColor;
+                        ctx.font = 'bold 16px Arial';
+                        const label = `${detection.class_name} (${(detection.confidence * 100).toFixed(1)}%)`;
+                        const textWidth = ctx.measureText(label).width;
+                        
+                        // Pozadina za tekst
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        ctx.fillRect(x1, y1 - 25, textWidth + 10, 25);
+                        
+                        // Tekst
+                        ctx.fillStyle = borderColor;
+                        ctx.fillText(label, x1 + 5, y1 - 5);
+                    });
+                }
+                
+                // Prikaži canvas umesto preview slike
+                preview.classList.remove('show');
+                canvas.classList.add('show');
+            };
+            
+            img.src = currentImage;
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+        
+        function showResults() {
+            document.getElementById('results').classList.add('show');
+        }
+        
+        function hideResults() {
+            document.getElementById('results').classList.remove('show');
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+        
+        function hideError() {
+            document.getElementById('error').classList.remove('show');
+        }
+    </script>
+</body>
+</html>
