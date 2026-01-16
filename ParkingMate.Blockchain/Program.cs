@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MPI;
+using System;
 
 namespace ParkingMate.Blockchain
 {
@@ -6,15 +7,22 @@ namespace ParkingMate.Blockchain
     {
         static void Main(string[] args)
         {
-            // Parsiranje command-line argumenata
+            AppContext.SetSwitch("System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization", true);
+
+            // Dodatni "mode" flagovi (ne diramo CommandLineArgs, samo ovde čitamo)
+            bool smoke = HasFlag(args, "--smoke");
+            bool runTests = HasFlag(args, "--run-tests");
+
+            // Parsiranje command-line argumenata (OK je da se uradi pre MPI env-a)
             var cliArgs = CommandLineArgs.Parse(args);
 
-            // Prikaži help ako je tražen
             if (cliArgs.ShowHelp)
             {
                 CommandLineArgs.PrintHelp();
                 return;
             }
+
+
 
             // Test ThreadPool implementacije (4.1.2, 4.1.3, 4.1.4)
             // Otkomentariši sledeću liniju da testiraš ThreadPool:
@@ -81,108 +89,159 @@ namespace ParkingMate.Blockchain
             // TestMiningCreatesValidBlock.RunTest();
             // return;
 
+            // Test MPI skaliranja / benchmark (MPI performance test)
+            // Otkomentariši sledeću liniju da testiraš MPI scaling i speedup:
+            // TestMpiScalingBenchmark.RunTest();
+            // return;
 
-            // MPI inicijalizacija (5.1.1, 5.1.2, 5.1.3)
-            var mpi = MpiEnvironment.Instance;
-            if (cliArgs.UseMpi)
-            {
-                // Inicijalizuj MPI okruženje
-                int mpiSize = cliArgs.MpiSize ?? 1;
-                int mpiRank = cliArgs.MpiRank ?? 0;
-                
-                if (!mpi.Initialize(mpiSize, mpiRank))
-                {
-                    Console.WriteLine("Upozorenje: MPI okruženje je već inicijalizovano. Nastavljam sa postojećom konfiguracijom.");
-                }
 
-                Console.WriteLine("=== MPI okruženje ===");
-                Console.WriteLine(mpi);
-                Console.WriteLine($"IsMaster: {mpi.IsMaster}, IsWorker: {mpi.IsWorker}");
-                Console.WriteLine();
-            }
-            else
-            {
-                // Pokušaj inicijalizaciju iz environment varijabli ili argumenata (ako su postavljeni)
-                // Ovo omogućava automatsku detekciju u stvarnom MPI okruženju
-                mpi.InitializeFromArgs(args);
-                if (mpi.IsInitialized)
-                {
-                    Console.WriteLine("=== MPI okruženje (detektovano automatski) ===");
-                    Console.WriteLine(mpi);
-                    Console.WriteLine();
-                }
-            }
-
-            // Napomena: Sledeći kod testira CLI parametre i blockchain funkcionalnost
-
-            // Dobij broj niti (CLI override ili automatska detekcija)
-            int threadCount = cliArgs.GetThreadCount();
+            // Dodatni "mode" flagovi (ne diramo CommandLineArgs, samo ovde čitamo)
+            int threads = cliArgs.GetThreadCount();
             uint initialDifficulty = cliArgs.GetDifficulty();
             int blocksToMine = cliArgs.GetBlocksToMine();
-            
-            // Dobij parametre za dinamičku difficulty (6.1.3)
             long blockIntervalSeconds = cliArgs.GetBlockIntervalSeconds();
             uint adjustmentInterval = cliArgs.GetAdjustmentInterval();
 
-            // Prikaži informacije o konfiguraciji
-            Console.WriteLine("=== Konfiguracija rudarjenja ===");
-            if (cliArgs.ThreadCount.HasValue)
+            // MPI.NET environment – sve MPI pozive radi SAMO unutar ovog using-a
+            using (new MPI.Environment(ref args))
             {
-                Console.WriteLine($"Broj niti (CLI override): {threadCount}");
-            }
-            else
-            {
-                int autoThreads = ThreadedMiner.GetOptimalThreadCount();
-                Console.WriteLine($"Broj niti (automatska detekcija): {threadCount}");
-                Console.WriteLine($"  Dostupno logičkih procesora: {ThreadedMiner.GetAvailableProcessorCount()}");
-                Console.WriteLine($"  Dostupno fizičkih jezgara: {ThreadedMiner.GetPhysicalProcessorCount()}");
-            }
-            Console.WriteLine($"Početna težina: {initialDifficulty}");
-            Console.WriteLine($"Broj blokova za rudarenje: {blocksToMine}");
-            Console.WriteLine($"Block interval: {blockIntervalSeconds} sekundi (6.1.3)");
-            Console.WriteLine($"Adjustment interval: {adjustmentInterval} blokova (6.1.3)");
-            Console.WriteLine();
+                var world = Communicator.world;
+                IMpiCommunication comm = new RealMpiCommunication(world);
 
-            // Kreiraj blockchain sa parametrima za dinamičku difficulty (6.1.3) i multi-threaded mining (EPIC 4)
-            var blockchain = new Blockchain(blockIntervalSeconds, adjustmentInterval, threadCount);
-
-            // EPIC 4: Multi-threaded mining je integrisan u Blockchain.AddBlock()
-            Console.WriteLine($"Korišćenje multi-threaded mining-a sa {threadCount} niti (EPIC 4)");
-            Console.WriteLine();
-
-            // Trenutna difficulty vrednost (počinje sa početnom difficulty, zatim se dinamički prilagođava)
-            uint currentDifficulty = initialDifficulty;
-
-            for (int i = 1; i <= blocksToMine; i++)
-            {
-                // Izračunaj difficulty za sledeći blok (6.1.3)
-                currentDifficulty = blockchain.GetNextDifficulty(currentDifficulty);
-                
-                if (i > 1 && DynamicDifficulty.ShouldAdjustDifficulty(blockchain.Chain.Count, adjustmentInterval))
+                // 1) Smoke mod (brz sanity check)
+                if (smoke)
                 {
-                    Console.WriteLine($"  [Difficulty prilagođena na: {currentDifficulty}]");
+                    if (world.Rank == 0)
+                        Console.WriteLine($"[MODE] SMOKE (size={world.Size})");
+
+                    // difficulty=2, threadsPerWorker=2 (mozes menjati)
+                    TestMpiSmoke.Run(world, comm, threadsPerWorker: 2, difficulty: 2);
+
+                    comm.Barrier();
+                    return;
                 }
 
-                var block = new Block(
-                    index: 0,
-                    data: $"Auto-mined block #{i}",
-                    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    previousHash: "",
-                    difficulty: currentDifficulty,
-                    nonce: 0
-                );
+                // 2) Lokalni testovi (bez MPI) – samo rank 0 da ne duplira ispise
+                if (runTests)
+                {
+                    if (world.Rank == 0)
+                    {
+                        Console.WriteLine("[MODE] RUN TESTS (local tests on rank 0)");
+                        TestMiningCreatesValidBlock.RunTest();
+                        TestBlockAndChainValidation.RunTest();
+                        Console.WriteLine("[TESTS] DONE.");
+                    }
 
-                Console.WriteLine($"\nMining block {i} (difficulty: {currentDifficulty})...");
-                blockchain.AddBlock(block);
+                    comm.Barrier();
+                    return;
+                }
+
+                // 3) Full mining (lokalno ili MPI)
+                bool mpiMode = world.Size > 1;
+
+                if (!mpiMode)
+                {
+                    Console.WriteLine("MPI size = 1 -> radim lokalno (bez distribuiranja).");
+
+                    var blockchain = new Blockchain(blockIntervalSeconds, adjustmentInterval, threads);
+                    uint currentDifficulty = initialDifficulty;
+
+                    for (int i = 1; i <= blocksToMine; i++)
+                    {
+                        currentDifficulty = blockchain.GetNextDifficulty(currentDifficulty);
+
+                        var block = new Block(
+                            index: 0,
+                            data: $"Auto-mined block #{i}",
+                            timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                            previousHash: "",
+                            difficulty: currentDifficulty,
+                            nonce: 0
+                        );
+
+                        blockchain.AddBlock(block);
+                        var latest = blockchain.GetLatestBlock();
+                        Console.WriteLine($"[LOCAL] Added block {latest.Index} diff={latest.Difficulty} hash={latest.Hash.Substring(0, 16)}...");
+                    }
+
+                    Console.WriteLine("Blockchain valid: " + blockchain.IsValidChain());
+                    return;
+                }
+
+                // MPI mining
+                // MPI mining
+                if (world.Rank == 0)
+                {
+                    Console.WriteLine($"[MASTER] MPI size={world.Size}, threads/worker={threads}");
+
+                    var blockchain = new Blockchain(blockIntervalSeconds, adjustmentInterval, threadCount: 1);
+                    uint currentDifficulty = initialDifficulty;
+
+                    for (int i = 1; i <= blocksToMine; i++)
+                    {
+                        currentDifficulty = blockchain.GetNextDifficulty(currentDifficulty);
+
+                        var latest = blockchain.GetLatestBlock();
+                        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                        long ts = Math.Max(now, latest.Timestamp + 1); // ✅ garantuje da vreme raste
+
+                        var blockTemplate = new Block(
+                            index: latest.Index + 1,
+                            data: $"MPI-mined block #{i}",
+                            timestamp: ts,
+                            previousHash: latest.Hash,
+                            difficulty: currentDifficulty,
+                            nonce: 0
+                        );
+
+
+                        Console.WriteLine($"[MASTER] Mining block {i}/{blocksToMine} difficulty={currentDifficulty} ...");
+
+                        Block mined = MpiMining.RunDistributedMiningAsMaster(
+                            comm,
+                            world.Size,
+                            blockTemplate,
+                            threadsPerWorker: threads
+                        );
+
+                        if (!blockchain.IsValidNewBlock(mined, latest))
+                            throw new InvalidOperationException("MPI mined block is invalid");
+
+                        blockchain.AppendMinedBlock(mined);
+                        Console.WriteLine($"[MASTER] Added block {mined.Index} hash={mined.Hash.Substring(0, 16)}...");
+                    }
+
+                    Console.WriteLine("[MASTER] Done mining. Sending shutdown jobs...");
+
+                    MpiMining.SendShutdownToWorkers(comm, world.Size);
+
+                    Console.WriteLine("[MASTER] Shutdown sent. Chain valid: " + blockchain.IsValidChain());
+                }
+                else
+                {
+                    Console.WriteLine($"[WORKER {world.Rank}] Starting. threads={threads}");
+
+                    while (true)
+                    {
+                        bool shouldExit = MpiMining.RunAsWorker(comm, world.Rank, threadsPerWorker: threads);
+                        if (shouldExit) break; // izlaz samo kad dobije shutdown
+                    }
+
+                    Console.WriteLine($"[WORKER {world.Rank}] Done.");
+
+                }
+
+                comm.Barrier();
+            }
             }
 
-            Console.WriteLine("\n=== Final Blockchain ===");
-            foreach (var block in blockchain.Chain)
-            {
-                Console.WriteLine(block);
-            }
-
-            Console.WriteLine("Blockchain valid: " + blockchain.IsValidChain());
+        private static bool HasFlag(string[] args, string flag)
+        {
+            if (args == null) return false;
+            foreach (var a in args)
+                if (string.Equals(a, flag, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
         }
     }
 }

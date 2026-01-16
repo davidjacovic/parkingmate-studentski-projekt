@@ -168,41 +168,42 @@ namespace ParkingMate.Blockchain
 
         private static void TestTimestampNotGreaterThanPrevious(ref int passed, ref int failed)
         {
-            Console.WriteLine("Test 3: Timestamp manji ili jednak prethodnom bloku");
-            
-            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            long previousTimestamp = currentTime - 100;
-            long currentTimestamp = previousTimestamp - 10; // Manji od prethodnog
+            Console.WriteLine("Test 3: Timestamp može biti manji od prethodnog (do 60s)");
 
-            var previousBlock = new Block(0, "Previous", previousTimestamp, "0", 1, 0);
-            var currentBlock = new Block(1, "Current", currentTimestamp, previousBlock.Hash, 1, 0);
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long prevTs = now;
 
-            bool isValid = TimestampValidator.IsValidTimestamp(currentBlock, previousBlock);
-            
-            if (!isValid)
+            var prev = new Block(0, "Previous", prevTs, "0", 1, 0);
+
+            // 1) current = prev - 30 (validno jer je unutar 60s u nazad)
+            long tsOk = prevTs - 30;
+            var curOk = new Block(1, "Current", tsOk, prev.Hash, 1, 0);
+
+            bool ok = TimestampValidator.IsValidTimestamp(curOk, prev);
+            if (ok)
             {
-                Console.WriteLine("✓ Timestamp manji od prethodnog je odbačen");
+                Console.WriteLine("✓ Timestamp 30s manji od prethodnog je prihvaćen (ispravno).");
                 passed++;
             }
             else
             {
-                Console.WriteLine("✗ Timestamp manji od prethodnog je prihvaćen");
+                Console.WriteLine("✗ Timestamp 30s manji od prethodnog je odbačen (pogrešno).");
                 failed++;
             }
 
-            // Test sa jednakim timestamp-om
-            currentTimestamp = previousTimestamp; // Isti kao prethodni
-            var currentBlock2 = new Block(1, "Current", currentTimestamp, previousBlock.Hash, 1, 0);
-            bool isValid2 = TimestampValidator.IsValidTimestamp(currentBlock2, previousBlock);
-            
-            if (!isValid2)
+            // 2) current = prev - 61 (nevalidno, previše unazad)
+            long tsBad = prevTs - (TimestampValidator.MaxPastTimeSeconds + 1);
+            var curBad = new Block(1, "Current", tsBad, prev.Hash, 1, 0);
+
+            bool bad = TimestampValidator.IsValidTimestamp(curBad, prev);
+            if (!bad)
             {
-                Console.WriteLine("✓ Timestamp jednak prethodnom je odbačen");
+                Console.WriteLine("✓ Timestamp >60s manji od prethodnog je odbačen (ispravno).");
                 passed++;
             }
             else
             {
-                Console.WriteLine("✗ Timestamp jednak prethodnom je prihvaćen");
+                Console.WriteLine("✗ Timestamp >60s manji od prethodnog je prihvaćen (pogrešno).");
                 failed++;
             }
         }

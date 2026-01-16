@@ -187,6 +187,11 @@ namespace ParkingMate.Blockchain
                         result.ShowHelp = true;
                         break;
 
+                    case "--smoke":
+                    case "--run-tests":
+                        // Namerno ignorišemo - Program.cs obrađuje ove flagove
+                        break;
+
                     default:
                         Console.WriteLine($"Nepoznat argument: '{args[i]}'. Koristi --help za pomoć.");
                         break;

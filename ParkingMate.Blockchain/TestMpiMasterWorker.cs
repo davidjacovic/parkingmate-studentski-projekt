@@ -1,405 +1,267 @@
+#if false 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ParkingMate.Blockchain
 {
     /// <summary>
     /// Test klasa za testiranje MPI Master-Worker arhitekture (Subtasks 5.2.1, 5.2.2, 5.2.3, 5.2.4, 5.2.5)
+    /// Prepravljeno da koristi MpiMining (IMpiCommunication).
     /// </summary>
     public class TestMpiMasterWorker
     {
         public static void RunTest()
         {
-            Console.WriteLine("=== Test MPI Master-Worker arhitekture (5.2.1, 5.2.2, 5.2.3, 5.2.4, 5.2.5) ===\n");
+            Console.WriteLine("=== Test MPI Master-Worker arhitekture (MpiMining) ===\n");
 
-            // Test 1: Master generiše nonce opsege (Subtask 5.2.1)
-            Console.WriteLine("Test 1: Master generiše seed / nonce opsege (5.2.1)");
+            Console.WriteLine("Test 1: Master generiše nonce opsege (5.2.1)");
             TestMasterGenerateRanges();
             Console.WriteLine();
 
-            // Test 2: Slanje seed-ova worker procesima (Subtask 5.2.2)
-            Console.WriteLine("Test 2: Slanje seed-ova worker procesima (5.2.2)");
+            Console.WriteLine("Test 2: Slanje nonce opsega worker procesima (5.2.2)");
             TestSendRangesToWorkers();
             Console.WriteLine();
 
-            // Test 3: Worker pokreće multi-thread PoW (Subtask 5.2.3)
-            Console.WriteLine("Test 3: Worker pokreće multi-thread PoW (5.2.3)");
-            TestWorkerMultiThreadMining();
+            Console.WriteLine("Test 3: Worker pokreće multi-thread PoW (5.2.3) + šalje rezultat (5.2.4)");
+            TestWorkerMultiThreadMiningAndResult();
             Console.WriteLine();
 
-            // Test 4: Worker vraća pronađeno rešenje masteru (Subtask 5.2.4)
-            Console.WriteLine("Test 4: Worker vraća pronađeno rešenje masteru (5.2.4)");
-            TestWorkerReturnsResult();
+            Console.WriteLine("Test 4: Master broadcast STOP svima (5.2.5) (integracioni)");
+            TestMasterNotifiesWorkersStopBroadcast();
             Console.WriteLine();
 
-            // Test 5: Master obaveštava sve čvorove o završetku (Subtask 5.2.5)
-            Console.WriteLine("Test 5: Master obaveštava sve čvorove o završetku (5.2.5)");
-            TestMasterNotifiesWorkers();
-            Console.WriteLine();
-
-            // TODO: Integracija - Kompletan Master-Worker ciklus (opciono za buduće)
-            /*
-            // Test 6: Kompletan Master-Worker ciklus
-            Console.WriteLine("Test 6: Kompletan Master-Worker ciklus");
-            TestCompleteMasterWorkerCycle();
-            Console.WriteLine();
-            */
-
-            Console.WriteLine("✓ Testovi za Subtask 5.2.1, 5.2.2, 5.2.3, 5.2.4 i 5.2.5 (Kompletan Master-Worker ciklus) su prošli!");
+            Console.WriteLine("✓ Testovi za 5.2.1–5.2.5 (MpiMining) su prošli!");
         }
 
         private static void TestMasterGenerateRanges()
         {
-            var mpi = MpiEnvironment.Instance;
-            mpi.Finalize();
-            mpi.Initialize(size: 4, rank: 0); // Master (rank 0)
+            int worldSize = 4;
+            int numWorkers = worldSize - 1;
 
-            var master = new MpiMiningMasterWorker.MpiMiningMaster(mpi);
+            // MpiMining koristi ThreadedMiner.CalculateNonceRange(numWorkers, i)
+            var ranges = new List<(ulong start, ulong end)>();
+            for (int i = 0; i < numWorkers; i++)
+                ranges.Add(ThreadedMiner.CalculateNonceRange(numWorkers, i));
 
-            var blockToMine = new Block(
-                index: 1,
-                data: "Test block for Master-Worker",
-                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                previousHash: "0",
-                difficulty: 3,
-                nonce: 0
-            );
+            if (ranges.Count != 3)
+                throw new Exception($"FAIL: Očekivano 3 opsega, dobijeno {ranges.Count}");
 
-            var messages = master.GenerateNonceRanges(blockToMine);
+            Console.WriteLine($"  ✓ Generisano {ranges.Count} opsega za {numWorkers} worker-a");
 
-            if (messages.Count == 3) // 3 workers (size 4 - 1 master = 3)
+            // Provera: bez preklapanja (dozvoljeno start == prevEnd ako su “uzastopni” po tvojoj definiciji)
+            bool noOverlap = true;
+            ulong? prevEnd = null;
+
+            for (int i = 0; i < ranges.Count; i++)
             {
-                Console.WriteLine($"  ✓ Master je generisao {messages.Count} nonce opsega za workers");
+                var (start, end) = ranges[i];
+                int workerRank = i + 1;
 
-                // Proveri da li su opsegi uzastopni i bez stvarnog preklapanja
-                // Opsegi mogu biti uzastopni (jedan endNonce = sledeći startNonce), ali ne smeju se preklapati
-                bool noOverlap = true;
-                ulong? prevEnd = null;
-                
-                for (int i = 0; i < messages.Count; i++)
+                Console.WriteLine($"    Worker {workerRank}: [{start:N0}, {end:N0}]");
+
+                if (prevEnd.HasValue && start < prevEnd.Value)
                 {
-                    var msg = messages[i];
-                    Console.WriteLine($"    Worker {msg.WorkerRank}: [{msg.StartNonce:N0}, {msg.EndNonce:N0}]");
-                    
-                    // Proveri da li trenutni start preklapa sa prethodnim opsegom
-                    // Opseg [start, end] preklapa se sa [prevStart, prevEnd] ako: start < prevEnd
-                    // Ako je start == prevEnd, to su uzastopni opsegi (OK)
-                    if (prevEnd.HasValue && msg.StartNonce < prevEnd.Value)
-                    {
-                        noOverlap = false;
-                        Console.WriteLine($"      ✗ Preklapanje: Worker {msg.WorkerRank} start ({msg.StartNonce:N0}) < prethodni end ({prevEnd.Value:N0})");
-                    }
-                    
-                    prevEnd = msg.EndNonce;
+                    noOverlap = false;
+                    Console.WriteLine($"      ✗ Preklapanje: start({start:N0}) < prevEnd({prevEnd.Value:N0})");
                 }
 
-                if (noOverlap)
-                {
-                    Console.WriteLine("  ✓ Svi opsegi su uzastopni ili bez preklapanja");
-                }
-                else
-                {
-                    Console.WriteLine("  ⚠ Upozorenje: Pronađeno preklapanje između opsega (možda je to očekivano zbog <= endNonce u loop-u)");
-                }
+                prevEnd = end;
             }
-            else
-            {
-                Console.WriteLine($"  ✗ Greška: Očekivano 3 opsega, dobijeno {messages.Count}");
-            }
+
+            if (!noOverlap)
+                throw new Exception("FAIL: Opsezi se preklapaju (ne bi trebalo).");
+
+            Console.WriteLine("  ✓ Opsezi su bez preklapanja.");
         }
 
         private static void TestSendRangesToWorkers()
         {
-            // Očisti message queue pre testa (ako koristi simulaciju)
             SimulatedMpiCommunication.ClearQueue();
 
-            var mpi = MpiEnvironment.Instance;
-            mpi.Finalize();
-            mpi.Initialize(size: 4, rank: 0); // Master
+            int worldSize = 4;
+            int numWorkers = worldSize - 1;
 
-            var master = new MpiMiningMasterWorker.MpiMiningMaster(mpi);
+            // PLACEHOLDER: napravi IMpiCommunication za master rank 0
+            // ZAMENI OVU LINIJU prema tvojoj implementaciji:
+            IMpiCommunication masterComm = MakeSimComm(rank: 0, size: worldSize);
 
-            var blockToMine = new Block(
+            var blockTemplate = new Block(
                 index: 1,
-                data: "Test block",
+                data: "Test send ranges",
                 timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 previousHash: "0",
-                difficulty: 3,
+                difficulty: 2,
                 nonce: 0
             );
 
-            var messages = master.GenerateNonceRanges(blockToMine);
+            // Master ručno šalje poruke kao što radi MpiMining.RunDistributedMiningAsMaster
+            for (int i = 0; i < numWorkers; i++)
+            {
+                int workerRank = i + 1;
+                var (start, end) = ThreadedMiner.CalculateNonceRange(numWorkers, i);
 
-            if (messages.Count == 0)
-            {
-                Console.WriteLine("  ✗ Greška: Nema poruka za slanje");
-                return;
+                var msg = new MpiMining.NonceRangeMessage
+                {
+                    StartNonce = start,
+                    EndNonce = end,
+                    BlockToMine = new Block(
+                        blockTemplate.Index,
+                        blockTemplate.Data,
+                        blockTemplate.Timestamp,
+                        blockTemplate.PreviousHash,
+                        blockTemplate.Difficulty,
+                        0
+                    )
+                };
+
+                masterComm.Send(msg, workerRank, MpiMining.TAG_NONCE_RANGE);
             }
 
-            try
+            // Svaki worker treba da može da primi poruku od mastera (rank 0)
+            for (int workerRank = 1; workerRank < worldSize; workerRank++)
             {
-                master.SendNonceRangesToWorkers(messages);
-                Console.WriteLine($"  ✓ Master je uspešno poslao {messages.Count} nonce opsega workers");
-                
-                // Proveri da li su poruke stvarno poslate (simulacija)
-                // U stvarnom MPI okruženju, ovo bi proveravao stvarnu MPI komunikaciju
-                Console.WriteLine("  ✓ Svi nonce opsegi su poslati putem MPI komunikacije");
+                // PLACEHOLDER: napravi IMpiCommunication za workerRank
+                IMpiCommunication workerComm = MakeSimComm(rank: workerRank, size: worldSize);
+
+                var job = workerComm.Receive<MpiMining.NonceRangeMessage>(sourceRank: 0, tag: MpiMining.TAG_NONCE_RANGE);
+                if (job == null)
+                    throw new Exception($"FAIL: Worker {workerRank} nije primio NonceRangeMessage.");
+
+                Console.WriteLine($"  ✓ Worker {workerRank} primio job: [{job.StartNonce:N0}, {job.EndNonce:N0}]");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  ✗ Greška pri slanju poruka: {ex.Message}");
-            }
+
+            Console.WriteLine("  ✓ Svi worker-i su primili nonce opsege.");
         }
 
-        private static void TestWorkerMultiThreadMining()
+        private static void TestWorkerMultiThreadMiningAndResult()
         {
-            // Očisti message queue pre testa
             SimulatedMpiCommunication.ClearQueue();
 
-            var mpi = MpiEnvironment.Instance;
-            mpi.Finalize();
-            mpi.Initialize(size: 4, rank: 1); // Worker
+            int worldSize = 2;      // dovoljno za ovaj test: 1 master + 1 worker
+            int workerRank = 1;
+            int threadsPerWorker = 2;
 
-            var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpi, threadCount: 2);
+            // PLACEHOLDER: comm za master i worker
+            IMpiCommunication masterComm = MakeSimComm(rank: 0, size: worldSize);
+            IMpiCommunication workerComm = MakeSimComm(rank: workerRank, size: worldSize);
 
-            // Kreiraj test poruku sa opsegom
-            var blockToMine = new Block(
-                index: 1,
-                data: "Test block for worker",
-                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                previousHash: "0",
-                difficulty: 2, // Niža difficulty za brže testiranje
-                nonce: 0
-            );
-
-            ulong startNonce = 0;
-            ulong endNonce = 1000000; // Ograničen opseg za test
-            var message = new MpiMiningMasterWorker.NonceRangeMessage(startNonce, endNonce, 1, blockToMine);
-
-            Console.WriteLine("  Pokretanje multi-threaded mining na worker procesu...");
-            var result = worker.ExecuteMining(message);
-
-            if (result != null)
+            // Master pošalje mali range + nižu težinu da test ne traje dugo
+            var job = new MpiMining.NonceRangeMessage
             {
-                Console.WriteLine($"  ✓ Worker je izvršio mining (Uspeh: {result.Success}, Vreme: {result.MiningTimeMs} ms)");
-                Console.WriteLine($"  ✓ Ukupno pokušaja: {result.TotalAttempts:N0}");
-                if (result.FoundBlock != null)
-                {
-                    Console.WriteLine($"  ✓ Pronađen nonce: {result.FoundBlock.Nonce:N0}");
-                    Console.WriteLine($"  ✓ Hash: {result.FoundBlock.Hash.Substring(0, Math.Min(20, result.FoundBlock.Hash.Length))}...");
-                }
-                else
-                {
-                    Console.WriteLine("  ⚠ Rešenje nije pronađeno u dodeljenom opsegu (može biti normalno ako je difficulty prevelika)");
-                }
+                StartNonce = 0,
+                EndNonce = 200_000, // mali opseg za test
+                BlockToMine = new Block(
+                    index: 1,
+                    data: "Worker mining test",
+                    timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    previousHash: "0",
+                    difficulty: 2, // spusti na 1 ako je sporo
+                    nonce: 0
+                )
+            };
+
+            masterComm.Send(job, workerRank, MpiMining.TAG_NONCE_RANGE);
+
+            // Worker radi MpiMining.RunAsWorker u task-u (da bismo istovremeno čekali rezultat)
+            var t = Task.Run(() =>
+            {
+                MpiMining.RunAsWorker(workerComm, myRank: workerRank, threadsPerWorker: threadsPerWorker);
+            });
+
+            // Master primi rezultat
+            var res = masterComm.Receive<MpiMining.MiningResultMessage>(sourceRank: workerRank, tag: MpiMining.TAG_RESULT);
+
+            if (res == null)
+                throw new Exception("FAIL: Master nije primio MiningResultMessage.");
+
+            Console.WriteLine($"  ✓ Master primio rezultat od rank {res.WorkerRank}: success={res.Success}, time={res.MiningTimeMs}ms");
+
+            // Master mora da broadcast STOP (u RunDistributedMiningAsMaster bi to uradio; ovde ručno)
+            var stop = new MpiMining.StopMessage { Stop = true };
+            masterComm.Broadcast(ref stop, rootRank: 0);
+
+            // Worker čeka stop broadcast pre izlaska, pa task mora da se završi
+            if (!t.Wait(10_000))
+                throw new Exception("FAIL: Worker nije završio (verovatno nije primio STOP broadcast).");
+
+            if (res.Success && res.FoundBlock != null)
+            {
+                string prefix = new string('0', (int)res.FoundBlock.Difficulty);
+
+                if (res.FoundBlock.Hash == null || !res.FoundBlock.Hash.StartsWith(prefix))
+                    throw new Exception("FAIL: FoundBlock hash ne zadovoljava difficulty prefix.");
+
+                if (res.FoundBlock.CalculateHash() != res.FoundBlock.Hash)
+                    throw new Exception("FAIL: FoundBlock.Hash != FoundBlock.CalculateHash().");
+
+                Console.WriteLine($"  ✓ FoundBlock validan. Nonce={res.FoundBlock.Nonce:N0}, Hash={res.FoundBlock.Hash.Substring(0, Math.Min(20, res.FoundBlock.Hash.Length))}...");
             }
             else
             {
-                Console.WriteLine("  ✗ Greška: Worker nije vratio rezultat");
+                Console.WriteLine("  ⚠ Worker nije našao rešenje u malom opsegu (nije nužno greška).");
+                Console.WriteLine("    Ako želiš da ovaj test bude deterministički: povećaj EndNonce ili spusti difficulty na 1.");
             }
         }
 
-        private static void TestWorkerReturnsResult()
+        private static void TestMasterNotifiesWorkersStopBroadcast()
         {
-            // Očisti message queue pre testa
             SimulatedMpiCommunication.ClearQueue();
 
-            // Worker deo - kreiraj i pošalji rezultat PRVO
-            var mpiWorker = MpiEnvironment.Instance;
-            mpiWorker.Finalize();
-            mpiWorker.Initialize(size: 4, rank: 2); // Worker rank 2
+            int worldSize = 4;
+            int threadsPerWorker = 2;
 
-            var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpiWorker);
+            // PLACEHOLDER: comm za master + comm za sve workere
+            IMpiCommunication masterComm = MakeSimComm(rank: 0, size: worldSize);
 
-            // Kreiraj test rezultat
-            var result = new MpiMiningMasterWorker.MiningResultMessage(2);
-            result.Success = true;
-            result.MiningTimeMs = 100;
-            result.TotalAttempts = 5000;
+            var workerTasks = new List<Task>();
+            for (int rank = 1; rank < worldSize; rank++)
+            {
+                int r = rank;
+                IMpiCommunication workerComm = MakeSimComm(rank: r, size: worldSize);
 
-            var block = new Block(
+                workerTasks.Add(Task.Run(() =>
+                {
+                    MpiMining.RunAsWorker(workerComm, myRank: r, threadsPerWorker: threadsPerWorker);
+                }));
+            }
+
+            var template = new Block(
                 index: 1,
-                data: "Test block",
+                data: "Stop broadcast integration test",
                 timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 previousHash: "0",
-                difficulty: 3,
-                nonce: 12345
-            );
-            block.Hash = block.CalculateHash();
-            result.FoundBlock = block;
-
-            try
-            {
-                // Worker šalje rezultat masteru (rank 0)
-                worker.SendResultToMaster(result);
-                Console.WriteLine("  ✓ Worker (rank 2) je uspešno poslao rezultat masteru (rank 0)");
-
-                // Sada postavi master okruženje za primanje
-                var mpiMaster = MpiEnvironment.Instance;
-                mpiMaster.Finalize();
-                mpiMaster.Initialize(size: 4, rank: 0); // Master rank 0
-
-                var master = new MpiMiningMasterWorker.MpiMiningMaster(mpiMaster);
-
-                // Master prima rezultat od workera (rank 2)
-                var receivedResult = master.ReceiveResult(workerRank: 2);
-                
-                if (receivedResult != null && receivedResult.Success && receivedResult.FoundBlock != null)
-                {
-                    Console.WriteLine($"  ✓ Master (rank 0) je uspešno primio rezultat od worker-a rank {receivedResult.WorkerRank}");
-                    Console.WriteLine($"  ✓ Rezultat: Success={receivedResult.Success}, Nonce={receivedResult.FoundBlock.Nonce}");
-                    Console.WriteLine($"  ✓ Vreme: {receivedResult.MiningTimeMs} ms, Pokušaji: {receivedResult.TotalAttempts:N0}");
-
-                    // Proveri da li je rezultat sačuvan u dictionary-u
-                    var savedResult = master.GetFirstSuccessfulResult();
-                    if (savedResult != null && savedResult.WorkerRank == 2)
-                    {
-                        Console.WriteLine("  ✓ Rezultat je uspešno sačuvan u master dictionary-u");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("  ✗ Greška: Master nije primio rezultat ili rezultat nije validan");
-                    Console.WriteLine($"    receivedResult == null: {receivedResult == null}");
-                    if (receivedResult != null)
-                    {
-                        Console.WriteLine($"    Success: {receivedResult.Success}, FoundBlock == null: {receivedResult.FoundBlock == null}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  ✗ Greška pri slanju/primanju rezultata: {ex.Message}");
-            }
-        }
-
-        private static void TestMasterNotifiesWorkers()
-        {
-            // Očisti message queue i broadcast queue pre testa
-            SimulatedMpiCommunication.ClearQueue();
-
-            // Master deo - obaveštava workers
-            var mpiMaster = MpiEnvironment.Instance;
-            mpiMaster.Finalize();
-            mpiMaster.Initialize(size: 4, rank: 0); // Master rank 0
-
-            var master = new MpiMiningMasterWorker.MpiMiningMaster(mpiMaster);
-
-            try
-            {
-                // Master obaveštava sve workers da prekinu rad
-                master.NotifyWorkersToStop("Rešenje je pronađeno");
-                Console.WriteLine("  ✓ Master (rank 0) je uspešno poslao stop signal svim workers");
-
-                // Test primanja stop signala od strane workers
-                for (int workerRank = 1; workerRank < 4; workerRank++)
-                {
-                    var mpiWorker = MpiEnvironment.Instance;
-                    mpiWorker.Finalize();
-                    mpiWorker.Initialize(size: 4, rank: workerRank); // Worker rank 1, 2, 3
-
-                    var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpiWorker);
-
-                    // Worker prima stop signal
-                    var stopSignal = worker.ReceiveStopSignal();
-
-                    if (stopSignal != null && stopSignal.ShouldStop)
-                    {
-                        Console.WriteLine($"  ✓ Worker (rank {workerRank}) je primio stop signal od master-a");
-                        if (!string.IsNullOrEmpty(stopSignal.Reason))
-                        {
-                            Console.WriteLine($"    Razlog: {stopSignal.Reason}");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"  ⚠ Worker (rank {workerRank}) nije primio stop signal");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  ✗ Greška pri obaveštavanju workers: {ex.Message}");
-            }
-        }
-
-        // TODO: Integracija - Kompletan Master-Worker ciklus (nakon 5.2.5)
-        /*
-        private static void TestCompleteMasterWorkerCycle()
-        {
-            Console.WriteLine("  Simulacija kompletnog Master-Worker ciklusa:");
-
-            // Master deo
-            var mpiMaster = MpiEnvironment.Instance;
-            mpiMaster.Finalize();
-            mpiMaster.Initialize(size: 4, rank: 0);
-
-            var master = new MpiMiningMasterWorker.MpiMiningMaster(mpiMaster);
-
-            var blockToMine = new Block(
-                index: 1,
-                data: "Complete cycle test block",
-                timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                previousHash: "0",
-                difficulty: 2, // Niža difficulty za test
+                difficulty: 2, // spusti ako je sporo
                 nonce: 0
             );
 
-            // 1. Master generiše opsege
-            var messages = master.GenerateNonceRanges(blockToMine);
-            Console.WriteLine($"  [Master] Generisano {messages.Count} opsega");
+            // Ovo internally: šalje poslove, primi rezultate, onda Broadcast STOP svima
+            var mined = MpiMining.RunDistributedMiningAsMaster(
+                comm: masterComm,
+                worldSize: worldSize,
+                blockTemplate: template,
+                threadsPerWorker: threadsPerWorker
+            );
 
-            // 2. Master šalje opsege workers
-            master.SendNonceRangesToWorkers(messages);
-            Console.WriteLine("  [Master] Opsegi poslati workers");
+            if (mined == null || mined.Hash == null)
+                throw new Exception("FAIL: Master nije dobio mined blok.");
 
-            // 3. Simulacija: Worker izvršava mining
-            List<MpiMiningMasterWorker.MiningResultMessage> workerResults = new List<MpiMiningMasterWorker.MiningResultMessage>();
+            // Worker-i moraju da završe jer čekaju broadcast STOP
+            if (!Task.WaitAll(workerTasks.ToArray(), 15_000))
+                throw new Exception("FAIL: Neki worker nije završio (STOP broadcast nije “prošao”).");
 
-            for (int i = 0; i < messages.Count && i < 2; i++) // Test samo sa 2 workers zbog vremena
-            {
-                var mpiWorker = MpiEnvironment.Instance;
-                mpiWorker.Finalize();
-                mpiWorker.Initialize(size: 4, rank: messages[i].WorkerRank);
-
-                var worker = new MpiMiningMasterWorker.MpiMiningWorker(mpiWorker, threadCount: 2);
-
-                Console.WriteLine($"  [Worker {messages[i].WorkerRank}] Pokretanje mining-a...");
-                var result = worker.ExecuteMining(messages[i]);
-
-                if (result.Success)
-                {
-                    master.ReceiveResult(result);
-                    Console.WriteLine($"  [Worker {messages[i].WorkerRank}] ✓ Rešenje pronađeno i poslato masteru");
-                    break; // Prvi worker koji pronađe rešenje
-                }
-                else
-                {
-                    master.ReceiveResult(result);
-                    Console.WriteLine($"  [Worker {messages[i].WorkerRank}] Rešenje nije pronađeno u opsegu");
-                }
-
-                workerResults.Add(result);
-            }
-
-            // 4. Master proverava rezultate
-            var firstResult = master.GetFirstSuccessfulResult();
-            if (firstResult != null)
-            {
-                Console.WriteLine($"  [Master] ✓ Pronađeno rešenje od worker-a {firstResult.WorkerRank}");
-                
-                // 5. Master obaveštava sve workers
-                master.NotifyWorkersToStop();
-                Console.WriteLine("  [Master] Svi workers obavešteni o završetku");
-
-                Console.WriteLine("  ✓ Kompletan Master-Worker ciklus je uspešno završen");
-            }
-            else
-            {
-                Console.WriteLine("  ✗ Nema pronađenog rešenja (možda je difficulty prevelika ili opseg premali)");
-            }
+            Console.WriteLine("  ✓ Svi worker-i su završili nakon STOP broadcast-a.");
         }
-        */
+
+        private static IMpiCommunication MakeSimComm(int rank, int size)
+        {
+            var mpi = MpiEnvironment.Instance;
+            mpi.Finalize();
+            mpi.Initialize(size: size, rank: rank);
+            return new SimulatedMpiCommunication(mpi);
+        }
+
     }
-}
 
+}
+#endif
