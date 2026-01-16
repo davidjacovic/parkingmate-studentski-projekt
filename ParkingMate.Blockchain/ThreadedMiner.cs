@@ -110,28 +110,21 @@ namespace ParkingMate.Blockchain
         /// <returns>Par (startNonce, endNonce) za datu nit</returns>
         public static (ulong startNonce, ulong endNonce) CalculateNonceRange(int numThreads, int threadId)
         {
-            // Dizajn: Podela nonce prostora na jednak broj opsega
-            // Thread 0: [0, MAX/N)
-            // Thread 1: [MAX/N, 2*MAX/N)
-            // Thread 2: [2*MAX/N, 3*MAX/N)
-            // ...
-            // Thread N-1: [(N-1)*MAX/N, MAX]
-            
             if (numThreads <= 0)
                 throw new ArgumentException("Broj niti mora biti veći od 0", nameof(numThreads));
-            
+
             if (threadId < 0 || threadId >= numThreads)
                 throw new ArgumentException($"Thread ID mora biti između 0 i {numThreads - 1}", nameof(threadId));
 
             ulong maxNonce = ulong.MaxValue;
             ulong rangeSize = maxNonce / (ulong)numThreads;
-            
+
             ulong startNonce = (ulong)threadId * rangeSize;
-            
-            // Poslednja nit dobija sve preostale vrednosti do ulong.MaxValue
-            ulong endNonce = (threadId == numThreads - 1) 
-                ? ulong.MaxValue 
-                : ((ulong)(threadId + 1) * rangeSize);
+
+            // INCLUSIVE endNonce:
+            ulong endNonce = (threadId == numThreads - 1)
+                ? ulong.MaxValue
+                : (((ulong)(threadId + 1) * rangeSize) - 1);
 
             return (startNonce, endNonce);
         }
@@ -694,35 +687,19 @@ namespace ParkingMate.Blockchain
                 // Rudari dok ne nađeš validan nonce ili dok ne završiš opseg ili dok ne bude signalizirano da se zaustavi
                 while (currentNonce <= _endNonce && !ShouldStop())
                 {
-                    // Ažuriraj nonce u bloku
                     _blockToMine.Nonce = currentNonce;
-
-                    // Izračunaj hash
                     string hash = _blockToMine.CalculateHash();
-
-                    // Inkrementiraj brojač pokušaja
                     _sharedState.IncrementAttempts();
 
-                    // Proveri da li je hash validan (ima dovoljno nula na početku)
                     if (hash.StartsWith(_targetPrefix))
                     {
-                        // Validan hash pronađen!
-                        // Ažuriraj hash u bloku
                         _blockToMine.Hash = hash;
-                        
-                        // Pokušaj postaviti flag i sačuvati blok
-                        if (_sharedState.TrySetFoundBlock(_blockToMine, _threadId))
-                        {
-                            // Ovaj worker je prvi pronašao rešenje
-                            // Blok je već sačuvan u shared state-u
-                            return;
-                        }
-                        else
-                        {
-                            // Drugi worker je već pronašao rešenje
-                            return;
-                        }
+                        _sharedState.TrySetFoundBlock(_blockToMine, _threadId);
+                        return;
                     }
+
+                    if (currentNonce == ulong.MaxValue)
+                        break;
 
                     currentNonce++;
                 }

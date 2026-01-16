@@ -1,33 +1,24 @@
 using System;
-using System.Collections.Generic;
 
 namespace ParkingMate.Blockchain
 {
     /// <summary>
-    /// MPI (Message Passing Interface) okruženje za distribuirano rudarjenje blokova.
-    /// Subtask 5.1.1: MPI inicijalizacija - detekcija rank-a i size-a
-    /// Subtask 5.3.3: Cleanup MPI okruženja
+    /// Legacy/simulacioni MPI "environment" (nije MPI.NET).
+    /// Zadržan samo da testovi koji ga koriste mogu da se kompajliraju.
+    ///
+    /// U REAL MPI modu koristi se MPI.Environment + Communicator.world (vidi Program.cs).
     /// </summary>
     public class MpiEnvironment
     {
         private static MpiEnvironment? _instance;
         private static readonly object _lock = new object();
-        
+
         private bool _initialized = false;
         private int _rank = 0;
         private int _size = 1;
-        private bool _isMaster = true;
 
-        /// <summary>
-        /// Privatni konstruktor za singleton pattern
-        /// </summary>
-        private MpiEnvironment()
-        {
-        }
+        private MpiEnvironment() { }
 
-        /// <summary>
-        /// Singleton instance MPI okruženja
-        /// </summary>
         public static MpiEnvironment Instance
         {
             get
@@ -36,101 +27,67 @@ namespace ParkingMate.Blockchain
                 {
                     lock (_lock)
                     {
-                        if (_instance == null)
-                        {
-                            _instance = new MpiEnvironment();
-                        }
+                        _instance ??= new MpiEnvironment();
                     }
                 }
                 return _instance;
             }
         }
 
-        /// <summary>
-        /// Inicijalizuje MPI okruženje.
-        /// Subtask 5.1.1: Inicijalizacija MPI okruženja
-        /// </summary>
-        /// <param name="size">Ukupan broj procesa (size)</param>
-        /// <param name="rank">ID trenutnog procesa (rank)</param>
-        /// <returns>True ako je inicijalizacija uspešna</returns>
         public bool Initialize(int size = 1, int rank = 0)
         {
             if (_initialized)
             {
-                Console.WriteLine("Upozorenje: MPI okruženje je već inicijalizovano.");
+                Console.WriteLine("Upozorenje: MPI okruženje je već inicijalizovano (legacy).");
                 return false;
             }
 
             if (size < 1)
-            {
-                throw new ArgumentException("Size mora biti veći od 0", nameof(size));
-            }
+                throw new ArgumentException("Size mora biti > 0", nameof(size));
 
             if (rank < 0 || rank >= size)
-            {
                 throw new ArgumentException($"Rank mora biti između 0 i {size - 1}", nameof(rank));
-            }
 
             _size = size;
             _rank = rank;
-            _isMaster = (rank == 0);
             _initialized = true;
 
             return true;
         }
 
-        /// <summary>
-        /// Inicijalizuje MPI okruženje iz environment varijabli ili command-line argumenata.
-        /// Simulira inicijalizaciju MPI_COMM_WORLD.
-        /// </summary>
-        /// <param name="args">Command-line argumenti (mogu sadržati --mpi-size i --mpi-rank)</param>
-        /// <returns>True ako je inicijalizacija uspešna</returns>
         public bool InitializeFromArgs(string[]? args = null)
         {
-            if (_initialized)
-            {
-                return false;
-            }
+            if (_initialized) return false;
 
-            // Pokušaj da učitam iz environment varijabli (kao što bi to bio slučaj sa stvarnim MPI)
+            // Legacy: čita (opciono) iz env var ili CLI arg (simulacija)
             string? mpiSizeEnv = Environment.GetEnvironmentVariable("MPI_SIZE");
             string? mpiRankEnv = Environment.GetEnvironmentVariable("MPI_RANK");
 
             int size = 1;
             int rank = 0;
 
-            // Parsiraj iz environment varijabli
-            if (!string.IsNullOrEmpty(mpiSizeEnv) && int.TryParse(mpiSizeEnv, out int envSize))
-            {
+            if (!string.IsNullOrEmpty(mpiSizeEnv) && int.TryParse(mpiSizeEnv, out int envSize) && envSize > 0)
                 size = envSize;
-            }
 
-            if (!string.IsNullOrEmpty(mpiRankEnv) && int.TryParse(mpiRankEnv, out int envRank))
-            {
+            if (!string.IsNullOrEmpty(mpiRankEnv) && int.TryParse(mpiRankEnv, out int envRank) && envRank >= 0)
                 rank = envRank;
-            }
 
-            // Parsiraj iz command-line argumenata ako postoje
             if (args != null)
             {
                 for (int i = 0; i < args.Length; i++)
                 {
-                    string arg = args[i].ToLower();
-                    
+                    string arg = args[i].ToLowerInvariant();
+
                     if ((arg == "--mpi-size" || arg == "-ms") && i + 1 < args.Length)
                     {
                         if (int.TryParse(args[i + 1], out int parsedSize) && parsedSize > 0)
-                        {
                             size = parsedSize;
-                        }
                         i++;
                     }
                     else if ((arg == "--mpi-rank" || arg == "-mr") && i + 1 < args.Length)
                     {
                         if (int.TryParse(args[i + 1], out int parsedRank) && parsedRank >= 0)
-                        {
                             rank = parsedRank;
-                        }
                         i++;
                     }
                 }
@@ -139,149 +96,77 @@ namespace ParkingMate.Blockchain
             return Initialize(size, rank);
         }
 
-        /// <summary>
-        /// Proverava da li je MPI okruženje inicijalizovano
-        /// </summary>
         public bool IsInitialized => _initialized;
 
-        /// <summary>
-        /// Vraća rank (ID) trenutnog procesa.
-        /// Rank 0 je master proces.
-        /// Subtask 5.1.2: Detekcija rank-a
-        /// </summary>
         public int Rank
         {
             get
             {
-                if (!_initialized)
-                {
-                    throw new InvalidOperationException("MPI okruženje nije inicijalizovano. Pozovi Initialize() prvo.");
-                }
+                if (!_initialized) throw new InvalidOperationException("MPI okruženje nije inicijalizovano (legacy).");
                 return _rank;
             }
         }
 
-        /// <summary>
-        /// Vraća ukupan broj procesa (size).
-        /// Subtask 5.1.2: Detekcija size-a
-        /// </summary>
         public int Size
         {
             get
             {
-                if (!_initialized)
-                {
-                    throw new InvalidOperationException("MPI okruženje nije inicijalizovano. Pozovi Initialize() prvo.");
-                }
+                if (!_initialized) throw new InvalidOperationException("MPI okruženje nije inicijalizovano (legacy).");
                 return _size;
             }
         }
 
-        /// <summary>
-        /// Proverava da li je trenutni proces master (rank == 0)
-        /// </summary>
-        public bool IsMaster => _initialized && _isMaster;
+        public bool IsMaster => _initialized && _rank == 0;
+        public bool IsWorker => _initialized && _rank != 0;
 
         /// <summary>
-        /// Proverava da li je trenutni proces worker (rank != 0)
+        /// Cleanup za legacy/simulacioni env. Ne dira real MPI (MPI.Environment).
         /// </summary>
-        public bool IsWorker => _initialized && !_isMaster;
-
-        /// <summary>
-        /// Finalizuje MPI okruženje (cleanup).
-        /// Subtask 5.3.3: Cleanup MPI okruženja
-        /// Oslobađa sve resurse i vraća okruženje u inicijalno stanje.
-        /// </summary>
-        public void Finalize()
+        public void Shutdown()
         {
-            if (!_initialized)
-            {
-                return; // Već finalizovano
-            }
+            if (!_initialized) return;
 
-            Console.WriteLine($"[MPI Rank {_rank}] Pokretanje cleanup MPI okruženja...");
-
-            // Korak 1: Očisti sve pending MPI komunikacije
-            try
-            {
-                // Očisti message queue i broadcast queue
-                SimulatedMpiCommunication.ClearQueue();
-                Console.WriteLine($"[MPI Rank {_rank}] ✓ Očišćene MPI komunikacione queue-e");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[MPI Rank {_rank}] ⚠ Greška pri čišćenju komunikacionih queue-a: {ex.Message}");
-            }
-
-            // Korak 2: Sačekaj da se sve asinhrone operacije završe (ako postoje)
-            // U stvarnom MPI, ovo bi čekalo MPI_Wait za sve pending operacije
-            Thread.Sleep(100); // Kratka pauza za oslobađanje resursa
-
-            // Korak 3: Resetuj stanje okruženja
             int oldRank = _rank;
+
             _initialized = false;
             _rank = 0;
             _size = 1;
-            _isMaster = true;
 
-            Console.WriteLine($"[MPI Rank {oldRank}] ✓ MPI okruženje je finalizovano i resursi oslobođeni");
+            Console.WriteLine($"[Legacy MPI Rank {oldRank}] ✓ Legacy MPI env resetovan.");
         }
 
-        /// <summary>
-        /// Vraća string reprezentaciju MPI okruženja
-        /// </summary>
         public override string ToString()
         {
-            if (!_initialized)
-            {
-                return "MPI Environment: Not initialized";
-            }
-            return $"MPI Environment: Rank {_rank}/{_size - 1}, Size={_size}, IsMaster={_isMaster}";
+            if (!_initialized) return "MPI Environment (legacy): Not initialized";
+            return $"MPI Environment (legacy): Rank {_rank}/{_size - 1}, Size={_size}, IsMaster={IsMaster}";
         }
     }
 
     /// <summary>
-    /// Helper klasa za proveru da li se program izvršava u MPI modu.
-    /// Subtask 5.1.3: MPI flag u CLI interfejsu
+    /// Helper klasa za CLI detekciju MPI moda.
+    /// (Ovo možeš da koristiš, ali realno u MPI.NET modu world.Size već govori sve.)
     /// </summary>
     public static class MpiHelper
     {
-        /// <summary>
-        /// Proverava da li je program pokrenut sa MPI flag-om
-        /// </summary>
-        /// <param name="args">Command-line argumenti</param>
-        /// <returns>True ako je --mpi ili -m flag prisutan</returns>
         public static bool IsMpiMode(string[] args)
         {
             if (args == null || args.Length == 0)
-            {
                 return false;
-            }
 
             foreach (string arg in args)
             {
-                string lowerArg = arg.ToLower();
+                string lowerArg = arg.ToLowerInvariant();
                 if (lowerArg == "--mpi" || lowerArg == "-m" || lowerArg == "--use-mpi")
-                {
                     return true;
-                }
             }
 
-            // Proveri environment varijablu
             string? mpiMode = Environment.GetEnvironmentVariable("MPI_MODE");
-            if (!string.IsNullOrEmpty(mpiMode) && (mpiMode.ToLower() == "true" || mpiMode == "1"))
-            {
+            if (!string.IsNullOrEmpty(mpiMode) && (mpiMode.Equals("true", StringComparison.OrdinalIgnoreCase) || mpiMode == "1"))
                 return true;
-            }
 
             return false;
         }
 
-        /// <summary>
-        /// Parsira MPI parametre iz command-line argumenata
-        /// </summary>
-        /// <param name="args">Command-line argumenti</param>
-        /// <returns>Tuple (useMpi, mpiSize, mpiRank)</returns>
         public static (bool useMpi, int? mpiSize, int? mpiRank) ParseMpiArgs(string[] args)
         {
             bool useMpi = IsMpiMode(args);
@@ -289,28 +174,22 @@ namespace ParkingMate.Blockchain
             int? mpiRank = null;
 
             if (!useMpi)
-            {
                 return (false, null, null);
-            }
 
             for (int i = 0; i < args.Length; i++)
             {
-                string arg = args[i].ToLower();
+                string arg = args[i].ToLowerInvariant();
 
                 if ((arg == "--mpi-size" || arg == "-ms") && i + 1 < args.Length)
                 {
                     if (int.TryParse(args[i + 1], out int size) && size > 0)
-                    {
                         mpiSize = size;
-                    }
                     i++;
                 }
                 else if ((arg == "--mpi-rank" || arg == "-mr") && i + 1 < args.Length)
                 {
                     if (int.TryParse(args[i + 1], out int rank) && rank >= 0)
-                    {
                         mpiRank = rank;
-                    }
                     i++;
                 }
             }
@@ -319,4 +198,3 @@ namespace ParkingMate.Blockchain
         }
     }
 }
-
