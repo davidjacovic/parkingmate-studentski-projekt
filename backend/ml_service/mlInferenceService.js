@@ -16,8 +16,8 @@ class MLInferenceService {
         this.modelPath = process.env.ML_MODEL_PATH || path.join(__dirname, '..', 'models', 'last.pt');
         // Python executable - default to 'python' on Windows, 'python3' on Unix
         this.pythonExecutable = process.env.PYTHON_EXECUTABLE || (process.platform === 'win32' ? 'python' : 'python3');
-        // Default thresholds
-        this.confidenceThreshold = parseFloat(process.env.ML_CONFIDENCE_THRESHOLD || '0.5');
+        // Default thresholds - lowered for better detection (some occupied spots have lower confidence)
+        this.confidenceThreshold = parseFloat(process.env.ML_CONFIDENCE_THRESHOLD || '0.3');
         // Log directory - Task 3.3.4
         this.logDirectory = path.join(__dirname, '..', 'logs');
         this.logFile = path.join(this.logDirectory, 'ml_analysis.log');

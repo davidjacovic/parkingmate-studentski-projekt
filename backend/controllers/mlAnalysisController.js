@@ -41,11 +41,19 @@ exports.analyzeImage = async (req, res) => {
         }
 
         // Optional parameters
+        // Note: When using multer with multipart/form-data, body parameters are available in req.body
         const options = {
             confidenceThreshold: req.body.confidenceThreshold ? parseFloat(req.body.confidenceThreshold) : undefined,
             emptyThreshold: req.body.emptyThreshold ? parseFloat(req.body.emptyThreshold) : undefined,
             occupiedThreshold: req.body.occupiedThreshold ? parseFloat(req.body.occupiedThreshold) : undefined
         };
+        
+        // Debug: log received parameters
+        console.log('ML Analysis - Received parameters:', {
+            confidenceThreshold: options.confidenceThreshold,
+            emptyThreshold: options.emptyThreshold,
+            occupiedThreshold: options.occupiedThreshold
+        });
 
         // Run ML analysis
         const analysisResult = await mlInferenceService.analyzeImage(imagePath, options);
