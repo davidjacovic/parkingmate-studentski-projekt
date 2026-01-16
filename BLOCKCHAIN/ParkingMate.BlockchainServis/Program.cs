@@ -7,6 +7,9 @@ builder.Services.AddControllers();
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<ParkingMate.Blockchain.Infrastructure.BlockchainState>();
+builder.Services.AddSingleton<ParkingMate.Blockchain.Infrastructure.MiningGate>();
+
 
 var app = builder.Build();
 
