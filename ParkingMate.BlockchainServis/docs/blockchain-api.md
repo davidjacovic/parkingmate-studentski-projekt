@@ -198,3 +198,153 @@ Mining failed due to an internal server error.
 }
 
 ```
+
+## Examples (curl / Postman)
+
+This section provides example HTTP requests that demonstrate how to interact
+with the Blockchain REST API using `curl`.
+All examples assume the service is running locally on `http://localhost:5000`.
+
+---
+
+### Retrieve blockchain state
+
+**Request**
+```bash
+curl -X GET http://localhost:5000/api/blockchain
+```
+**Successful response (200 OK)**
+```json
+{
+  "length": 12,
+  "latestIndex": 11,
+  "latestHash": "0000abcd...",
+  "cumulativeWeight": "12345678901234567890",
+  "chain": [
+    {
+      "index": 0,
+      "data": "Genesis Block",
+      "timestamp": 1736990000,
+      "previousHash": "0",
+      "difficulty": 1,
+      "nonce": 0,
+      "hash": "00genesis..."
+    }
+  ]
+}
+```
+
+### Validate blockchain integrity
+
+**Request**
+```bash
+curl -X GET http://localhost:5000/api/blockchain/validate
+```
+**Successful response (200 OK)**
+```json
+{
+  "valid": true
+}
+```
+
+### Mine a new block
+
+**Request**
+```bash
+curl -X POST http://localhost:5000/api/blockchain/mine \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": "event: accident at Koroska 11",
+    "timestamp": 1737000000
+  }'
+```
+**Successful response (201 Created)**
+```json
+{
+  "index": 12,
+  "data": "event: accident at Koroska 11",
+  "timestamp": 1737000000,
+  "previousHash": "0000abcd...",
+  "difficulty": 4,
+  "nonce": 982341,
+  "hash": "0000cafe..."
+}
+```
+
+
+### Mine block – missing data (validation error)
+
+**Request**
+```bash
+curl -X POST http://localhost:5000/api/blockchain/mine \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
+```
+**Response (400 Bad Request)**
+```json
+{
+  "errorCode": "VALIDATION_ERROR",
+  "message": "Invalid request body",
+  "details": [
+    "data is required"
+  ]
+}
+
+```
+
+### Mine block – invalid timestamp
+
+**Request**
+```bash
+curl -X POST http://localhost:5000/api/blockchain/mine \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": "test event",
+    "timestamp": "invalid"
+  }'
+
+```
+**Response (400 Bad Request)**
+```json
+{
+  "errorCode": "VALIDATION_ERROR",
+  "message": "Invalid request body",
+  "details": [
+    "timestamp must be unix seconds"
+  ]
+}
+
+```
+
+### Mine block – mining already in progress
+
+**Request**
+```bash
+curl -X POST http://localhost:5000/api/blockchain/mine \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": "parallel mining test"
+  }'
+
+```
+**Response (409 Conflict)**
+```json
+{
+  "errorCode": "MINING_IN_PROGRESS",
+  "message": "Mining operation already in progress"
+}
+```
+
+### Internal server error example
+
+**Response (500 Internal Server Error)**
+```json
+{
+  "errorCode": "INTERNAL_ERROR",
+  "message": "Mining failed due to server error"
+}
+
+```
+
+
