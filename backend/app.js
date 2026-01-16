@@ -17,17 +17,10 @@ const { exec } = require('child_process');
 
 const app = express();
 
-//CORS
-const allowedOrigins = ['http://localhost:3000', 'http://localhost:3002'];
+//CORS - Dozvoljava pristup sa bilo koje adrese (za development)
 app.use(cors({
   credentials: true,
-  origin(origin, callback) {
-    if (!origin) return callback(null, true); // allow REST clients like Postman with no origin
-    if (!allowedOrigins.includes(origin)) {
-      return callback(new Error('The CORS policy does not allow access from the specified Origin.'), false);
-    }
-    return callback(null, true);
-  }
+  origin: true // Dozvoljava sve origin-e (za development - u produkciji ograničiti!)
 }));
 
 // Database connection
@@ -87,6 +80,7 @@ const paymentRouter = require('./routes/paymentRoutes');
 const parkingLocationRouter = require('./routes/parkingLocationRoutes');
 const parkingImageRouter = require('./routes/parkingImageRoutes');
 const mlRouter = require('./routes/mlRoutes');
+const eventRouter = require('./routes/eventRoutes');
 
 
 // View engine setup
@@ -114,6 +108,7 @@ app.use('/payments', authenticateToken, paymentRouter);
 app.use('/parkingLocations', parkingLocationRouter);
 app.use('/api/parking-images', parkingImageRouter);
 app.use('/api/ml', mlRouter);
+app.use('/api/events', eventRouter);
 
 // Catch 404 and forward to error handler
 app.use(function(req, res, next) {
