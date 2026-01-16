@@ -1,27 +1,22 @@
-using ParkingMate.Blockchain;
+using ParkingMate.Blockchain.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddSingleton<ParkingMate.Blockchain.Infrastructure.BlockchainState>();
-builder.Services.AddSingleton<ParkingMate.Blockchain.Infrastructure.MiningGate>();
 
+// B3: state + gate
+builder.Services.AddSingleton<BlockchainState>();
+builder.Services.AddSingleton<MiningGate>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapControllers();
+
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();
