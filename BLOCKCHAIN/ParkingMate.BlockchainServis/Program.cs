@@ -8,13 +8,14 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// B3: state + gate
+// B3: state + gate + storage
+builder.Services.AddSingleton<BlockchainStorage>();
 builder.Services.AddSingleton<BlockchainState>();
 builder.Services.AddSingleton<MiningGate>();
 
 var app = builder.Build();
 
-// TASK D1 — GLOBAL ERROR HANDLER (OVDE)
+// TASK D1 ï¿½ GLOBAL ERROR HANDLER (OVDE)
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>

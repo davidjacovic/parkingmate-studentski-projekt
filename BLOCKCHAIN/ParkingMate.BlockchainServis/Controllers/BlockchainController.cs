@@ -2,7 +2,6 @@
 using ParkingMate.Blockchain;
 using ParkingMate.Blockchain.Infrastructure;
 using ParkingMate.BlockchainService.Dtos;
-using ParkingMate.Blockchain.Infrastructure;
 using System.Numerics;
 
 namespace ParkingMate.BlockchainService.Controllers
@@ -94,9 +93,10 @@ namespace ParkingMate.BlockchainService.Controllers
             try
             {
                 // 1) Napravi "newBlock" samo sa Data (ostalo Blockchain.AddBlock popunjava)
+                // request.Data je već validiran kao non-null i non-empty gore
                 var input = new Block(
                     index: 0,
-                    data: request.Data,
+                    data: request.Data!,
                     timestamp: 0,
                     previousHash: "",
                     difficulty: 0,
@@ -106,7 +106,10 @@ namespace ParkingMate.BlockchainService.Controllers
                 // 2) Rudari + append (tvoja postojeća logika)
                 _state.Chain.AddBlock(input);
 
-                // 3) Vrati poslednji blok kao response (201)
+                // 3) Sačuvaj blockchain u storage nakon dodavanja novog bloka
+                _state.SaveChain();
+
+                // 4) Vrati poslednji blok kao response (201)
                 var mined = _state.Chain.GetLatestBlock();
                 return Created("", ToDto(mined));
             }
@@ -118,6 +121,11 @@ namespace ParkingMate.BlockchainService.Controllers
                     Message = "Mining failed due to server error",
                     Details = new List<string> { ex.Message }
                 });
+            }
+            finally
+            {
+                // Oslobodi lock da bi sledeći zahtev mogao da prođe
+                _gate.Exit();
             }
         }
 

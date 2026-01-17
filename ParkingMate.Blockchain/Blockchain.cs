@@ -27,6 +27,39 @@ namespace ParkingMate.Blockchain
             chain.Add(CreateGenesisBlock());
         }
 
+        /// <summary>
+        /// Kreira Blockchain instancu iz postojeće liste blokova (za učitavanje iz storage-a).
+        /// </summary>
+        public Blockchain(IReadOnlyList<Block> existingBlocks, long blockIntervalSeconds = 600, uint adjustmentInterval = 10, int threadCount = 1)
+        {
+            this.blockIntervalSeconds = blockIntervalSeconds;
+            this.adjustmentInterval = adjustmentInterval;
+
+            if (threadCount == 0)
+                this.threadCount = ThreadedMiner.GetOptimalThreadCount();
+            else if (threadCount < 1)
+                throw new ArgumentException("threadCount mora biti >= 1 ili 0 za automatsku detekciju", nameof(threadCount));
+            else
+                this.threadCount = threadCount;
+
+            if (existingBlocks == null || existingBlocks.Count == 0)
+            {
+                chain = new List<Block>();
+                chain.Add(CreateGenesisBlock());
+            }
+            else
+            {
+                // Prvo inicijalizuj chain, pa onda validiraj
+                chain = new List<Block>(existingBlocks);
+                
+                // Validiraj lanac pre nego što ga koristimo
+                if (!IsValidChain())
+                {
+                    throw new ArgumentException("Invalid blockchain chain provided - chain validation failed", nameof(existingBlocks));
+                }
+            }
+        }
+
         public IReadOnlyList<Block> Chain => chain;
         public long BlockIntervalSeconds => blockIntervalSeconds;
         public uint AdjustmentInterval => adjustmentInterval;

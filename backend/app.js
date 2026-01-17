@@ -81,7 +81,10 @@ const parkingLocationRouter = require('./routes/parkingLocationRoutes');
 const parkingImageRouter = require('./routes/parkingImageRoutes');
 const mlRouter = require('./routes/mlRoutes');
 const eventRouter = require('./routes/eventRoutes');
+const blockchainRouter = require('./routes/blockchainRoutes');
 
+// EPIK 3.2: Blockchain worker za background processing eventov
+const blockchainWorker = require('./services/blockchainWorker');
 
 // View engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -109,6 +112,7 @@ app.use('/parkingLocations', parkingLocationRouter);
 app.use('/api/parking-images', parkingImageRouter);
 app.use('/api/ml', mlRouter);
 app.use('/api/events', eventRouter);
+app.use('/api/blockchain', blockchainRouter);
 
 // Catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -123,6 +127,8 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+// EPIK 3.2: Blockchain worker će biti pokrenut iz bin/www nakon što se server pokrene
 
 module.exports = app;
 
