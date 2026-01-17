@@ -53,6 +53,7 @@ object ApiClient {
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
                     Log.d("DELETE_SIMULATION", "Simulation deleted successfully")
+                    Log.d("ML_ANALYZE", "Body: ${response.body}")
                 } else {
                     Log.e("DELETE_SIMULATION", "Error: ${response.code}")
                 }
@@ -348,6 +349,7 @@ object ApiClient {
 
             override fun onResponse(call: Call, response: Response) {
                 val responseBody = response.body?.string() ?: ""
+                Log.d("ML_ANALYZE", "HTTP ${response.code} Body: $responseBody")
 
                 if (!response.isSuccessful) {
                     Log.e("ML_ANALYZE", "Error: ${response.code} - $responseBody")
@@ -358,7 +360,7 @@ object ApiClient {
                 try {
                     // Response format: { success: true, data: { free, occupied, status } }
                     val parsed = gson.fromJson(responseBody, MlAnalyzeResponse::class.java)
-
+                    Log.d("ML_ANALYZE", "Parsed: $parsed")
                     if (parsed.success) {
                         callback(true, parsed.data, "")
                     } else {

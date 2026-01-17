@@ -49,6 +49,7 @@ class SensorPickImageActivity : AppCompatActivity() {
         if (uri != null) {
             selectedImageUri = uri
             binding.ivPreview.setImageURI(uri)
+            runMlAnalyzeAndShow(uri)
         }
     }
 
@@ -57,7 +58,10 @@ class SensorPickImageActivity : AppCompatActivity() {
         ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            selectedImageUri?.let { binding.ivPreview.setImageURI(it) }
+            selectedImageUri?.let {
+                binding.ivPreview.setImageURI(it)
+                runMlAnalyzeAndShow(it)
+            }
         } else {
             // korisnik odustao
             selectedImageUri = null
@@ -264,6 +268,36 @@ class SensorPickImageActivity : AppCompatActivity() {
             }
         }
         return file
+    }
+    private fun runMlAnalyzeAndShow(uri: Uri) {
+        binding.tvMlResult.text = "ML: analyzing..."
+
+        try {
+            val file = uriToCacheFile(uri)
+
+            ApiClient.analyzeImageMl(file) { ok, result, err ->
+                runOnUiThread {
+                    if (ok && result != null) {
+                        val free = result.free ?: 0
+                        val occupied = result.occupied ?: 0
+
+                        val total = free + occupied
+                        val status = if (ok) "ok" else "error"
+
+
+                        binding.tvMlResult.text =
+                            "Free: $free\nOccupied: $occupied\nTotal: $total\nStatus: $status"
+                    } else {
+                        binding.tvMlResult.text = "ML error: $err"
+                        Toast.makeText(this, "ML error: $err", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+
+        } catch (e: Exception) {
+            binding.tvMlResult.text = "ML error: ${e.message}"
+            Toast.makeText(this, "ML error: ${e.message}", Toast.LENGTH_LONG).show()
+        }
     }
 
 
