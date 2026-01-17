@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ParkingMate.Blockchain;
 using ParkingMate.Blockchain.Infrastructure;
 using ParkingMate.BlockchainService.Dtos;
@@ -84,16 +84,31 @@ namespace ParkingMate.BlockchainService.Controllers
 
             try
             {
-                // Stub za Task B
-                return StatusCode(501, new ErrorResponseDto
-                {
-                    ErrorCode = "NOT_IMPLEMENTED",
-                    Message = "Mining is implemented in Task C. Endpoint wiring is done."
-                });
+                // 1) Napravi "newBlock" samo sa Data (ostalo Blockchain.AddBlock popunjava)
+                var input = new Block(
+                    index: 0,
+                    data: request.Data,
+                    timestamp: 0,
+                    previousHash: "",
+                    difficulty: 0,
+                    nonce: 0
+                );
+
+                // 2) Rudari + append (tvoja postojeća logika)
+                _state.Chain.AddBlock(input);
+
+                // 3) Vrati poslednji blok kao response (201)
+                var mined = _state.Chain.GetLatestBlock();
+                return Created("", ToDto(mined));
             }
-            finally
+            catch (Exception ex)
             {
-                _gate.Exit();
+                return StatusCode(500, new ErrorResponseDto
+                {
+                    ErrorCode = "INTERNAL_ERROR",
+                    Message = "Mining failed due to server error",
+                    Details = new List<string> { ex.Message }
+                });
             }
         }
 
