@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.net.Uri
 import android.os.Bundle
@@ -11,6 +12,7 @@ import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.example.parkingmate.databinding.ActivitySensorPickImageBinding
 import org.osmdroid.config.Configuration
@@ -128,8 +130,16 @@ class SensorPickImageActivity : AppCompatActivity() {
         }
 
         binding.btnPickCamera.setOnClickListener {
-            openCamera()
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions.launch(arrayOf(Manifest.permission.CAMERA))
+                Toast.makeText(this, "Allow Camera permission then tap Camera again", Toast.LENGTH_SHORT).show()
+            } else {
+                openCamera()
+            }
         }
+
 
         binding.btnSave.setOnClickListener {
             validateAndFakeSave()
@@ -223,19 +233,26 @@ class SensorPickImageActivity : AppCompatActivity() {
     }
 
     private fun openCamera() {
-        // napravi temp file u cache
-        val dir = File(cacheDir, "camera").apply { mkdirs() }
-        val file = File(dir, "sensor_${System.currentTimeMillis()}.jpg")
-        cameraTempFile = file
+        try {
+            val dir = File(cacheDir, "camera").apply { mkdirs() }
+            val file = File(dir, "sensor_${System.currentTimeMillis()}.jpg")
+            cameraTempFile = file
 
-        val uri = FileProvider.getUriForFile(
-            this,
-            "${applicationContext.packageName}.fileprovider",
-            file
-        )
-        selectedImageUri = uri
-        takePicture.launch(uri)
+            val uri = FileProvider.getUriForFile(
+                this,
+                "${applicationContext.packageName}.fileprovider",
+                file
+            )
+
+            selectedImageUri = uri
+            takePicture.launch(uri)
+
+        } catch (e: Exception) {
+            Toast.makeText(this, "Camera error: ${e.message}", Toast.LENGTH_LONG).show()
+            selectedImageUri = null
+        }
     }
+
 
     override fun onResume() {
         super.onResume()
