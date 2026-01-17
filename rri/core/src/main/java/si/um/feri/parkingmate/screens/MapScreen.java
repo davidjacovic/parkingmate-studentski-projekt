@@ -25,14 +25,19 @@ import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import si.um.feri.parkingmate.ParkingMate;
+import si.um.feri.parkingmate.api.EventMapper;
+import si.um.feri.parkingmate.api.EventService;
 import si.um.feri.parkingmate.api.ParkingMapper;
 import si.um.feri.parkingmate.api.ParkingService;
 import si.um.feri.parkingmate.map.*;
+import si.um.feri.parkingmate.model.Event;
 import si.um.feri.parkingmate.model.Marker;
 import si.um.feri.parkingmate.model.Parking;
+import si.um.feri.parkingmate.ui.EventPanel;
 import si.um.feri.parkingmate.ui.InfoPanel;
 import si.um.feri.parkingmate.ui.ParkingHoverTooltip;
 import si.um.feri.parkingmate.util.FontManager;
@@ -133,6 +138,23 @@ public class MapScreen extends BaseScreen {
 
     // Backend API base URL (backend runs on port 3002)
     private static final String API_BASE_URL = "http://localhost:3002";
+    private List<Event> events = new ArrayList<>();
+    private Texture eventParkingFull;
+    private Texture eventParkingFree;
+    private Texture eventAccident;
+
+    private EventService eventService;
+
+    // ================= EVENT PANEL =================
+    private si.um.feri.parkingmate.ui.EventPanel eventPanel;
+    private float eventPanelWidth;
+    private float eventPanelHeight;
+    private float eventPanelX;
+    private float eventPanelY;
+
+
+
+
 
     private Marker hoveredMarker = null;
     private ParkingHoverTooltip hoverTooltip;
@@ -149,7 +171,9 @@ public class MapScreen extends BaseScreen {
         this.game = game;
         this.markers = new ArrayList<>();
         this.parkingService = new ParkingService(API_BASE_URL);
+        this.eventService = new EventService(API_BASE_URL);
         this.infoPanel = new InfoPanel();
+        this.eventPanel = new EventPanel();
     }
 
     /**
@@ -241,7 +265,11 @@ public class MapScreen extends BaseScreen {
         // Setup info panel
         setupInfoPanel();
 
+        // Setup event panel
+        setupEventPanel();
+
         infoPanel.setAnimationDuration(0.4f);
+        eventPanel.setAnimationDuration(0.4f);
 
         // Setup input handlers for zoom and pan
         setupInputHandlers();
@@ -257,12 +285,14 @@ public class MapScreen extends BaseScreen {
 
         // Initialize info panel with font
         infoPanel.setFont(font);
+        eventPanel.setFont(font);
 
         // Try to load marker textures
         loadMarkerTextures();
 
         infoPanel.setMarkerTextures(markerFreeTexture, markerPartialTexture,
             markerFullTexture, markerUnknownTexture);
+
 
         // Initialize navigation button
         initializeNavigationButton();
@@ -273,6 +303,9 @@ public class MapScreen extends BaseScreen {
 
         // Load parking locations from API
         loadParkingLocationsFromAPI();
+        //Load events from API
+        loadEventsFromAPI();
+
 
         // Set initial car position (camera center)
         setupInitialCarPosition();
@@ -280,6 +313,10 @@ public class MapScreen extends BaseScreen {
         // Initialize simulation button
         initializeSimulationButton();
         hoverTooltip = new ParkingHoverTooltip(font);
+
+        eventParkingFull = new Texture("markers/warning.png");
+        eventParkingFree = new Texture("markers/warning.png");
+        eventAccident = new Texture("markers/warning.png");
 
     }
 
@@ -483,6 +520,21 @@ public class MapScreen extends BaseScreen {
         // Set bounds for info panel
         infoPanel.setBounds(infoPanelX, infoPanelY, infoPanelWidth, infoPanelHeight);
     }
+    private void setupEventPanel() {
+        float screenWidth = Gdx.graphics.getWidth();
+        float screenHeight = Gdx.graphics.getHeight();
+
+        // Set panel width to 40% of screen width
+        eventPanelWidth = screenWidth * 0.40f;
+        eventPanelHeight = screenHeight;
+
+        // Position at right side of screen
+        eventPanelX = screenWidth - eventPanelWidth;
+        eventPanelY = 0; // Start from bottom of screen
+
+        // Set bounds for info panel
+        eventPanel.setBounds(eventPanelX, eventPanelY, eventPanelWidth, eventPanelHeight);
+    }
 
     /**
      * Loads font for info panel text rendering.
@@ -583,6 +635,28 @@ public class MapScreen extends BaseScreen {
             }
         }).start();
     }
+    private void loadEventsFromAPI() {
+        new Thread(() -> {
+            try {
+                Gdx.app.log("MapScreen", "Fetching events...");
+
+                JSONArray json = eventService.fetchEvents();
+                List<Event> eventList = EventMapper.mapToEventList(json);
+
+                Gdx.app.postRunnable(() -> {
+                    events.clear();
+                    events.addAll(eventList);
+                    Gdx.app.log("MapScreen",
+                        "Loaded " + events.size() + " events");
+                });
+
+            } catch (Exception e) {
+                Gdx.app.error("MapScreen", "Failed to load events", e);
+            }
+        }).start();
+    }
+
+
 
     /**
      * Converts a Parking model to a Marker model for display on the map.
@@ -728,6 +802,52 @@ public class MapScreen extends BaseScreen {
                 }
 
                 if (infoPanel.isVisible()) {
+                // ================== EVENT PANEL (HIGHEST PRIORITY) ==================
+                if (eventPanel.isVisible()) {
+
+                    // X dugme
+                    if (eventPanel.isCloseButtonClicked(screenX, gdxY)) {
+                        eventPanel.hide();
+                        return true;
+                    }
+
+                    // Klik unutar panela
+                    if (eventPanel.contains(screenX, gdxY)) {
+                        return true;
+                    }
+
+                    // Klik van panela
+                    eventPanel.hide();
+                    return true;
+                }
+
+                // ================== INFO PANEL ==================
+                if (infoPanel.isVisible()) {
+
+                    if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
+                        infoPanel.hide();
+                        return true;
+                    }
+
+                    if (infoPanel.isTariffPopupCloseButtonClicked(screenX, gdxY)) {
+                        infoPanel.closeTariffPopup();
+                        return true;
+                    }
+
+                    if (infoPanel.isTariffPopupClicked(screenX, gdxY)) {
+                        return true;
+                    }
+
+                    if (infoPanel.isTariffButtonClicked(screenX, gdxY)) {
+                        infoPanel.openTariffPopup();
+                        return true;
+                    }
+
+                    if (infoPanel.contains(screenX, gdxY)) {
+                        return true;
+                    }
+
+                    // Klik van info panela
                     infoPanel.hide();
                     return true;
                 }
@@ -781,6 +901,34 @@ public class MapScreen extends BaseScreen {
                         hoverTooltip.hide();
                     }
                 }
+
+                // ================== NAV BUTTON ==================
+                if (isNavButtonClicked(screenX, gdxY)) {
+                    if (infoPanel.isVisible()) return true;
+
+                    navigationMode = !navigationMode;
+                    if (!navigationMode) resetNavigation();
+                    return true;
+                }
+
+                // ================== SIMULATION BUTTON ==================
+                if (isSimulationButtonClicked(screenX, gdxY)) {
+                    openSimulationScreen();
+                    return true;
+                }
+
+                // ================== NAVIGATION MODE ==================
+                if (navigationMode) {
+                    if (handleMarkerClickForNavigation(screenX, screenY)) {
+                        return true;
+                    }
+                }
+
+                // ================== EVENT CLICK ==================
+                handleEventClick(screenX, screenY);
+
+                // ================== PARKING MARKER CLICK ==================
+                handleMarkerClick(screenX, screenY);
 
                 return false;
             }
@@ -894,6 +1042,7 @@ public class MapScreen extends BaseScreen {
 
         // Update info panel animation
         infoPanel.update(delta);
+        eventPanel.update(delta);
 
         Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -911,6 +1060,9 @@ public class MapScreen extends BaseScreen {
 
             // Draw markers on top of the map (ALWAYS)
             drawMarkers();
+            // Draw events on top of the map
+            drawEvents();
+
 
             // DRAW NAVIGATION IF ACTIVE
             drawNavigation();
@@ -920,6 +1072,7 @@ public class MapScreen extends BaseScreen {
 
             // Draw info panel if visible
             infoPanel.render();
+            eventPanel.render();
             drawNavigationButton();
             // Draw hover panel if visble
             hoverTooltip.render();
@@ -1631,6 +1784,70 @@ public class MapScreen extends BaseScreen {
             drawMarkersWithShapes();
         }
     }
+
+    private void drawEvents() {
+        if (events.isEmpty()) return;
+
+        spriteBatch.setProjectionMatrix(camera.combined);
+        spriteBatch.begin();
+
+        for (Event e : events) {
+            Vector2 pos = MapRasterTiles.getPixelPosition(
+                e.getLat(),
+                e.getLng(),
+                beginTile.x,
+                beginTile.y
+            );
+
+            Texture icon = getEventTexture(e.getEventType());
+            if (icon == null) continue;
+
+            float size = 64f;
+            spriteBatch.draw(
+                icon,
+                pos.x - size / 2,
+                pos.y - size / 2,
+                size,
+                size
+            );
+        }
+
+        spriteBatch.end();
+    }
+    private void handleEventClick(float screenX, float screenY) {
+        Vector3 worldPos = new Vector3(screenX, screenY, 0);
+        camera.unproject(worldPos);
+
+        float clickRadius = 40f;
+
+        for (Event e : events) {
+            Vector2 pos = MapRasterTiles.getPixelPosition(
+                e.getLat(), e.getLng(),
+                beginTile.x, beginTile.y
+            );
+
+            if (Vector2.dst(worldPos.x, worldPos.y, pos.x, pos.y) <= clickRadius) {
+                eventPanel.show(e);
+                infoPanel.hide(); // opciono
+                return;
+            }
+        }
+    }
+
+    private Texture getEventTexture(String type) {
+        switch (type) {
+            case "PARKING_FULL":
+                return eventParkingFull;
+            case "PARKING_FREE":
+                return eventParkingFree;
+            case "ACCIDENT":
+                return eventAccident;
+            default:
+                return null;
+        }
+    }
+
+
 
     /**
      * Draws markers using PNG textures.
