@@ -316,4 +316,61 @@ object ApiClient {
             }
         })
     }
+    // ✅ Story D: Poziv ML endpoint-a /api/ml/analyze (multipart field name: "image")
+    fun analyzeImageMl(
+        imageFile: File,
+        callback: (Boolean, MlResult?, String) -> Unit
+    ) {
+        if (!imageFile.exists()) {
+            callback(false, null, "File not found: ${imageFile.absolutePath}")
+            return
+        }
+
+        val mediaType = "image/*".toMediaTypeOrNull()
+        val requestBodyFile = imageFile.asRequestBody(mediaType)
+
+        val requestBody = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            // OBAVEZNO: field name mora biti "image" (upload.single('image'))
+            .addFormDataPart("image", imageFile.name, requestBodyFile)
+            .build()
+
+        val request = Request.Builder()
+            .url("${getBaseUrl()}/api/ml/analyze")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("ML_ANALYZE", "Failed: ${e.message}")
+                callback(false, null, e.message ?: "Network error")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val responseBody = response.body?.string() ?: ""
+
+                if (!response.isSuccessful) {
+                    Log.e("ML_ANALYZE", "Error: ${response.code} - $responseBody")
+                    callback(false, null, "Server error: ${response.code}")
+                    return
+                }
+
+                try {
+                    // Response format: { success: true, data: { free, occupied, status } }
+                    val parsed = gson.fromJson(responseBody, MlAnalyzeResponse::class.java)
+
+                    if (parsed.success) {
+                        callback(true, parsed.data, "")
+                    } else {
+                        callback(false, null, "ML returned success=false")
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("ML_ANALYZE", "Parse error: ${e.message}. Body=$responseBody")
+                    callback(false, null, "Parse error: ${e.message}")
+                }
+            }
+        })
+    }
+
 }
