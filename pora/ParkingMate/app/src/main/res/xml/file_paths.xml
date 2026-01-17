@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Dozvola za slike koje čuvaš u externalMediaDirs -->
+    <!-- OBAVEZNO: jer praviš file u cacheDir/camera/ -->
+    <cache-path
+        name="camera_cache"
+        path="camera/" />
+
+    <!-- (opciono) ako kasnije budeš čuvala u externalFilesDir -->
     <external-files-path
-        name="images"
+        name="external_files"
         path="." />
 
 </paths>

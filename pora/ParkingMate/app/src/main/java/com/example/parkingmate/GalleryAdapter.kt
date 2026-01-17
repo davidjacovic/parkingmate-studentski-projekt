@@ -5,6 +5,7 @@ import android.net.Uri
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.parkingmate.databinding.ItemGalleryBinding
 import java.io.File
 
@@ -25,13 +26,14 @@ class GalleryAdapter(
         return GalleryViewHolder(binding)
     }
 
-    // Povezuje podatke slike sa ViewHolder-om
     override fun onBindViewHolder(holder: GalleryViewHolder, position: Int) {
         val file = images[position]
-        // Postavlja sliku u ImageView
-        holder.binding.imageView.setImageURI(Uri.fromFile(file))
 
-        // Postavlja klik listener za otvaranje detalja slike
+        Glide.with(holder.itemView)
+            .load(file)
+            .fitCenter()       // neće seći sliku
+            .into(holder.binding.imageView)
+
         holder.binding.root.setOnClickListener {
             val context = holder.itemView.context
             val intent = Intent(context, PhotoDetailActivity::class.java)
@@ -39,13 +41,11 @@ class GalleryAdapter(
             context.startActivity(intent)
         }
 
-        // Postavlja long click listener za brisanje slike
         holder.binding.root.setOnLongClickListener {
             onDeleteClick(file, position)
             true
         }
     }
-
     // Vraća ukupan broj slika u galeriji
     override fun getItemCount() = images.size
 
