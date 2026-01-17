@@ -151,17 +151,6 @@ class CameraActivity : AppCompatActivity() {
 
                     binding.tvData.text =
                         "Lat: $lastLat\nLon: $lastLon\nTime: ${Date(timestampMillis)}"
-                    val parkingLocationId = "64a9b8c2f0a5c1234567890b"
-
-                    // Šalje sliku i meta-podatke na server
-                    ApiClient.uploadParkingImage(
-                        parkingLocationId = parkingLocationId,
-                        lat = lastLat ?: 0.0,
-                        lon = lastLon ?: 0.0,
-                        timestamp = timestampMillis,
-                        imagePath = photoFile.absolutePath
-                    )
-
 
                     Toast.makeText(
                         this@CameraActivity,

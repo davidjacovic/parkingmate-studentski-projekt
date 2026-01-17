@@ -1,18 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.parkingmate">
 
-    <!-- PERMISIONS -->
-    <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-feature android:name="android.hardware.camera" android:required="true"/>
+    <!-- PERMISSIONS -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Storage (za starije verzije Androida) -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -24,23 +31,41 @@
         android:usesCleartextTraffic="true"
         tools:replace="android:allowBackup">
 
+        <!-- 🔴 FILE PROVIDER (OBAVEZNO ZA KAMERU) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- LAUNCHER -->
         <activity
             android:name=".IntroActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity android:name=".MainActivity" android:exported="true"/>
-        <activity android:name=".SensorsActivity" android:exported="true"/>
-        <activity android:name=".SimulationActivity" android:exported="true"/>
-        <activity android:name=".SimulationDetailActivity" android:exported="true"/>
-        <activity android:name=".MessagesActivity" android:exported="true"/>
-        <activity android:name=".CameraActivity" android:exported="true"/>
-        <activity android:name=".GalleryActivity" android:exported="true"/>
-        <activity android:name=".PhotoDetailActivity" android:exported="true"/>
-        <activity android:name=".SendEventActivity" android:exported="true"/>
+        <!-- MAIN SCREENS -->
+        <activity android:name=".MainActivity" android:exported="true" />
+        <activity android:name=".SensorsActivity" android:exported="true" />
+        <activity android:name=".CameraActivity" android:exported="true" />
+        <activity android:name=".GalleryActivity" android:exported="true" />
+        <activity android:name=".PhotoDetailActivity" android:exported="true" />
+
+        <!-- OSTALE -->
+        <activity android:name=".SimulationActivity" android:exported="true" />
+        <activity android:name=".SimulationDetailActivity" android:exported="true" />
+        <activity android:name=".MessagesActivity" android:exported="true" />
+        <activity android:name=".SendEventActivity" android:exported="true" />
+        <activity android:name=".SensorPickImageActivity" android:exported="true" />
+
     </application>
+
 </manifest>
