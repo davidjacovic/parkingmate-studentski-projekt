@@ -51,6 +51,9 @@ namespace ParkingMate.BlockchainService.Controllers
             // Task B: endpoint postoji + basic validacija + concurrency gate
             // Task C: ovde ide stvarni mining (multithread / mpi ne ovde)
 
+            const int MaxDataLength = 1024;
+
+
             var errors = new List<string>();
             if (request == null)
             {
@@ -58,8 +61,14 @@ namespace ParkingMate.BlockchainService.Controllers
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(request.Data)) errors.Add("data is required");
-                if (request.Timestamp <= 0) errors.Add("timestamp must be unix seconds");
+                if (string.IsNullOrWhiteSpace(request.Data))
+                    errors.Add("data is required");
+
+                if (request.Data.Length > MaxDataLength)
+                    errors.Add($"data must be <= {MaxDataLength} characters");
+
+                if (request.Timestamp <= 0)
+                    errors.Add("timestamp must be unix seconds");
             }
 
             if (errors.Count > 0)
