@@ -252,6 +252,20 @@ class SensorPickImageActivity : AppCompatActivity() {
             selectedImageUri = null
         }
     }
+    
+    private fun uriToCacheFile(uri: Uri): File {
+        val inputStream = contentResolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("Cannot open input stream from URI")
+
+        val file = File(cacheDir, "upload_${System.currentTimeMillis()}.jpg")
+        file.outputStream().use { output ->
+            inputStream.use { input ->
+                input.copyTo(output)
+            }
+        }
+        return file
+    }
+
 
 
     override fun onResume() {
