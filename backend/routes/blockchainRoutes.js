@@ -20,5 +20,11 @@ router.get('/chain', blockchainController.getBlockchainChain);
 // GET /api/blockchain/validate - Validira blockchain lanac
 router.get('/validate', blockchainController.validateBlockchain);
 
+// GET /api/blockchain/verify/event/:eventId - Verifikuje event u blockchain-u
+router.get('/verify/event/:eventId', blockchainController.verifyEvent);
+
+// GET /api/blockchain/search?data={data} - Pretražuje blokove po sadržaju
+router.get('/search', blockchainController.searchBlocks);
+
 module.exports = router;
 
