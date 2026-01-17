@@ -104,9 +104,11 @@ public class TariffPopup {
      * Check if point is inside popup
      */
     public boolean contains(float screenX, float screenY) {
-        return screenX >= x && screenX <= x + width &&
+        return visible &&
+            screenX >= x && screenX <= x + width &&
             screenY >= y && screenY <= y + height;
     }
+
 
     /**
      * Render the tariff popup - BEZ OVERLAY, DA SE VIDI MAPA
