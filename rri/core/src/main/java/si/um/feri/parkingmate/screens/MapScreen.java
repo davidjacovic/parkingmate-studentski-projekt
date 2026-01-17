@@ -777,51 +777,19 @@ public class MapScreen extends BaseScreen {
             @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
-
-                if (infoPanel.isTariffPopupCloseButtonClicked(screenX, gdxY)) {
-                    infoPanel.closeTariffPopup();
-                    return true;
-                }
-
-                if (infoPanel.isTariffPopupClicked(screenX, gdxY)) {
-                    return true;
-                }
-
-                if (infoPanel.isTariffButtonClicked(screenX, gdxY)) {
-                    infoPanel.openTariffPopup();
-                    return true;
-                }
-
-                if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
-                    infoPanel.hide();
-                    return true;
-                }
-
-                if (infoPanel.contains(screenX, gdxY)) {
-                    return true;
-                }
-
-                if (infoPanel.isVisible()) {
-                // ================== EVENT PANEL (HIGHEST PRIORITY) ==================
                 if (eventPanel.isVisible()) {
 
-                    // X dugme
+                    // Klik na X
                     if (eventPanel.isCloseButtonClicked(screenX, gdxY)) {
                         eventPanel.hide();
                         return true;
                     }
-
-                    // Klik unutar panela
                     if (eventPanel.contains(screenX, gdxY)) {
                         return true;
                     }
-
-                    // Klik van panela
                     eventPanel.hide();
                     return true;
                 }
-
-                // ================== INFO PANEL ==================
                 if (infoPanel.isVisible()) {
 
                     if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
@@ -846,21 +814,47 @@ public class MapScreen extends BaseScreen {
                     if (infoPanel.contains(screenX, gdxY)) {
                         return true;
                     }
-
-                    // Klik van info panela
                     infoPanel.hide();
                     return true;
                 }
+                if (isNavButtonClicked(screenX, gdxY)) {
+
+                    navigationMode = !navigationMode;
+
+                    if (!navigationMode) {
+                        resetNavigation();
+                    } else {
+                        Vector2 ljubljanaPixel = MapRasterTiles.getPixelPosition(
+                            46.0569, 14.5058,
+                            beginTile.x,
+                            beginTile.y
+                        );
+
+                        carPosition = new Vector2(ljubljanaPixel);
+                        cursorWorldPos = new Vector2(carPosition);
+
+                        camera.position.set(carPosition.x, carPosition.y, 0);
+                        camera.update();
+                    }
+                    return true;
+                }
+                if (isSimulationButtonClicked(screenX, gdxY)) {
+                    openSimulationScreen();
+                    return true;
+                }
+                if (navigationMode) {
+                    if (handleMarkerClickForNavigation(screenX, screenY)) {
+                        return true;
+                    }
+                }
+                handleEventClick(screenX, screenY);
                 handleMarkerClick(screenX, screenY);
+
                 return false;
             }
-
-
-
             @Override
             public boolean mouseMoved(int screenX, int screenY) {
-
-                if (infoPanel.isVisible() || navigationMode) {
+                if (infoPanel.isVisible() || eventPanel.isVisible() || navigationMode) {
                     hoverTooltip.hide();
                     hoveredMarker = null;
                     return false;
@@ -901,34 +895,6 @@ public class MapScreen extends BaseScreen {
                         hoverTooltip.hide();
                     }
                 }
-
-                // ================== NAV BUTTON ==================
-                if (isNavButtonClicked(screenX, gdxY)) {
-                    if (infoPanel.isVisible()) return true;
-
-                    navigationMode = !navigationMode;
-                    if (!navigationMode) resetNavigation();
-                    return true;
-                }
-
-                // ================== SIMULATION BUTTON ==================
-                if (isSimulationButtonClicked(screenX, gdxY)) {
-                    openSimulationScreen();
-                    return true;
-                }
-
-                // ================== NAVIGATION MODE ==================
-                if (navigationMode) {
-                    if (handleMarkerClickForNavigation(screenX, screenY)) {
-                        return true;
-                    }
-                }
-
-                // ================== EVENT CLICK ==================
-                handleEventClick(screenX, screenY);
-
-                // ================== PARKING MARKER CLICK ==================
-                handleMarkerClick(screenX, screenY);
 
                 return false;
             }
