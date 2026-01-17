@@ -88,6 +88,9 @@ public class InfoPanel {
     private float headerIconSize = 28f;
     private float headerIconMargin = 12f;
 
+    private boolean tariffPopupVisible = false;
+
+
     // Animation states
     private enum AnimationState {
         SHOWING,
@@ -318,6 +321,7 @@ public class InfoPanel {
             String parkingName = selectedMarker.getName();
             List<Tariff> tariffs = selectedMarker.getParkingData().getTariffs();
             tariffPopup.show(parkingName, tariffs);
+            tariffPopupVisible = true; // ✅ KLJUČNO
         }
     }
 
@@ -326,21 +330,24 @@ public class InfoPanel {
      */
     public void closeTariffPopup() {
         tariffPopup.hide();
+        tariffPopupVisible = false;
     }
 
     /**
      * Check if tariff popup close button clicked
      */
     public boolean isTariffPopupCloseButtonClicked(float screenX, float screenY) {
-        return tariffPopup.isCloseButtonClicked(screenX, screenY);
+        return tariffPopup != null && tariffPopup.isCloseButtonClicked(screenX, screenY);
     }
+
 
     /**
      * Check if click is on tariff popup
      */
     public boolean isTariffPopupClicked(float screenX, float screenY) {
-        return tariffPopup.contains(screenX, screenY);
+        return tariffPopup != null && tariffPopup.contains(screenX, screenY);
     }
+
     /**
      * Hide panel
      */
@@ -348,7 +355,7 @@ public class InfoPanel {
         if (animationState == AnimationState.HIDDEN || animationState == AnimationState.HIDING) {
             return;
         }
-
+        closeTariffPopup();
         this.animationState = AnimationState.HIDING;
         this.isAnimating = true;
         this.animationTime = 0f;
@@ -731,4 +738,10 @@ public class InfoPanel {
     public void setAnimationDuration(float duration) {
         this.animationDuration = duration;
     }
+
+    public boolean isTariffPopupVisible() {
+        return tariffPopup != null && tariffPopup.isVisible();
+    }
+
 }
+

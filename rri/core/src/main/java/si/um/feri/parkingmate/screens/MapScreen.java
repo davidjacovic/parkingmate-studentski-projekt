@@ -34,6 +34,7 @@ import si.um.feri.parkingmate.map.*;
 import si.um.feri.parkingmate.model.Marker;
 import si.um.feri.parkingmate.model.Parking;
 import si.um.feri.parkingmate.ui.InfoPanel;
+import si.um.feri.parkingmate.ui.ParkingHoverTooltip;
 import si.um.feri.parkingmate.util.FontManager;
 import si.um.feri.parkingmate.simulation.SimulationScreen;
 
@@ -132,6 +133,13 @@ public class MapScreen extends BaseScreen {
 
     // Backend API base URL (backend runs on port 3002)
     private static final String API_BASE_URL = "http://localhost:3002";
+
+    private Marker hoveredMarker = null;
+    private ParkingHoverTooltip hoverTooltip;
+    private InputMultiplexer inputMultiplexer;
+
+
+
 
     /**
      * Constructor for MapScreen.
@@ -271,6 +279,8 @@ public class MapScreen extends BaseScreen {
 
         // Initialize simulation button
         initializeSimulationButton();
+        hoverTooltip = new ParkingHoverTooltip(font);
+
     }
 
     /**
@@ -677,65 +687,22 @@ public class MapScreen extends BaseScreen {
         gestureDetector = new GestureDetector(new MapGestureListener());
 
         InputAdapter scrollInputAdapter = new InputAdapter() {
+
             @Override
             public boolean scrolled(float amountX, float amountY) {
                 float zoomSpeed = 0.1f;
                 camera.zoom += amountY * zoomSpeed;
-                camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
+                camera.zoom = MathUtils.clamp(
+                    camera.zoom,
+                    MapConstants.MIN_ZOOM,
+                    MapConstants.MAX_ZOOM
+                );
                 return true;
             }
 
+            @Override
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
-
-                // CHECK CLICK ON NAVIGATION BUTTON
-                if (isNavButtonClicked(screenX, gdxY)) {
-                    if (infoPanel.isVisible()) {
-                        Gdx.app.log("MapScreen", "Cannot turn on navigation while info panel is open");
-                        return true;
-                    }
-
-                    navigationMode = !navigationMode;
-                    Gdx.app.log("MapScreen", "Navigation mode: " + navigationMode);
-
-                    // Reset navigation state when turning off navigation
-                    if (!navigationMode) {
-                        resetNavigation();
-                    }
-
-                    // WHEN NAVIGATION IS TURNED ON, CENTER CAMERA ON CAR
-                    if (navigationMode) {
-                        Vector2 ljubljanaPixel = MapRasterTiles.getPixelPosition(
-                            46.0569, 14.5058,
-                            beginTile.x,
-                            beginTile.y
-                        );
-
-                        carPosition = new Vector2(ljubljanaPixel);
-                        cursorWorldPos = new Vector2(carPosition);
-
-                        camera.position.set(carPosition.x, carPosition.y, 0);
-                        camera.update();
-
-                        Gdx.app.log("MapScreen", "Navigation ON – car at Ljubljana: " + carPosition);
-                    }
-                    return true;
-                }
-                // CHECK CLICK ON SIMULATION BUTTON
-                if (isSimulationButtonClicked(screenX, gdxY)) {
-                    Gdx.app.log("MapScreen", "Simulation button clicked");
-
-                    // Otvori novi simulation screen
-                    openSimulationScreen();
-                    return true;
-                }
-
-                // If info panel is clicked, turn off navigation
-                if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
-                    infoPanel.hide();
-                    // Do not reset navigation here, just hide the panel
-                    return true;
-                }
 
                 if (infoPanel.isTariffPopupCloseButtonClicked(screenX, gdxY)) {
                     infoPanel.closeTariffPopup();
@@ -751,36 +718,73 @@ public class MapScreen extends BaseScreen {
                     return true;
                 }
 
-                if (infoPanel.contains(screenX, gdxY)) {
-                    // If click is inside info panel, turn off navigation
-                    if (navigationMode) {
-                        navigationMode = false;
-                        resetNavigation();
-                    }
+                if (infoPanel.isCloseButtonClicked(screenX, gdxY)) {
+                    infoPanel.hide();
                     return true;
                 }
 
-                // Handle marker click for navigation
-                if (navigationMode) {
-                    boolean markerClicked = handleMarkerClickForNavigation(screenX, screenY);
-                    if (markerClicked) {
-                        return true;
-                    }
+                if (infoPanel.contains(screenX, gdxY)) {
+                    return true;
                 }
 
+                if (infoPanel.isVisible()) {
+                    infoPanel.hide();
+                    return true;
+                }
                 handleMarkerClick(screenX, screenY);
                 return false;
             }
 
+
+
             @Override
             public boolean mouseMoved(int screenX, int screenY) {
-                if (navigationMode && !isMovingToTarget) {
-                    Vector3 worldPos = new Vector3(screenX, screenY, 0);
-                    camera.unproject(worldPos);
-                    cursorWorldPos.set(worldPos.x, worldPos.y);
+
+                if (infoPanel.isVisible() || navigationMode) {
+                    hoverTooltip.hide();
+                    hoveredMarker = null;
+                    return false;
                 }
+
+                Vector3 mouseWorld = new Vector3(screenX, screenY, 0);
+                camera.unproject(mouseWorld);
+
+                Vector2 mousePos = new Vector2(mouseWorld.x, mouseWorld.y);
+
+                float hoverRadius = markerSize / 2f;
+                Marker newHovered = null;
+
+                for (Marker marker : markers) {
+                    Vector2 markerPos = MapRasterTiles.getPixelPosition(
+                        marker.getPosition().lat,
+                        marker.getPosition().lng,
+                        beginTile.x,
+                        beginTile.y
+                    );
+
+                    if (mousePos.dst(markerPos) <= hoverRadius) {
+                        newHovered = marker;
+                        break;
+                    }
+                }
+
+                if (newHovered != hoveredMarker) {
+                    hoveredMarker = newHovered;
+
+                    if (hoveredMarker != null) {
+                        hoverTooltip.show(
+                            hoveredMarker,
+                            screenX,
+                            Gdx.graphics.getHeight() - screenY
+                        );
+                    } else {
+                        hoverTooltip.hide();
+                    }
+                }
+
                 return false;
             }
+
         };
 
         InputMultiplexer inputMultiplexer = new InputMultiplexer();
@@ -788,6 +792,8 @@ public class MapScreen extends BaseScreen {
         inputMultiplexer.addProcessor(gestureDetector);
         Gdx.input.setInputProcessor(inputMultiplexer);
     }
+
+
     /**
      * Checks if the simulation button was clicked.
      */
@@ -915,7 +921,11 @@ public class MapScreen extends BaseScreen {
             // Draw info panel if visible
             infoPanel.render();
             drawNavigationButton();
+            // Draw hover panel if visble
+            hoverTooltip.render();
         }
+
+
 
         if (isArriving) {
             arrivalTimer += delta;
@@ -1550,15 +1560,11 @@ public class MapScreen extends BaseScreen {
      * Handles click on marker for info panel display.
      */
     private void handleMarkerClick(float screenX, float screenY) {
-        if (beginTile == null || markers == null || navigationMode) {
-            return;
-        }
+        if (beginTile == null || markers == null) return;
 
-        // Convert screen coordinates to world coordinates
         Vector3 worldPos = new Vector3(screenX, screenY, 0);
         camera.unproject(worldPos);
 
-        // Check each marker to see if click is within marker bounds
         float clickRadius = markerSize / 2f + 10f;
 
         for (Marker marker : markers) {
@@ -1569,34 +1575,19 @@ public class MapScreen extends BaseScreen {
                 beginTile.y
             );
 
-            // Calculate distance from click to marker
             float distance = Vector2.dst(
                 worldPos.x, worldPos.y,
                 markerPixelPos.x, markerPixelPos.y
             );
 
             if (distance <= clickRadius) {
-                // Marker clicked
-                Gdx.app.debug("MapScreen", "Marker clicked: " + marker.getName());
-
-                // Toggle info panel with animation
-                if (infoPanel.isVisible() && infoPanel.getSelectedMarker() == marker) {
-                    // If same marker is clicked again, hide panel
-                    infoPanel.hide();
-                } else {
-                    // Show panel for clicked marker
-                    infoPanel.show(marker);
-                }
+                infoPanel.show(marker);
                 return;
             }
         }
-
-        // Click was not on any marker - hide info panel if click was outside
-        float gdxY = Gdx.graphics.getHeight() - screenY;
-        if (!infoPanel.contains(screenX, gdxY)) {
-            infoPanel.hide();
-        }
     }
+
+
 
     /**
      * Resets navigation state to initial values.
@@ -1855,6 +1846,7 @@ public class MapScreen extends BaseScreen {
         }
     }
 
+
     /**
      * Cleans up resources when screen is disposed.
      */
@@ -1912,6 +1904,10 @@ public class MapScreen extends BaseScreen {
         if (simulationButtonActiveTexture != null && simulationButtonActiveTexture != simulationButtonTexture) {
             simulationButtonActiveTexture.dispose();
         }
+        if (hoverTooltip != null) {
+            hoverTooltip.dispose();
+        }
+
         FontManager.dispose();
     }
 
@@ -1922,54 +1918,67 @@ public class MapScreen extends BaseScreen {
 
         @Override
         public boolean touchDown(float x, float y, int pointer, int button) {
+            if (infoPanel.isVisible()) return false;
             return false;
         }
 
         @Override
         public boolean tap(float x, float y, int count, int button) {
+            if (infoPanel.isVisible()) return false;
             return false;
         }
 
         @Override
         public boolean longPress(float x, float y) {
+            if (infoPanel.isVisible()) return false;
             return false;
         }
 
         @Override
         public boolean fling(float velocityX, float velocityY, int button) {
+            if (infoPanel.isVisible()) return false;
             return false;
         }
 
         @Override
         public boolean pan(float x, float y, float deltaX, float deltaY) {
-            // Pan the camera by translating it opposite to the drag direction
-            // deltaX and deltaY are in screen coordinates, need to convert to world coordinates
+            if (infoPanel.isVisible()) return false;
+
             camera.translate(-deltaX * camera.zoom, deltaY * camera.zoom);
             return true;
         }
 
         @Override
         public boolean panStop(float x, float y, int pointer, int button) {
+            if (infoPanel.isVisible()) return false;
             return false;
         }
 
         @Override
         public boolean zoom(float initialDistance, float distance) {
-            // Zoom in/out based on gesture distance
+            if (infoPanel.isVisible()) return false;
+
             float ratio = initialDistance / distance;
             camera.zoom *= ratio;
-            camera.zoom = MathUtils.clamp(camera.zoom, MapConstants.MIN_ZOOM, MapConstants.MAX_ZOOM);
+            camera.zoom = MathUtils.clamp(
+                camera.zoom,
+                MapConstants.MIN_ZOOM,
+                MapConstants.MAX_ZOOM
+            );
             return true;
         }
 
         @Override
-        public boolean pinch(Vector2 initialPointer1, Vector2 initialPointer2, Vector2 pointer1, Vector2 pointer2) {
+        public boolean pinch(Vector2 initialPointer1, Vector2 initialPointer2,
+                             Vector2 pointer1, Vector2 pointer2) {
+            if (infoPanel.isVisible()) return false;
             return false;
         }
 
         @Override
         public void pinchStop() {
-            // Not used
+            // nothing
         }
     }
+
 }
