@@ -15,7 +15,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.btnSensors.setOnClickListener {
-            startActivity(Intent(this, SensorsActivity::class.java))
+            startActivity(Intent(this, SensorPickImageActivity::class.java))
         }
 
         binding.btnSimulation.setOnClickListener {
