@@ -138,3 +138,112 @@ exports.validateBlockchain = async (req, res) => {
     }
 };
 
+/**
+ * Verifikuje da li je event zapisan u blockchain-u i da li je validan.
+ * GET /api/blockchain/verify/event/:eventId
+ */
+exports.verifyEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        if (!eventId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Event ID is required'
+            });
+        }
+
+        // Pronađi event u bazi
+        const event = await Event.findById(eventId);
+        
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                message: `Event with ID '${eventId}' not found`
+            });
+        }
+
+        // Proveri da li event ima blockchainHash
+        if (!event.blockchainHash) {
+            return res.json({
+                success: true,
+                data: {
+                    eventId: event._id.toString(),
+                    verified: false,
+                    found: false,
+                    integrityValid: false,
+                    chainValid: false,
+                    message: 'Event is not recorded in blockchain (no blockchainHash)'
+                }
+            });
+        }
+
+        // Verifikuj blok u blockchain-u
+        const verification = await blockchainService.verifyBlock(event.blockchainHash);
+
+        res.json({
+            success: true,
+            data: {
+                eventId: event._id.toString(),
+                eventStatus: event.status,
+                blockchainHash: event.blockchainHash,
+                verified: verification.verified,
+                found: verification.found,
+                integrityValid: verification.integrityValid,
+                chainValid: verification.chainValid,
+                message: verification.message,
+                block: verification.block
+            }
+        });
+    } catch (err) {
+        console.error('Error in verifyEvent:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: err.message
+        });
+    }
+};
+
+/**
+ * Pretražuje blokove po sadržaju (event ID ili drugi podaci).
+ * GET /api/blockchain/search?data={data}
+ */
+exports.searchBlocks = async (req, res) => {
+    try {
+        const { data } = req.query;
+
+        if (!data || typeof data !== 'string' || data.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Search data parameter is required'
+            });
+        }
+
+        const result = await blockchainService.searchBlocks(data);
+
+        if (result.success) {
+            res.json({
+                success: true,
+                data: {
+                    blocks: result.blocks,
+                    count: result.blocks.length
+                }
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to search blocks',
+                errors: result.errors
+            });
+        }
+    } catch (err) {
+        console.error('Error in searchBlocks:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: err.message
+        });
+    }
+};
+

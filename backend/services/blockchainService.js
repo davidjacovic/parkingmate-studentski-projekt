@@ -214,11 +214,132 @@ async function getBlockchainState() {
     }
 }
 
+/**
+ * Verifikuje da li je blok sa određenim hash-om validan i prisutan u lancu.
+ * 
+ * @param {string} hash - Hash bloka za verifikaciju
+ * @returns {Promise<Object>} { verified: boolean, found: boolean, integrityValid: boolean, chainValid: boolean, message: string, block: Object|null }
+ */
+async function verifyBlock(hash) {
+    try {
+        if (!hash || typeof hash !== 'string' || hash.trim().length === 0) {
+            return {
+                verified: false,
+                found: false,
+                integrityValid: false,
+                chainValid: false,
+                message: 'Hash is required',
+                block: null
+            };
+        }
+
+        const response = await axios.get(`${BLOCKCHAIN_SERVICE_URL}/api/blockchain/verify/${encodeURIComponent(hash)}`, {
+            timeout: HTTP_TIMEOUT
+        });
+
+        if (response.status === 200) {
+            return {
+                verified: response.data.verified === true,
+                found: response.data.found === true,
+                integrityValid: response.data.integrityValid === true,
+                chainValid: response.data.chainValid === true,
+                message: response.data.message || '',
+                block: response.data.block || null
+            };
+        } else {
+            return {
+                verified: false,
+                found: false,
+                integrityValid: false,
+                chainValid: false,
+                message: `Unexpected response status: ${response.status}`,
+                block: null
+            };
+        }
+    } catch (error) {
+        let errorMessage = 'Unknown error';
+        
+        if (error.response) {
+            const statusCode = error.response.status;
+            errorMessage = `Blockchain service error: ${statusCode} ${error.response.statusText}`;
+        } else if (error.request) {
+            errorMessage = `Blockchain service unavailable (no response from ${BLOCKCHAIN_SERVICE_URL})`;
+        } else {
+            errorMessage = `Error setting up request: ${error.message}`;
+        }
+
+        return {
+            verified: false,
+            found: false,
+            integrityValid: false,
+            chainValid: false,
+            message: errorMessage,
+            block: null
+        };
+    }
+}
+
+/**
+ * Pretražuje blokove po sadržaju (data).
+ * 
+ * @param {string} data - Podaci za pretragu
+ * @returns {Promise<Object>} { success: boolean, blocks: Array, errors: string[] }
+ */
+async function searchBlocks(data) {
+    try {
+        if (!data || typeof data !== 'string' || data.trim().length === 0) {
+            return {
+                success: false,
+                blocks: [],
+                errors: ['Search data parameter is required']
+            };
+        }
+
+        const response = await axios.get(`${BLOCKCHAIN_SERVICE_URL}/api/blockchain/search`, {
+            params: { data },
+            timeout: HTTP_TIMEOUT
+        });
+
+        if (response.status === 200) {
+            return {
+                success: true,
+                blocks: Array.isArray(response.data) ? response.data : [],
+                errors: []
+            };
+        } else {
+            return {
+                success: false,
+                blocks: [],
+                errors: [`Unexpected response status: ${response.status}`]
+            };
+        }
+    } catch (error) {
+        let errorMessage = 'Unknown error';
+        
+        if (error.response) {
+            const statusCode = error.response.status;
+            errorMessage = `Blockchain service error: ${statusCode} ${error.response.statusText}`;
+        } else if (error.request) {
+            errorMessage = `Blockchain service unavailable (no response from ${BLOCKCHAIN_SERVICE_URL})`;
+        } else {
+            errorMessage = `Error setting up request: ${error.message}`;
+        }
+
+        return {
+            success: false,
+            blocks: [],
+            errors: [errorMessage]
+        };
+    }
+}
+
 module.exports = {
     recordEventInBlockchain,
     checkBlockchainServiceHealth,
     validateBlockchain,
     getBlockchainState,
+    verifyBlock,
+    searchBlocks,
     BLOCKCHAIN_SERVICE_URL
 };
 
