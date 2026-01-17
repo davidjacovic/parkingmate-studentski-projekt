@@ -145,4 +145,21 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
+  
+  // EPIK 3.2: Pokreni blockchain worker nakon što se server pokrene
+  const blockchainWorker = require('../services/blockchainWorker');
+  blockchainWorker.startWorker();
+  
+  // Graceful shutdown - zaustavi worker pri zatvaranju servera
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, stopping blockchain worker...');
+    blockchainWorker.stopWorker();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT received, stopping blockchain worker...');
+    blockchainWorker.stopWorker();
+    process.exit(0);
+  });
 }

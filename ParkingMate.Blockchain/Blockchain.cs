@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ParkingMate.Blockchain
 {
@@ -25,6 +26,39 @@ namespace ParkingMate.Blockchain
 
             chain = new List<Block>();
             chain.Add(CreateGenesisBlock());
+        }
+
+        /// <summary>
+        /// Kreira Blockchain instancu iz postojeće liste blokova (za učitavanje iz storage-a).
+        /// </summary>
+        public Blockchain(IReadOnlyList<Block> existingBlocks, long blockIntervalSeconds = 600, uint adjustmentInterval = 10, int threadCount = 1)
+        {
+            this.blockIntervalSeconds = blockIntervalSeconds;
+            this.adjustmentInterval = adjustmentInterval;
+
+            if (threadCount == 0)
+                this.threadCount = ThreadedMiner.GetOptimalThreadCount();
+            else if (threadCount < 1)
+                throw new ArgumentException("threadCount mora biti >= 1 ili 0 za automatsku detekciju", nameof(threadCount));
+            else
+                this.threadCount = threadCount;
+
+            if (existingBlocks == null || existingBlocks.Count == 0)
+            {
+                chain = new List<Block>();
+                chain.Add(CreateGenesisBlock());
+            }
+            else
+            {
+                // Prvo inicijalizuj chain, pa onda validiraj
+                chain = new List<Block>(existingBlocks);
+                
+                // Validiraj lanac pre nego što ga koristimo
+                if (!IsValidChain())
+                {
+                    throw new ArgumentException("Invalid blockchain chain provided - chain validation failed", nameof(existingBlocks));
+                }
+            }
         }
 
         public IReadOnlyList<Block> Chain => chain;
@@ -222,6 +256,75 @@ namespace ParkingMate.Blockchain
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Pronalazi blok po hash-u.
+        /// </summary>
+        public Block? FindBlockByHash(string hash)
+        {
+            if (string.IsNullOrEmpty(hash))
+                return null;
+
+            return chain.FirstOrDefault(b => b.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Pronalazi blokove koji sadrže određene podatke.
+        /// </summary>
+        public List<Block> FindBlocksByData(string data)
+        {
+            if (string.IsNullOrEmpty(data))
+                return new List<Block>();
+
+            return chain.Where(b => b.Data.Contains(data, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        /// <summary>
+        /// Verifikuje da li je blok nepromenjen (hash validacija).
+        /// </summary>
+        public bool VerifyBlockIntegrity(Block block)
+        {
+            if (block == null)
+                return false;
+
+            // Proveri da li hash odgovara izračunatom hash-u
+            string calculatedHash = block.CalculateHash();
+            if (block.Hash != calculatedHash)
+                return false;
+
+            // Proveri da li hash ispunjava difficulty zahtev
+            string prefix = new string('0', (int)block.Difficulty);
+            if (!block.Hash.StartsWith(prefix))
+                return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Verifikuje da li je blok sa određenim hash-om validan i prisutan u lancu.
+        /// </summary>
+        public bool VerifyBlockInChain(string hash)
+        {
+            var block = FindBlockByHash(hash);
+            if (block == null)
+                return false;
+
+            // Proveri integritet bloka
+            if (!VerifyBlockIntegrity(block))
+                return false;
+
+            // Proveri da li blok postoji u lancu i da li je validan u kontekstu lanca
+            int index = chain.FindIndex(b => b.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));
+            if (index < 0)
+                return false;
+
+            // Za genesis blok (index 0), samo proveri hash
+            if (index == 0)
+                return true;
+
+            // Za ostale blokove, proveri validaciju u kontekstu prethodnog bloka
+            return IsValidNewBlock(block, chain[index - 1]);
         }
     }
 }
