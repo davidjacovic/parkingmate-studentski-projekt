@@ -9,23 +9,17 @@ class SensorsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySensorsBinding
 
-    // Glavna aktivnost za senzore - omogućava navigaciju ka kameri ili galeriji
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySensorsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Dugme za nazad
-        binding.btnBack.setOnClickListener {
-            finish()
-        }
+        binding.btnBack.setOnClickListener { finish() }
 
-        // Dugme za pokretanje aktivnosti kamere
         binding.btnCamera.setOnClickListener {
-            startActivity(Intent(this, CameraActivity::class.java))
+            startActivity(Intent(this, SensorPickImageActivity::class.java))
         }
 
-        // Dugme za pokretanje aktivnosti galerije
         binding.btnGallery.setOnClickListener {
             startActivity(Intent(this, GalleryActivity::class.java))
         }

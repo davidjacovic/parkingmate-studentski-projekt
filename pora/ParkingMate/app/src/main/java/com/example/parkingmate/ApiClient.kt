@@ -26,16 +26,17 @@ object ApiClient {
 
     // URL adrese za emulator i fizički uređaj
     const val EMULATOR_URL = "http://10.0.2.2:3002"
-    const val PHONE_URL = "http://192.168.0.12:3002"
+    //const val PHONE_URL = "http://192.168.0.12:3002"
 
     // Određuje bazni URL na osnovu tipa uređaja
-    fun getBaseUrl(): String {
+    fun getBaseUrl(): String = EMULATOR_URL
+    /*fun getBaseUrl(): String {
         return if (android.os.Build.FINGERPRINT.contains("generic")) {
             EMULATOR_URL
         } else {
             PHONE_URL
         }
-    }
+    }*/
 
     // Briše simulaciju sa servera
     fun deleteSimulation(simulationId: String) {
