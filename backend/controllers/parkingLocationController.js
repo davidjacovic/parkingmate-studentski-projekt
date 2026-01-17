@@ -2,6 +2,7 @@ var Parking_locationModel = require('../models/parkingLocationModel.js');
 const ParkingLog = require('../models/parkingLogModel.js');
 const UserModel = require('../models/userModel');
 const ParkingLocationModel = require('../models/parkingLocationModel');
+const mlInferenceService = require('../ml_service/mlInferenceService');
 
 // or the correct relative path to your model
 
@@ -74,73 +75,64 @@ module.exports = {
     });
 },
 
-    create: function (req, res) {
-        try {
-            console.log('create parkingLocation called');
-            console.log('req.user:', req.user);       // log korisnika (token)
-            console.log('req.body:', req.body);       // log body requesta
-            // pretpostavka da je user tu, ili zameni po potrebi
-            var data = req.body;
+    create: async function (req, res) {
+  try {
+    const data = req.body;
 
-            var parking_location = new Parking_locationModel({
-                name: data.name,
-                address: data.address,
-                location: {
-                    type: 'Point',
-                    coordinates: data.location.coordinates // očekujem [lng, lat]
-                },
-                total_regular_spots: data.total_regular_spots,
-                total_invalid_spots: data.total_invalid_spots,
-                total_bus_spots: data.total_bus_spots,
-                available_regular_spots: data.available_regular_spots,
-                available_invalid_spots: data.available_invalid_spots,
-                available_bus_spots: data.available_bus_spots,
-                created: new Date(),
-                modified: new Date(),
-                description: data.description,
-                hidden: data.hidden
-            });
+    // 1) napravi instancu iz forme (ime/adresa/lokacija)
+    const parking_location = new Parking_locationModel({
+      name: data.name,
+      address: data.address,
+      location: {
+        type: 'Point',
+        coordinates: data.location.coordinates // [lng, lat]
+      },
+      description: data.description,
+      hidden: data.hidden,
+      created: new Date(),
+      modified: new Date(),
 
-            parking_location.save(function (err, parking_location) {
-                if (err) {
-                    console.error('Error when creating parking_location:', err);
-                    return res.status(500).json({
-                        message: 'Error when creating parking_location',
-                        error: err.message || err
-                    });
-                }
+      // ostala polja možeš ostaviti kako već radiš
+      total_invalid_spots: data.total_invalid_spots,
+      total_bus_spots: data.total_bus_spots,
+      available_invalid_spots: data.available_invalid_spots,
+      available_bus_spots: data.available_bus_spots
+    });
 
-                console.log('Parking location saved:', parking_location);
+    // 2) ako je poslata slika, uradi ML i popuni polja
+    if (req.file) {
+      const imagePath = req.file.path;
 
-                // ako treba formatirati koordinate, pozovi funkciju
-                if (typeof convertDecimalCoordinates === 'function') {
-                    convertDecimalCoordinates(parking_location);
-                }
+      const analysisResult = await mlInferenceService.analyzeImage(imagePath, {});
+      const formatted = mlInferenceService.formatResult(analysisResult);
 
-                // Kreiraj inicijalni log zapisa
-                const log = new ParkingLog({
-                    parkingLocationId: parking_location._id,
-                    available_regular_spots: parking_location.available_regular_spots,
-                    available_invalid_spots: parking_location.available_invalid_spots,
-                    available_bus_spots: parking_location.available_bus_spots
-                });
+      const free = Number(formatted.free_spaces ?? formatted.free ?? 0);
+      const occupied = Number(formatted.occupied_spaces ?? formatted.occupied ?? 0);
+      const total = free + occupied;
 
-                log.save(err => {
-                    if (err) {
-                        console.error('Error saving parking log:', err);
-                    } else {
-                        console.log('Initial parking log saved.');
-                    }
-                });
+      parking_location.available_regular_spots = free;
+      parking_location.total_regular_spots = total;
+    }
 
-                return res.status(201).json(parking_location);
-            });
+    // 3) snimi u bazu
+    const saved = await parking_location.save();
 
-        } catch (error) {
-            console.error('Unexpected error in create:', error);
-            return res.status(500).json({ message: 'Server error', error: error.message });
-        }
-    },
+    // 4) (opciono) log kao što već radiš
+    const log = new ParkingLog({
+      parkingLocationId: saved._id,
+      available_regular_spots: saved.available_regular_spots,
+      available_invalid_spots: saved.available_invalid_spots,
+      available_bus_spots: saved.available_bus_spots
+    });
+    log.save().catch(() => {});
+
+    convertDecimalCoordinates(saved);
+    return res.status(201).json(saved);
+
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+},
 
 
     update: async function (req, res) {
