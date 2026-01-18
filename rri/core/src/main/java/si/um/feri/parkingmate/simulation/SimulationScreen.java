@@ -22,7 +22,6 @@ import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
-
 import org.json.JSONObject;
 
 import si.um.feri.parkingmate.ParkingMate;
@@ -66,6 +65,9 @@ public class SimulationScreen extends BaseScreen {
     private Texture restartSimulationTexture;
     private float restartSimulationSize = 48f;
     private float restartSimulationX, restartSimulationY;
+    private float fastButtonX, fastButtonY;
+    private float slowButtonX, slowButtonY;
+
 
     private float originalSimulationTime = 8.0f * 60f;
     private List<Marker> originalMarkersState = new ArrayList<>();
@@ -318,7 +320,6 @@ public class SimulationScreen extends BaseScreen {
 
         simulationTime = 8.0f * 60f;
         timeSpeedMultiplier = 1f;
-
         if (!originalMarkersState.isEmpty()) {
             markers.clear();
             for (Marker original : originalMarkersState) {
@@ -432,49 +433,59 @@ public class SimulationScreen extends BaseScreen {
      */
     private void updateClockPosition() {
         clockX = closeButtonMargin;
-        clockY = Gdx.graphics.getHeight() - clockHeight - closeButtonMargin - 70f;
+        clockY = Gdx.graphics.getHeight() - clockHeight - closeButtonMargin;
     }
+
 
     /**
      * Updates the speed buttons position on screen.
      */
     private void updateSpeedButtonsPosition() {
-        speedButtonX = closeButtonMargin;
-        speedButtonY = clockY - speedButtonSize - 10f;
+        // FAST (forward)
+        fastButtonX = playButtonX;
+        fastButtonY = playButtonY - speedButtonSize - 15f;
+
+        // SLOW (backwards)
+        slowButtonX = fastButtonX;
+        slowButtonY = fastButtonY - speedButtonSize - 10f;
     }
+
 
     /**
      * Updates the play button position on screen.
      */
     private void updatePlayButtonPosition() {
-        playButtonX = closeButtonMargin;
-        playButtonY = speedButtonY - playButtonSize - 20f;
+        playButtonX = clockX;
+        playButtonY = clockY - playButtonSize - 15f;
     }
 
     /**
      * Updates the restart button position on screen.
      */
     private void updateRestartButtonPosition() {
-        restartSimulationX = playButtonX + playButtonSize + 10f;
-        restartSimulationY = playButtonY;
+        restartSimulationX = slowButtonX;
+        restartSimulationY = slowButtonY - restartSimulationSize - 15f;
     }
+
 
     /**
      * Updates the concert simulation buttons position on screen.
      */
     private void updateConcertButtonsPosition() {
-        concertPlayButtonX = closeButtonMargin;
-        concertPlayButtonY = playButtonY - concertButtonSize - 60f;
-        concertRestartButtonX = concertPlayButtonX + concertButtonSpacing;
-        concertRestartButtonY = concertPlayButtonY;
+        concertPlayButtonX = restartSimulationX;
+        concertPlayButtonY = restartSimulationY - concertButtonSize - 30f;
+
+        concertRestartButtonX = concertPlayButtonX;
+        concertRestartButtonY = concertPlayButtonY - concertButtonSize - 10f;
     }
+
 
     /**
      * Renders concert simulation buttons (play/pause/restart).
      */
     private void drawConcertSimulationButtons() {
         if (spriteBatch == null) return;
-
+        font.setColor(Color.BLACK);
         updateConcertButtonsPosition();
         spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
         spriteBatch.begin();
@@ -483,16 +494,28 @@ public class SimulationScreen extends BaseScreen {
             if (concertPlayButtonTexture != null) {
                 spriteBatch.draw(concertPlayButtonTexture, concertPlayButtonX, concertPlayButtonY,
                     concertButtonSize, concertButtonSize);
-
                 if (font != null) {
-                    font.setColor(new Color(0.8f, 0.2f, 0.8f, 1f));
-                    String startText = "🎵 POKRENI KONCERT";
-                    font.draw(spriteBatch, startText, concertPlayButtonX, concertPlayButtonY - 10f);
+                    String title = isConcertSimulationActive
+                        ? "KONCERT SIMULACIJA"
+                        : "POKRENI KONCERT";
+                    font.draw(
+                        spriteBatch,
+                        title,
+                        concertPlayButtonX + concertButtonSize + 10f,
+                        concertPlayButtonY + concertButtonSize - 5f
+                    );
+                    String timeText = isConcertSimulationActive
+                        ? "" + formatConcertTime(concertSimulationTime)
+                        : "18:00 - 22:00";
 
-                    font.setColor(Color.LIGHT_GRAY);
-                    String timeText = "⏰ 18:00 - 22:00";
-                    font.draw(spriteBatch, timeText, concertPlayButtonX, concertPlayButtonY - 40f);
+                    font.draw(
+                        spriteBatch,
+                        timeText,
+                        concertPlayButtonX + concertButtonSize + 10f,
+                        concertPlayButtonY + concertButtonSize - 35f
+                    );
                 }
+
             }
         } else {
             if (isConcertSimulationRunning) {
@@ -514,13 +537,31 @@ public class SimulationScreen extends BaseScreen {
 
             if (font != null) {
                 font.setColor(new Color(0.8f, 0.2f, 0.8f, 1f));
-                String concertTitle = "🎵 KONCERT SIMULACIJA";
-                font.draw(spriteBatch, concertTitle, concertPlayButtonX, concertPlayButtonY - 10f);
+
+                String title = isConcertSimulationActive
+                    ? "KONCERT SIMULACIJA"
+                    : "POKRENI KONCERT";
+
+                font.draw(
+                    spriteBatch,
+                    title,
+                    concertPlayButtonX + concertButtonSize + 10f,
+                    concertPlayButtonY + concertButtonSize - 5f
+                );
 
                 font.setColor(Color.LIGHT_GRAY);
-                String concertTime = formatConcertTime(concertSimulationTime);
-                font.draw(spriteBatch, "⏰ " + concertTime, concertPlayButtonX, concertPlayButtonY - 40f);
+
+                String timeText = isConcertSimulationActive
+                    ? "" + formatConcertTime(concertSimulationTime)
+                    : "18:00 - 22:00";
+                font.draw(
+                    spriteBatch,
+                    timeText,
+                    concertPlayButtonX + concertButtonSize + 10f,
+                    concertPlayButtonY + concertButtonSize - 35f
+                );
             }
+
         }
 
         spriteBatch.end();
@@ -1157,6 +1198,15 @@ public class SimulationScreen extends BaseScreen {
         pixmap.dispose();
     }
 
+    private boolean isCloseButtonClicked(float screenX, float screenY) {
+        updateCloseButtonPosition();
+        return screenX >= closeButtonX &&
+            screenX <= closeButtonX + closeButtonSize &&
+            screenY >= closeButtonY &&
+            screenY <= closeButtonY + closeButtonSize;
+    }
+
+
     /**
      * Creates a default clock icon texture.
      */
@@ -1210,8 +1260,8 @@ public class SimulationScreen extends BaseScreen {
             spriteBatch.draw(clockIconTexture, clockX + 5f, clockY + 1f, 40f, 40f);
         }
         String timeText = formatSimulationTime(simulationTime);
-        String displayText = "🕒 " + timeText;
-        font.setColor(Color.WHITE);
+        String displayText = "" + timeText;
+        font.setColor(Color.BLACK);
         font.draw(spriteBatch, displayText, clockX + 50f, clockY + 30f);
         spriteBatch.end();
     }
@@ -1221,28 +1271,39 @@ public class SimulationScreen extends BaseScreen {
      */
     private void drawSpeedButtons() {
         if (spriteBatch == null) return;
-        updateSpeedButtonsPosition();
-        spriteBatch.setProjectionMatrix(new Matrix4().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight()));
-        spriteBatch.begin();
 
-        float currentX = speedButtonX;
+        updateSpeedButtonsPosition();
+        spriteBatch.setProjectionMatrix(
+            new Matrix4().setToOrtho2D(0, 0,
+                Gdx.graphics.getWidth(),
+                Gdx.graphics.getHeight()
+            )
+        );
+
+        spriteBatch.begin();
+        if (fastButtonTexture != null) {
+            spriteBatch.draw(
+                fastButtonTexture,
+                fastButtonX,
+                fastButtonY,
+                speedButtonSize,
+                speedButtonSize
+            );
+        }
 
         if (slowButtonTexture != null) {
-            spriteBatch.draw(slowButtonTexture, currentX, speedButtonY, speedButtonSize, speedButtonSize);
-            currentX += speedButtonSpacing;
-        }
-
-        if (normalButtonTexture != null) {
-            spriteBatch.draw(normalButtonTexture, currentX, speedButtonY, speedButtonSize, speedButtonSize);
-            currentX += speedButtonSpacing;
-        }
-
-        if (fastButtonTexture != null) {
-            spriteBatch.draw(fastButtonTexture, currentX, speedButtonY, speedButtonSize, speedButtonSize);
+            spriteBatch.draw(
+                slowButtonTexture,
+                slowButtonX,
+                slowButtonY,
+                speedButtonSize,
+                speedButtonSize
+            );
         }
 
         spriteBatch.end();
     }
+
 
     /**
      * Initializes the close button to exit simulation.
@@ -1250,7 +1311,7 @@ public class SimulationScreen extends BaseScreen {
     private void initializeCloseButton() {
         Gdx.app.log("SimulationScreen", "=== INITIALIZING CLOSE BUTTON ===");
         try {
-            closeButtonTexture = new Texture(Gdx.files.internal("ui/close_button.png"));
+            closeButtonTexture = new Texture(Gdx.files.internal("ui/nav_button.png"));
         } catch (Exception e) {
             createDefaultCloseButton();
         }
@@ -1434,6 +1495,12 @@ public class SimulationScreen extends BaseScreen {
             public boolean touchDown(int screenX, int screenY, int pointer, int button) {
                 float gdxY = Gdx.graphics.getHeight() - screenY;
 
+                if (isCloseButtonClicked(screenX, gdxY)) {
+                    returnToMapScreen();
+                    return true;
+                }
+
+
                 if (isPlayButtonClicked(screenX, gdxY)) {
                     isSimulationRunning = !isSimulationRunning;
                     Gdx.app.log("SimulationScreen", "Normal simulation " +
@@ -1511,9 +1578,10 @@ public class SimulationScreen extends BaseScreen {
      * Checks if slow speed button was clicked.
      */
     private boolean isSlowButtonClicked(float screenX, float screenY) {
-        updateSpeedButtonsPosition();
-        float buttonX = speedButtonX;
-        return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
+        return screenX >= slowButtonX &&
+            screenX <= slowButtonX + speedButtonSize &&
+            screenY >= slowButtonY &&
+            screenY <= slowButtonY + speedButtonSize;
     }
 
     /**
@@ -1529,9 +1597,10 @@ public class SimulationScreen extends BaseScreen {
      * Checks if fast speed button was clicked.
      */
     private boolean isFastButtonClicked(float screenX, float screenY) {
-        updateSpeedButtonsPosition();
-        float buttonX = speedButtonX + speedButtonSpacing * 2;
-        return screenX >= buttonX && screenX <= buttonX + speedButtonSize && screenY >= speedButtonY && screenY <= speedButtonY + speedButtonSize;
+        return screenX >= fastButtonX &&
+            screenX <= fastButtonX + speedButtonSize &&
+            screenY >= fastButtonY &&
+            screenY <= fastButtonY + speedButtonSize;
     }
 
     /**
