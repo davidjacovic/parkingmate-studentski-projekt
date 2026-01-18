@@ -744,4 +744,3 @@ public class InfoPanel {
     }
 
 }
-

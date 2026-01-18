@@ -355,5 +355,26 @@ public class ParkingService {
 
         return locations;
     }
+    public JSONObject updateParking(
+        String parkingId,
+        String description,
+        Integer totalRegularSpots
+    ) throws ApiClient.ApiException {
+
+        JSONObject body = new JSONObject();
+
+        if (description != null) {
+            body.put("description", description);
+        }
+
+        if (totalRegularSpots != null) {
+            body.put("total_regular_spots", totalRegularSpots);
+        }
+
+        Gdx.app.debug("ParkingService",
+            "Updating parking " + parkingId + " with body: " + body);
+
+        return apiClient.patch("/parkingLocations/" + parkingId, body);
+    }
 }
 
