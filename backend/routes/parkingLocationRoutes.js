@@ -9,7 +9,7 @@ router.get('/:id', parkingLocationController.show);
 router.get('/nearby/search', parkingLocationController.nearby);
 router.get('/occupancy/status', parkingLocationController.getOccupancyStatus);
 router.get('/:id/logs', parkingLocationController.getParkingLogsByLocation);
-router.post('/', authenticateToken, parkingLocationController.create);
+router.post('/',parkingLocationController.create);
 router.put('/:id', parkingLocationController.update);
 router.delete('/:id', authenticateToken,parkingLocationController.remove);
 
