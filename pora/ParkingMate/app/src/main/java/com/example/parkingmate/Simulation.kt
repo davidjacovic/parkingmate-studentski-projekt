@@ -8,6 +8,7 @@ data class Simulation(
     val id: String = UUID.randomUUID().toString(), // Jedinstveni identifikator
     val name: String, // Naziv simulacije
     val type: SimulationType, // Tip simulacije (TOTAL_SPACES, FREE_SPACES, itd.)
+    val total: Int,
     val value: String, // Vrednost koja se šalje (broj parking mesta)
     val interval: String, // Vremenski interval između slanja (HH:MM:SS)
     val location: String, // GPS koordinate (lat,lon)

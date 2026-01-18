@@ -50,7 +50,10 @@ class SimulationDetailActivity : AppCompatActivity() {
 
     // Postavlja spinner za izbor tipa simulacije
     private fun setupSpinner() {
-        val simulationTypes = SimulationType.values().map { it.name }
+        val simulationTypes = listOf(
+            SimulationType.FREE_SPACES.name,
+            SimulationType.OCCUPIED_SPACES.name
+        )
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, simulationTypes)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerSimulationType.adapter = adapter
@@ -59,23 +62,23 @@ class SimulationDetailActivity : AppCompatActivity() {
     // Postavlja number pickere za sate, minute i sekunde
     @SuppressLint("SetTextI18n")
     private fun setupTimeIntervalPicker() {
-        setupNumberPicker(binding.npHours, 0, 23, 0, "hour")
-        setupNumberPicker(binding.npMinutes, 0, 59, 10, "min")
-        setupNumberPicker(binding.npSeconds, 0, 59, 0, "sec")
+        setupNumberPicker(binding.npHours, 0, 23, 0)
+        setupNumberPicker(binding.npMinutes, 0, 59, 10)
+        setupNumberPicker(binding.npSeconds, 0, 59, 0)
     }
 
     // Konfiguriše jedan NumberPicker
-    private fun setupNumberPicker(picker: NumberPicker, min: Int, max: Int, defaultValue: Int, label: String) {
+    private fun setupNumberPicker(picker: NumberPicker, min: Int, max: Int, defaultValue: Int) {
         picker.minValue = min
         picker.maxValue = max
         picker.value = defaultValue
-        picker.setFormatter { value -> String.format("%02d", value) } // Formatira kao dvocifren broj
+        picker.setFormatter { value -> String.format("%02d", value) }
         picker.wrapSelectorWheel = true
         picker.setOnValueChangedListener { _, _, _ ->
-            // Računa interval u milisekundama
-            intervalInMillis = TimeUnit.HOURS.toMillis(binding.npHours.value.toLong()) +
-                    TimeUnit.MINUTES.toMillis(binding.npMinutes.value.toLong()) +
-                    TimeUnit.SECONDS.toMillis(binding.npSeconds.value.toLong())
+            intervalInMillis =
+                TimeUnit.HOURS.toMillis(binding.npHours.value.toLong()) +
+                        TimeUnit.MINUTES.toMillis(binding.npMinutes.value.toLong()) +
+                        TimeUnit.SECONDS.toMillis(binding.npSeconds.value.toLong())
         }
     }
 
@@ -86,7 +89,7 @@ class SimulationDetailActivity : AppCompatActivity() {
         map.setMultiTouchControls(true)
         map.setBuiltInZoomControls(true)
 
-        val startPoint = GeoPoint(44.7866, 20.4489) // Beograd kao početna lokacija
+        val startPoint = GeoPoint(44.7866, 20.4489) // Beograd
         map.controller.setZoom(12.0)
         map.controller.setCenter(startPoint)
         binding.mapContainer.addView(map)
@@ -97,16 +100,17 @@ class SimulationDetailActivity : AppCompatActivity() {
     // Postavlja listener za klik na mapu
     private fun setupMapClickListener() {
         map.overlays.add(object : org.osmdroid.views.overlay.Overlay() {
-            override fun onSingleTapConfirmed(e: android.view.MotionEvent?, mapView: MapView?): Boolean {
+            override fun onSingleTapConfirmed(
+                e: android.view.MotionEvent?,
+                mapView: MapView?
+            ): Boolean {
                 if (e != null && mapView != null) {
                     try {
-                        // Konvertuje koordinate ekrana u geografske koordinate
-                        val geoPoint = mapView.projection.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint
+                        val geoPoint =
+                            mapView.projection.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint
 
-                        // Uklanja prethodni marker
                         currentMarker?.let { map.overlays.remove(it) }
 
-                        // Kreira novi marker
                         currentMarker = Marker(mapView).apply {
                             position = geoPoint
                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
@@ -115,16 +119,24 @@ class SimulationDetailActivity : AppCompatActivity() {
 
                         currentMarker?.let { map.overlays.add(it) }
 
-                        // Postavlja koordinate u polje za unos
-                        binding.etLocation.setText(String.format(Locale.US, "%.6f, %.6f",
-                            geoPoint.latitude, geoPoint.longitude))
+                        binding.etLocation.setText(
+                            String.format(
+                                Locale.US,
+                                "%.6f, %.6f",
+                                geoPoint.latitude,
+                                geoPoint.longitude
+                            )
+                        )
 
                         map.controller.animateTo(geoPoint)
                         map.invalidate()
 
                     } catch (ex: Exception) {
-                        Toast.makeText(this@SimulationDetailActivity,
-                            "Error: ${ex.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@SimulationDetailActivity,
+                            "Error: ${ex.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
                 return true
@@ -132,7 +144,6 @@ class SimulationDetailActivity : AppCompatActivity() {
         })
     }
 
-    // Postavlja listener-e za dugmad i kontrole
     @SuppressLint("SetTextI18n")
     private fun setupListeners() {
         // Pretraga adrese ili koordinata
@@ -166,18 +177,59 @@ class SimulationDetailActivity : AppCompatActivity() {
         // Aktivacija/deaktivacija simulacije
         binding.switchActivate.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                if (binding.etValue.text.toString().trim().isEmpty() ||
-                    binding.etLocation.text.toString().trim().isEmpty()) {
+                // mora total, value, location
+                val totalStr = binding.etTotal.text.toString().trim()
+                val valueStr = binding.etValue.text.toString().trim()
+                val locationStr = binding.etLocation.text.toString().trim()
+                val type = SimulationType.valueOf(binding.spinnerSimulationType.selectedItem.toString())
 
-                    Toast.makeText(this, "Fill in the value and location before activation",
-                        Toast.LENGTH_SHORT).show()
+                val total = totalStr.toIntOrNull()
+                if (total == null || total <= 0) {
+                    Toast.makeText(this, "Enter valid total spots", Toast.LENGTH_SHORT).show()
                     binding.switchActivate.isChecked = false
                     return@setOnCheckedChangeListener
                 }
 
+                val valueNum = valueStr.toIntOrNull()
+                if (valueNum == null || valueNum < 0) {
+                    Toast.makeText(this, "Enter valid value", Toast.LENGTH_SHORT).show()
+                    binding.switchActivate.isChecked = false
+                    return@setOnCheckedChangeListener
+                }
+
+                if (locationStr.isEmpty()) {
+                    Toast.makeText(this, "Fill in location before activation", Toast.LENGTH_SHORT)
+                        .show()
+                    binding.switchActivate.isChecked = false
+                    return@setOnCheckedChangeListener
+                }
+
+                // value <= total
+                when (type) {
+                    SimulationType.FREE_SPACES -> {
+                        if (valueNum > total) {
+                            Toast.makeText(this, "Free must be <= Total", Toast.LENGTH_SHORT).show()
+                            binding.switchActivate.isChecked = false
+                            return@setOnCheckedChangeListener
+                        }
+                    }
+
+                    SimulationType.OCCUPIED_SPACES -> {
+                        if (valueNum > total) {
+                            Toast.makeText(this, "Occupied must be <= Total", Toast.LENGTH_SHORT)
+                                .show()
+                            binding.switchActivate.isChecked = false
+                            return@setOnCheckedChangeListener
+                        }
+                    }
+
+                    else -> {
+                        // ne bi trebalo da se desi jer spinner nudi samo FREE/OCCUPIED
+                    }
+                }
+
                 if (intervalInMillis <= 0) {
-                    Toast.makeText(this, "Set a valid time interval",
-                        Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Set a valid time interval", Toast.LENGTH_SHORT).show()
                     binding.switchActivate.isChecked = false
                     return@setOnCheckedChangeListener
                 }
@@ -188,18 +240,13 @@ class SimulationDetailActivity : AppCompatActivity() {
             }
         }
 
-        // Dugme za nazad
-        binding.btnBack.setOnClickListener {
-            finish()
-        }
+        // Nazad
+        binding.btnBack.setOnClickListener { finish() }
 
-        // Čuvanje simulacije
-        binding.btnSave.setOnClickListener {
-            saveSimulation()
-        }
+        // Save
+        binding.btnSave.setOnClickListener { saveSimulation() }
     }
 
-    // Pokreće simulaciju
     @SuppressLint("SetTextI18n")
     private fun startSimulation() {
         isSimulationRunning = true
@@ -209,12 +256,12 @@ class SimulationDetailActivity : AppCompatActivity() {
         binding.npHours.isEnabled = false
         binding.npMinutes.isEnabled = false
         binding.npSeconds.isEnabled = false
+        binding.etTotal.isEnabled = false
         binding.etValue.isEnabled = false
         binding.etLocation.isEnabled = false
         binding.btnSearch.isEnabled = false
         binding.spinnerSimulationType.isEnabled = false
 
-        // Postavlja periodično izvršavanje
         simulationHandler = Handler(Looper.getMainLooper())
         simulationRunnable = object : Runnable {
             override fun run() {
@@ -227,179 +274,215 @@ class SimulationDetailActivity : AppCompatActivity() {
         }
 
         simulationHandler?.post(simulationRunnable!!)
-
-        Toast.makeText(this,
-            "Simulation activated!",
-            Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Simulation activated!", Toast.LENGTH_SHORT).show()
     }
 
-    // Zaustavlja simulaciju
     @SuppressLint("SetTextI18n")
     private fun stopSimulation() {
         isSimulationRunning = false
 
-        simulationRunnable?.let {
-            simulationHandler?.removeCallbacks(it)
-        }
+        simulationRunnable?.let { simulationHandler?.removeCallbacks(it) }
         simulationRunnable = null
 
         // Ponovo omogućava kontrole
         binding.npHours.isEnabled = true
         binding.npMinutes.isEnabled = true
         binding.npSeconds.isEnabled = true
+        binding.etTotal.isEnabled = true
         binding.etValue.isEnabled = true
         binding.etLocation.isEnabled = true
         binding.btnSearch.isEnabled = true
         binding.spinnerSimulationType.isEnabled = true
 
-        Toast.makeText(this,
-            "Simulation deactivated",
-            Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Simulation deactivated", Toast.LENGTH_SHORT).show()
     }
 
-    // Izvršava jedan korak simulacije
     private fun executeSimulationStep() {
-        val type = SimulationType.values()[binding.spinnerSimulationType.selectedItemPosition]
-        val value = binding.etValue.text.toString()
-        val location = binding.etLocation.text.toString()
+        val type = SimulationType.valueOf(binding.spinnerSimulationType.selectedItem.toString())
+        val totalStr = binding.etTotal.text.toString().trim()
+        val valueStr = binding.etValue.text.toString().trim()
+        val location = binding.etLocation.text.toString().trim()
         val timestamp = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
 
-        // Ispisuje informacije u log
+        val total = totalStr.toIntOrNull() ?: 0
+        val valueNum = valueStr.toIntOrNull() ?: 0
+
         println("=== SIMULATION $simulationCounter ===")
         println("Time: $timestamp")
         println("Type: ${type.name}")
-        println("Value: $value")
+        println("Total: $total")
+        println("Value: $valueNum")
         println("Location: $location")
-        println("Interval: ${intervalInMillis/1000} secconds")
+        println("Interval: ${intervalInMillis / 1000} seconds")
 
-        sendSimulatedDataToBackend(value, location)
+        // Ako je total nevalidan, preskoči slanje da se ne šalje smeće
+        if (total > 0 && location.isNotEmpty()) {
+            sendSimulatedDataToBackend(total, type, valueNum, location)
+        }
 
-        // Prikazuje Toast svakih 5 koraka
         if (simulationCounter % 5 == 0) {
             runOnUiThread {
-                Toast.makeText(this,
-                    "Simulation #$simulationCounter\n${type.name}: $value",
-                    Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this,
+                    "Simulation #$simulationCounter\n${type.name}: $valueNum / total $total",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
         animateMarker()
     }
 
     // Šalje simulirane podatke na server
-    private fun sendSimulatedDataToBackend(value: String, location: String) {
+    private fun sendSimulatedDataToBackend(
+        total: Int,
+        type: SimulationType,
+        valueNum: Int,
+        location: String
+    ) {
         val coords = location.split(",")
         if (coords.size != 2) return
 
         val lat = coords[0].trim().toDoubleOrNull() ?: 0.0
         val lon = coords[1].trim().toDoubleOrNull() ?: 0.0
-        val numValue = value.toIntOrNull() ?: 0
 
-        val type = SimulationType.values()[binding.spinnerSimulationType.selectedItemPosition]
-        var totalSpots = 0
-        var freeSpaces = 0
-        var occupiedSpaces = 0
+        // clamp value <= total
+        val clamped = valueNum.coerceIn(0, total)
 
-        // Postavlja vrednosti u zavisnosti od tipa simulacije
+        val freeSpaces: Int
+        val occupiedSpaces: Int
+
         when (type) {
-            SimulationType.TOTAL_SPACES -> totalSpots = numValue
-            SimulationType.FREE_SPACES -> freeSpaces = numValue
-            SimulationType.OCCUPIED_SPACES -> occupiedSpaces = numValue
-            SimulationType.ALL -> {
-                totalSpots = numValue
-                freeSpaces = numValue
-                occupiedSpaces = numValue
+            SimulationType.FREE_SPACES -> {
+                freeSpaces = clamped
+                occupiedSpaces = (total - freeSpaces).coerceAtLeast(0)
             }
+
+            SimulationType.OCCUPIED_SPACES -> {
+                occupiedSpaces = clamped
+                freeSpaces = (total - occupiedSpaces).coerceAtLeast(0)
+            }
+
+            else -> return // ne bi trebalo
         }
 
         val urvrvResultJson = """
-    {
-        "totalSpots": $totalSpots,
-        "freeSpaces": $freeSpaces,
-        "occupiedSpaces": $occupiedSpaces,
-        "spotsCoordinates": []
-    }
-    """.trimIndent()
+        {
+            "totalSpots": $total,
+            "freeSpaces": $freeSpaces,
+            "occupiedSpaces": $occupiedSpaces,
+            "spotsCoordinates": []
+        }
+        """.trimIndent()
 
         val json = """
-    {
-        "parkingLocationId": "64a9b8c2f0a5c1234567890b",
-        "coordinates": "$lon,$lat",
-        "timestamp": ${System.currentTimeMillis()},
-        "imageUrl": "simulated.jpg",
-        "urvrvResult": $urvrvResultJson
-    }
-    """.trimIndent()
+        {
+            "parkingLocationId": "64a9b8c2f0a5c1234567890b",
+            "coordinates": "$lon,$lat",
+            "timestamp": ${System.currentTimeMillis()},
+            "imageUrl": "simulated.jpg",
+            "urvrvResult": $urvrvResultJson
+        }
+        """.trimIndent()
 
         ApiClient.uploadSimulatedData(json)
     }
 
-    // Animira marker na mapi sa novim naslovom
     private fun animateMarker() {
         runOnUiThread {
             currentMarker?.let { marker ->
                 try {
                     marker.title = "Sim #$simulationCounter - ${Date()}"
                     map.invalidate()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                 }
             }
         }
     }
 
-    // Čuva simulaciju i vraća rezultat nazad
     @SuppressLint("SetTextI18n")
     private fun saveSimulation() {
-        val type = SimulationType.values()[binding.spinnerSimulationType.selectedItemPosition]
-        val value = binding.etValue.text.toString().trim()
+        val totalStr = binding.etTotal.text.toString().trim()
+        val valueStr = binding.etValue.text.toString().trim()
         val location = binding.etLocation.text.toString().trim()
+        val type = SimulationType.valueOf(binding.spinnerSimulationType.selectedItem.toString())
 
-        if (value.isEmpty() || location.isEmpty()) {
-            Toast.makeText(this, "Fill in the value and location", Toast.LENGTH_SHORT).show()
+        val total = totalStr.toIntOrNull()
+        if (total == null || total <= 0) {
+            Toast.makeText(this, "Enter valid total spots", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Zaustavi lokalnu simulaciju pre čuvanja (ako je pokrenuta u ovoj aktivnosti)
-        // Ovo ne deaktivira simulaciju - samo zaustavlja lokalno izvršavanje
-        // Simulacija će se pokrenuti u SimulationActivity ako je isActive = true
+        val valueNum = valueStr.toIntOrNull()
+        if (valueNum == null || valueNum < 0) {
+            Toast.makeText(this, "Enter valid value", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (location.isEmpty()) {
+            Toast.makeText(this, "Fill in the location", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        when (type) {
+            SimulationType.FREE_SPACES -> {
+                if (valueNum > total) {
+                    Toast.makeText(this, "Free must be <= Total", Toast.LENGTH_SHORT).show()
+                    return
+                }
+            }
+
+            SimulationType.OCCUPIED_SPACES -> {
+                if (valueNum > total) {
+                    Toast.makeText(this, "Occupied must be <= Total", Toast.LENGTH_SHORT).show()
+                    return
+                }
+            }
+
+            else -> {
+                // ne bi trebalo da se desi
+            }
+        }
+
+        // Zaustavi lokalnu simulaciju pre čuvanja
         if (isSimulationRunning) {
             isSimulationRunning = false
-            simulationRunnable?.let {
-                simulationHandler?.removeCallbacks(it)
-            }
+            simulationRunnable?.let { simulationHandler?.removeCallbacks(it) }
             simulationRunnable = null
         }
-        
-        // Generiše naziv simulacije
+
         val simulationName = "${type.name.replace("_", " ")} - $location"
-        val interval = String.format("%02d:%02d:%02d",
+        val interval = String.format(
+            "%02d:%02d:%02d",
             binding.npHours.value,
             binding.npMinutes.value,
-            binding.npSeconds.value)
+            binding.npSeconds.value
+        )
 
-        // Kreira novu simulaciju - sačuvaj status switch-a
+        // NOTE: Simulation data class mora imati total:Int polje (dodaj ga u model)
         val newSimulation = Simulation(
             name = simulationName,
             type = type,
-            value = value,
+            total = total,
+            value = valueStr,
             interval = interval,
             location = location,
             isActive = binding.switchActivate.isChecked
         )
 
-        // Vraća simulaciju nazad u SimulationActivity
         val resultIntent = Intent().apply {
             putExtra("new_simulation", newSimulation)
         }
         setResult(RESULT_OK, resultIntent)
 
-        Toast.makeText(this,
-            "Simulation saved!\n${type.name}: $value\nLocation: $location",
-            Toast.LENGTH_LONG).show()
+        Toast.makeText(
+            this,
+            "Simulation saved!\nTotal: $total\n${type.name}: $valueStr\nLocation: $location",
+            Toast.LENGTH_LONG
+        ).show()
 
         finish()
     }
 
-    // Pretražuje adresu koristeći Geocoder
     private fun searchAddress(addressStr: String) {
         Thread {
             try {
@@ -413,8 +496,14 @@ class SimulationDetailActivity : AppCompatActivity() {
 
                         addMarkerAtLocation(geoPoint, addressStr)
 
-                        binding.etLocation.setText(String.format(Locale.US, "%.6f, %.6f",
-                            geoPoint.latitude, geoPoint.longitude))
+                        binding.etLocation.setText(
+                            String.format(
+                                Locale.US,
+                                "%.6f, %.6f",
+                                location.latitude,
+                                location.longitude
+                            )
+                        )
 
                         Toast.makeText(this, "Location found", Toast.LENGTH_SHORT).show()
                     } else {
@@ -429,11 +518,8 @@ class SimulationDetailActivity : AppCompatActivity() {
         }.start()
     }
 
-    // Dodaje marker na mapu na određenoj lokaciji
     private fun addMarkerAtLocation(geoPoint: GeoPoint, title: String) {
-        currentMarker?.let {
-            map.overlays.remove(it)
-        }
+        currentMarker?.let { map.overlays.remove(it) }
 
         currentMarker = Marker(map).apply {
             position = geoPoint
@@ -441,9 +527,7 @@ class SimulationDetailActivity : AppCompatActivity() {
             this.title = title
         }
 
-        currentMarker?.let { marker ->
-            map.overlays.add(marker)
-        }
+        currentMarker?.let { map.overlays.add(it) }
 
         map.controller.animateTo(geoPoint)
         map.controller.setZoom(15.0)
@@ -457,8 +541,6 @@ class SimulationDetailActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        // Ne zaustavljaj simulaciju kada se aktivnost pauzira - dozvoli da se sačuva
-        // Simulacija će se preneti u SimulationActivity kada se sačuva
         map.onPause()
     }
 

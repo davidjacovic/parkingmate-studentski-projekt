@@ -1,15 +1,16 @@
 package com.example.parkingmate
+
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
-import android.widget.*
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.parkingmate.databinding.ActivitySimulationBinding
-import java.util.*
+import java.util.Date
 import java.util.concurrent.TimeUnit
 
 // Glavna aktivnost za prikaz i upravljanje simulacijama
@@ -25,10 +26,10 @@ class SimulationActivity : AppCompatActivity() {
 
     // Mapa za praćenje poslednjeg dogodka po simulaciji (sprečava duplikate)
     private val lastEventTypeBySimulation = mutableMapOf<String, EventType?>()
-    
+
     // Mapa za praćenje vremena poslednjeg slanja dogodka po simulaciji (sprečava previše česta slanja)
     private val lastEventSentTimeBySimulation = mutableMapOf<String, Long>()
-    
+
     // Minimalno vreme između slanja istog tipa dogodka (5 minuta)
     private val MIN_EVENT_INTERVAL_MS = 5 * 60 * 1000L
 
@@ -39,11 +40,10 @@ class SimulationActivity : AppCompatActivity() {
 
         dataManager = DataManager(this)
 
-        // Učitava sačuvane simulacije
+        // Učitava sačuvane simulacije (pretpostavka: Simulation sad ima polje total:Int)
         val savedSimulations = dataManager.loadSimulations()
         simulations.addAll(savedSimulations)
 
-        // Kreira adapter za RecyclerView
         adapter = SimulationAdapter(
             simulations = simulations,
             onSwitchChanged = { simulation, isChecked ->
@@ -54,7 +54,6 @@ class SimulationActivity : AppCompatActivity() {
             },
             onDeleteClicked = { simulation ->
                 if (simulation.isActive) stopSimulationInterval(simulation)
-                // Očisti praćenje dogodaka kada se simulacija obriše
                 lastEventTypeBySimulation.remove(simulation.id)
                 lastEventSentTimeBySimulation.remove(simulation.id)
                 adapter.removeSimulation(simulation)
@@ -68,42 +67,35 @@ class SimulationActivity : AppCompatActivity() {
         binding.recyclerView.adapter = adapter
         updateEmptyState()
 
-        // Dugme za nazad
-        binding.btnBack.setOnClickListener {
-            finish()
-        }
+        binding.btnBack.setOnClickListener { finish() }
 
-        // Dugme za dodavanje nove simulacije
         binding.fabAddSimulation.setOnClickListener {
             val intent = Intent(this, SimulationDetailActivity::class.java)
             startActivityForResult(intent, ADD_SIMULATION_REQUEST)
         }
     }
 
-    // Ažurira status simulacije (aktivna/neaktivna)
     private fun updateSimulationStatus(simulation: Simulation, isActive: Boolean) {
         val index = simulations.indexOfFirst { it.id == simulation.id }
-        if (index != -1) {
-            val updated = simulation.copy(isActive = isActive)
-            simulations[index] = updated
-            adapter.notifyItemChanged(index)
-            dataManager.updateSimulation(updated)
+        if (index == -1) return
 
-            if (isActive) {
-                startSimulationInterval(updated)
-            } else {
-                stopSimulationInterval(updated)
-                // Očisti praćenje dogodaka kada se simulacija zaustavi
-                lastEventTypeBySimulation.remove(updated.id)
-                lastEventSentTimeBySimulation.remove(updated.id)
-            }
+        val updated = simulation.copy(isActive = isActive)
+        simulations[index] = updated
+        adapter.notifyItemChanged(index)
+        dataManager.updateSimulation(updated)
 
-            val message = if (isActive) "Simulation activated" else "Simulation deactivated"
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        if (isActive) {
+            startSimulationInterval(updated)
+        } else {
+            stopSimulationInterval(updated)
+            lastEventTypeBySimulation.remove(updated.id)
+            lastEventSentTimeBySimulation.remove(updated.id)
         }
+
+        val msg = if (isActive) "Simulation activated" else "Simulation deactivated"
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
-    // Pokreće periodično slanje podataka za simulaciju
     private fun startSimulationInterval(simulation: Simulation) {
         if (simulationHandler == null) simulationHandler = Handler(Looper.getMainLooper())
 
@@ -119,10 +111,8 @@ class SimulationActivity : AppCompatActivity() {
 
         activeSimulationsRunnables[simulation.id] = runnable
         simulationHandler?.post(runnable)
-        Log.d("SIMULATION", "Simulacija pokrenuta: ${simulation.name}")
     }
 
-    // Zaustavlja periodično slanje podataka za simulaciju
     private fun stopSimulationInterval(simulation: Simulation) {
         activeSimulationsRunnables[simulation.id]?.let {
             simulationHandler?.removeCallbacks(it)
@@ -130,19 +120,19 @@ class SimulationActivity : AppCompatActivity() {
         activeSimulationsRunnables.remove(simulation.id)
     }
 
-    // Pretvara vremenski interval iz stringa (HH:MM:SS) u milisekunde
     private fun getIntervalMillis(interval: String): Long {
         val parts = interval.split(":").map { it.toLongOrNull() ?: 0L }
-        val hours = if (parts.size > 0) parts[0] else 0L
-        val minutes = if (parts.size > 1) parts[1] else 0L
-        val seconds = if (parts.size > 2) parts[2] else 0L
-        return TimeUnit.HOURS.toMillis(hours) + TimeUnit.MINUTES.toMillis(minutes) + TimeUnit.SECONDS.toMillis(seconds)
+        val hours = parts.getOrElse(0) { 0L }
+        val minutes = parts.getOrElse(1) { 0L }
+        val seconds = parts.getOrElse(2) { 0L }
+        return TimeUnit.HOURS.toMillis(hours) +
+                TimeUnit.MINUTES.toMillis(minutes) +
+                TimeUnit.SECONDS.toMillis(seconds)
     }
 
-    // Izvršava jedan korak simulacije - ažurira brojač i šalje podatke
     private fun saveSimulationStep(simulation: Simulation) {
         Log.d("SIMULATION", "saveSimulationStep za: ${simulation.name}")
-        
+
         val index = simulations.indexOfFirst { it.id == simulation.id }
         if (index != -1) {
             val updated = simulation.copy(
@@ -159,101 +149,66 @@ class SimulationActivity : AppCompatActivity() {
         sendSimulatedDataToBackend(simulation)
     }
 
-    // Šalje simulirane podatke o parking mestima na server
+    // ✅ NOVO: total je uvek iz simulation.total, type je samo FREE_SPACES ili OCCUPIED_SPACES
     private fun sendSimulatedDataToBackend(simulation: Simulation) {
         val coords = simulation.location.split(",")
         if (coords.size != 2) return
 
         val lat = coords[0].trim().toDoubleOrNull() ?: 0.0
         val lon = coords[1].trim().toDoubleOrNull() ?: 0.0
-        val numValue = simulation.value.toIntOrNull() ?: 0
-        var totalSpots = 0
-        var freeSpaces = 0
-        var occupiedSpaces = 0
 
-        // Postavlja vrednosti u zavisnosti od tipa simulacije
+        val totalSpots = simulation.total
+        if (totalSpots <= 0) {
+            Log.e("SIMULATION", "Invalid totalSpots=${simulation.total} for simulation ${simulation.id}")
+            return
+        }
+
+        val numValue = simulation.value.toIntOrNull() ?: 0
+        val clampedValue = numValue.coerceIn(0, totalSpots)
+
+        val freeSpaces: Int
+        val occupiedSpaces: Int
+
         when (simulation.type) {
-            SimulationType.TOTAL_SPACES -> {
-                totalSpots = numValue
-                // Ako nije eksplicitno postavljeno, pretpostavi da su sva mesta slobodna
-                if (freeSpaces == 0 && occupiedSpaces == 0) {
-                    freeSpaces = totalSpots
-                }
-            }
             SimulationType.FREE_SPACES -> {
-                freeSpaces = numValue
-                // Ako totalSpots nije postavljen, postavi ga na realističan broj
-                // Za detekciju LOW_AVAILABILITY (<=20%), totalSpots treba biti barem 5x freeSpaces
-                // Primer: ako je freeSpaces=2, totalSpots treba biti barem 10 da bi bilo 20% dostupnosti
-                if (totalSpots == 0) {
-                    // Postavi totalSpots na minimum 10 ili 5x freeSpaces (šta je veće)
-                    totalSpots = maxOf(10, freeSpaces * 5)
-                    Log.d("SIMULATION", "FREE_SPACES: postavljen totalSpots=$totalSpots za freeSpaces=$freeSpaces")
-                }
+                freeSpaces = clampedValue
+                occupiedSpaces = (totalSpots - freeSpaces).coerceAtLeast(0)
             }
             SimulationType.OCCUPIED_SPACES -> {
-                occupiedSpaces = numValue
-                // Ako totalSpots nije postavljen, koristi occupiedSpaces kao minimum
-                if (totalSpots == 0) {
-                    totalSpots = occupiedSpaces
-                    freeSpaces = 0 // Ako su sva mesta zauzeta
-                }
+                occupiedSpaces = clampedValue
+                freeSpaces = (totalSpots - occupiedSpaces).coerceAtLeast(0)
             }
-            SimulationType.ALL -> {
-                totalSpots = numValue
-                freeSpaces = numValue
-                occupiedSpaces = numValue
+            else -> {
+                // Ako ti u bazi ostanu stare simulacije, ne šalji ih
+                Log.w("SIMULATION", "Unsupported type=${simulation.type} (expected FREE/OCCUPIED). Skipping.")
+                return
             }
-        }
-        
-        // Ako totalSpots još uvek nije postavljen, postavi ga na osnovu freeSpaces + occupiedSpaces
-        if (totalSpots == 0 && (freeSpaces > 0 || occupiedSpaces > 0)) {
-            totalSpots = freeSpaces + occupiedSpaces
         }
 
         val eventType: EventType? =
             when {
-                totalSpots > 0 && freeSpaces == 0 ->
-                    EventType.PARKING_FULL
-
-                totalSpots > 0 &&
-                        freeSpaces > 0 &&
-                        freeSpaces.toDouble() / totalSpots <= 0.2 ->
-                    EventType.LOW_AVAILABILITY
-
-                totalSpots > 0 ->
-                    EventType.PARKING_AVAILABLE
-
-                else -> null
+                freeSpaces == 0 -> EventType.PARKING_FULL
+                freeSpaces.toDouble() / totalSpots <= 0.2 -> EventType.LOW_AVAILABILITY
+                else -> EventType.PARKING_AVAILABLE
             }
 
-        // Debug logovi
-        Log.d("SIMULATION", "Simulacija: ${simulation.name}, totalSpots: $totalSpots, freeSpaces: $freeSpaces, occupiedSpaces: $occupiedSpaces")
-        
-        // Automatsko slanje dogodka za ekstremne situacije
+        Log.d(
+            "SIMULATION",
+            "Simulacija: ${simulation.name}, totalSpots: $totalSpots, freeSpaces: $freeSpaces, occupiedSpaces: $occupiedSpaces"
+        )
+
         if (eventType != null) {
             val simulationId = simulation.id
             val lastEventType = lastEventTypeBySimulation[simulationId]
             val lastSentTime = lastEventSentTimeBySimulation[simulationId] ?: 0L
             val currentTime = System.currentTimeMillis()
-            
-            Log.d("SIMULATION", "Detektovan dogodak: ${eventType.name} za simulaciju: ${simulation.name}")
-            
-            // Proveri da li se dogodak promenio ili je prošlo dovoljno vremena
+
             val eventChanged = eventType != lastEventType
             val enoughTimePassed = (currentTime - lastSentTime) >= MIN_EVENT_INTERVAL_MS
-            
-            // Definiši ekstremne dogodke koji se automatski šalju
-            val isExtremeEvent = eventType == EventType.PARKING_FULL || 
-                                 eventType == EventType.LOW_AVAILABILITY
-            
-            Log.d("SIMULATION", "isExtremeEvent: $isExtremeEvent, eventChanged: $eventChanged, enoughTimePassed: $enoughTimePassed")
-            
-            // Pošalji dogodak ako:
-            // 1. Dogodak se promenio (npr. iz AVAILABLE u FULL)
-            // 2. ILI je ekstremni dogodak i prošlo je dovoljno vremena (sprečava spam)
+            val isExtremeEvent =
+                eventType == EventType.PARKING_FULL || eventType == EventType.LOW_AVAILABILITY
+
             if (isExtremeEvent && (eventChanged || enoughTimePassed)) {
-                Log.d("SIMULATION", "Uslovi ispunjeni - šalje se dogodak!")
                 val event = when (eventType) {
                     EventType.PARKING_FULL -> Event(
                         _id = "",
@@ -301,20 +256,16 @@ class SimulationActivity : AppCompatActivity() {
                     )
                 }
 
-                // Automatski pošalji dogodak na backend
                 sendEventAutomatically(event, eventType, simulationId)
-                
-                // Ažuriraj praćenje
+
                 lastEventTypeBySimulation[simulationId] = eventType
                 lastEventSentTimeBySimulation[simulationId] = currentTime
-                
-                Log.d("AUTO_EVENT", "Automatski poslat dogodak: ${eventType.name} za simulaciju: ${simulation.name}")
+
+                Log.d("AUTO_EVENT", "Automatski poslat događaj: ${eventType.name} za simulaciju: ${simulation.name}")
             } else if (eventType != lastEventType) {
-                // Ažuriraj poslednji dogodak čak i ako ga ne šaljemo (za praćenje promena)
                 lastEventTypeBySimulation[simulationId] = eventType
             }
         }
-
 
         val urvrvResultJson = """
         {
@@ -336,15 +287,12 @@ class SimulationActivity : AppCompatActivity() {
         """.trimIndent()
 
         ApiClient.uploadSimulatedData(json)
-
     }
 
-    // Automatski šalje dogodak na backend server
     private fun sendEventAutomatically(event: Event, eventType: EventType, simulationId: String) {
         ApiClient.sendEvent(event, eventType) { success, errorMessage ->
             if (success) {
                 Log.d("AUTO_EVENT", "Dogodak uspešno poslat: ${eventType.name}")
-                // Opciono: prikaži notifikaciju korisniku
                 runOnUiThread {
                     Toast.makeText(
                         this,
@@ -353,34 +301,29 @@ class SimulationActivity : AppCompatActivity() {
                     ).show()
                 }
             } else {
-                Log.e("AUTO_EVENT", "Greška pri slanju dogodka: $errorMessage")
-                // Ne prikazuj grešku korisniku za automatske dogodke (da ne smeta)
+                Log.e("AUTO_EVENT", "Greška pri slanju događaja: $errorMessage")
             }
         }
     }
 
-    // Prikazuje detalje simulacije u Toast poruci
     private fun showSimulationDetails(simulation: Simulation) {
-        Toast.makeText(this,
-            "${simulation.name}\n${simulation.type.name}: ${simulation.value}",
-            Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            this,
+            "${simulation.name}\nTotal: ${simulation.total}\n${simulation.type.name}: ${simulation.value}",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
-    // Obrada rezultata iz SimulationDetailActivity
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == ADD_SIMULATION_REQUEST && resultCode == RESULT_OK) {
             val simulation = data?.getSerializableExtra("new_simulation") as? Simulation
             simulation?.let {
-                // Sačuvaj u DataManager prvo
                 dataManager.addSimulation(it)
-                
-                // Dodaj u listu (adapter koristi istu listu, tako da će se automatski ažurirati)
                 simulations.add(0, it)
                 adapter.notifyItemInserted(0)
 
-                // Ako je simulacija aktivna, pokreni interval automatski
                 if (it.isActive) {
                     startSimulationInterval(it)
                     Log.d("SIMULATION", "Automatski pokrenuta simulacija: ${it.name}")
@@ -393,7 +336,6 @@ class SimulationActivity : AppCompatActivity() {
         }
     }
 
-    // Ažurira prikaz kada je lista prazna
     private fun updateEmptyState() {
         if (simulations.isEmpty()) {
             binding.tvEmptyList.visibility = View.VISIBLE
@@ -405,6 +347,6 @@ class SimulationActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val ADD_SIMULATION_REQUEST = 1001 // Request kod za dodavanje simulacije
+        const val ADD_SIMULATION_REQUEST = 1001
     }
 }

@@ -26,7 +26,7 @@ exports.create = async (req, res) => {
         if (!file) {
             return res.status(400).json({ message: 'No image has been sent.' });
         }
-        
+
         // Obrada koordinata - podržava niz ili string format
         let coords = [0, 0];
         if (coordinates) {
@@ -37,7 +37,7 @@ exports.create = async (req, res) => {
                 coords = parts.map(Number); // Parsira string "lon,lat" u niz brojeva
             }
         }
-        
+
         // Obrada timestamp-a - ako je poslat, koristi ga, inače trenutno vreme
         const imageTimestamp = timestamp ? new Date(Number(timestamp)) : Date.now();
 
@@ -62,42 +62,100 @@ exports.create = async (req, res) => {
 };
 
 // Kontroler za kreiranje simuliranih parking podataka (bez stvarne slike)
-exports.createSimulated = async ({ parkingLocationId, coordinates, timestamp, imageUrl, urvrvResult }) => {
+// Kontroler za kreiranje simuliranih parking podataka (bez stvarne slike)
+exports.createSimulated = async ({
+    parkingLocationId,
+    coordinates,
+    timestamp,
+    imageUrl,
+    urvrvResult
+}) => {
     try {
-        // Ista logika obrade koordinata kao u create funkciji
+        // ===============================
+        // 1. Obrada koordinata
+        // ===============================
         let coords = [0, 0];
         if (coordinates) {
             if (Array.isArray(coordinates)) {
                 coords = coordinates.map(Number);
-            } else {
-                const parts = coordinates.split(',');
-                coords = parts.map(Number);
+            } else if (typeof coordinates === 'string') {
+                coords = coordinates.split(',').map(Number);
             }
         }
 
-        // Obrada timestamp-a
-        const imageTimestamp = timestamp ? new Date(Number(timestamp)) : Date.now();
+        // ===============================
+        // 2. Timestamp
+        // ===============================
+        const imageTimestamp = timestamp
+            ? new Date(Number(timestamp))
+            : new Date();
 
-        // Kreiranje simuliranog ParkingImage dokumenta
+        // ===============================
+        // 3. VALIDACIJA + NORMALIZACIJA
+        // ===============================
+        if (!urvrvResult || typeof urvrvResult !== 'object') {
+            throw new Error('urvrvResult is required for simulated image');
+        }
+
+        let total = Number(urvrvResult.totalSpots);
+        let free = Number(urvrvResult.freeSpaces);
+        let occupied = Number(urvrvResult.occupiedSpaces);
+
+        if (!Number.isFinite(total) || total <= 0) {
+            throw new Error('totalSpots must be a number > 0');
+        }
+
+        if (!Number.isFinite(free) || free < 0) free = 0;
+        if (!Number.isFinite(occupied) || occupied < 0) occupied = 0;
+
+        // Clamp da ne prelaze total
+        free = Math.min(free, total);
+        occupied = Math.min(occupied, total);
+
+        // Ako zbir nije jednak total → normalizuj
+        if (free + occupied !== total) {
+            // free ima prioritet, occupied se prilagođava
+            occupied = total - free;
+            if (occupied < 0) {
+                occupied = 0;
+                free = total;
+            }
+        }
+
+        const normalizedResult = {
+            totalSpots: total,
+            freeSpaces: free,
+            occupiedSpaces: occupied,
+            spotsCoordinates: Array.isArray(urvrvResult.spotsCoordinates)
+                ? urvrvResult.spotsCoordinates
+                : []
+        };
+
+        // ===============================
+        // 4. Kreiranje dokumenta
+        // ===============================
         const newImage = new ParkingImage({
             parkingLocationId,
             location: {
                 type: 'Point',
                 coordinates: coords
             },
-            imageUrl: imageUrl || 'simulated.jpg', // Podrazumevana slika za simulacije
+            imageUrl: imageUrl || 'simulated.jpg',
             timestamp: imageTimestamp,
-            urvrvResult: urvrvResult || whenSimulation(value) // Koristi poslate podatke ili generiše
+            urvrvResult: normalizedResult
         });
 
         await newImage.save();
+
         console.log('Simulated ParkingImage saved:', newImage._id);
         return newImage;
+
     } catch (err) {
-        console.error('Error saving simulated parking image:', err);
+        console.error('Error saving simulated parking image:', err.message);
         throw err;
     }
 };
+
 
 // Pomoćna funkcija za generisanje simuliranih parking podataka (fallback)
 function whenSimulation(value) {
