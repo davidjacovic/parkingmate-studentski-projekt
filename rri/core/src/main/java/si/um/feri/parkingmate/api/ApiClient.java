@@ -18,15 +18,15 @@ import java.util.Map;
  * Handles GET and POST requests with JSON support.
  */
 public class ApiClient {
-    
+
     private static final int CONNECT_TIMEOUT = 5000; // 5 seconds
     private static final int READ_TIMEOUT = 10000; // 10 seconds
     private static final int MAX_RETRIES = 3; // Maximum number of retry attempts
     private static final long RETRY_DELAY_MS = 1000; // Delay between retries (1 second)
-    
+
     private String baseUrl;
     private boolean retryEnabled = true;
-    
+
     /**
      * Constructor with base URL.
      * @param baseUrl Base URL for the API (e.g., "https://api.example.com")
@@ -34,7 +34,7 @@ public class ApiClient {
     public ApiClient(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
-    
+
     /**
      * Default constructor.
      * Base URL should be set via setBaseUrl() or in specific methods.
@@ -42,14 +42,14 @@ public class ApiClient {
     public ApiClient() {
         this.baseUrl = "";
     }
-    
+
     /**
      * Sets the base URL for API requests.
      */
     public void setBaseUrl(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
-    
+
     /**
      * Enables or disables automatic retry on failures.
      * @param enabled true to enable retries, false to disable
@@ -57,7 +57,7 @@ public class ApiClient {
     public void setRetryEnabled(boolean enabled) {
         this.retryEnabled = enabled;
     }
-    
+
     /**
      * Checks if retry is enabled.
      * @return true if retries are enabled
@@ -65,10 +65,10 @@ public class ApiClient {
     public boolean isRetryEnabled() {
         return retryEnabled;
     }
-    
+
     /**
      * Performs a GET request.
-     * 
+     *
      * @param endpoint API endpoint (e.g., "/parking-lots")
      * @return JSONObject response
      * @throws ApiException if request fails
@@ -76,10 +76,10 @@ public class ApiClient {
     public JSONObject get(String endpoint) throws ApiException {
         return get(endpoint, null);
     }
-    
+
     /**
      * Performs a GET request that returns an array.
-     * 
+     *
      * @param endpoint API endpoint
      * @return JSONArray response
      * @throws ApiException if request fails
@@ -87,10 +87,10 @@ public class ApiClient {
     public org.json.JSONArray getArray(String endpoint) throws ApiException {
         return getArray(endpoint, null);
     }
-    
+
     /**
      * Performs a GET request that returns an array with query parameters.
-     * 
+     *
      * @param endpoint API endpoint
      * @param queryParams Query parameters (key-value pairs)
      * @return JSONArray response
@@ -99,7 +99,7 @@ public class ApiClient {
     public org.json.JSONArray getArray(String endpoint, Map<String, String> queryParams) throws ApiException {
         return getArrayWithRetry(endpoint, queryParams, 0);
     }
-    
+
     /**
      * Internal method to perform GET request with retry logic.
      */
@@ -107,15 +107,15 @@ public class ApiClient {
         try {
             String urlString = buildUrl(endpoint, queryParams);
             URL url = new URL(urlString);
-            
+
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(CONNECT_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
             connection.setRequestProperty("Accept", "application/json");
-            
+
             return executeRequestAsArray(connection);
-            
+
         } catch (IOException e) {
             // Check if we should retry
             if (retryEnabled && attempt < MAX_RETRIES && isRetryableError(e)) {
@@ -130,10 +130,10 @@ public class ApiClient {
             throw new ApiException("Failed to execute GET request: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Performs a GET request with query parameters.
-     * 
+     *
      * @param endpoint API endpoint
      * @param queryParams Query parameters (key-value pairs)
      * @return JSONObject response
@@ -142,7 +142,7 @@ public class ApiClient {
     public JSONObject get(String endpoint, Map<String, String> queryParams) throws ApiException {
         return getWithRetry(endpoint, queryParams, 0);
     }
-    
+
     /**
      * Internal method to perform GET request with retry logic.
      */
@@ -150,15 +150,15 @@ public class ApiClient {
         try {
             String urlString = buildUrl(endpoint, queryParams);
             URL url = new URL(urlString);
-            
+
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(CONNECT_TIMEOUT);
             connection.setReadTimeout(READ_TIMEOUT);
             connection.setRequestProperty("Accept", "application/json");
-            
+
             return executeRequest(connection);
-            
+
         } catch (IOException e) {
             // Check if we should retry
             if (retryEnabled && attempt < MAX_RETRIES && isRetryableError(e)) {
@@ -173,10 +173,10 @@ public class ApiClient {
             throw new ApiException("Failed to execute GET request: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Performs a POST request with JSON body.
-     * 
+     *
      * @param endpoint API endpoint
      * @param jsonBody JSON body as string
      * @return JSONObject response
@@ -185,10 +185,10 @@ public class ApiClient {
     public JSONObject post(String endpoint, String jsonBody) throws ApiException {
         return post(endpoint, jsonBody, null);
     }
-    
+
     /**
      * Performs a POST request with JSON body and headers.
-     * 
+     *
      * @param endpoint API endpoint
      * @param jsonBody JSON body as string
      * @param headers Additional headers (key-value pairs)
@@ -199,7 +199,7 @@ public class ApiClient {
         try {
             String urlString = buildUrl(endpoint, null);
             URL url = new URL(urlString);
-            
+
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setConnectTimeout(CONNECT_TIMEOUT);
@@ -207,14 +207,14 @@ public class ApiClient {
             connection.setRequestProperty("Content-Type", "application/json");
             connection.setRequestProperty("Accept", "application/json");
             connection.setDoOutput(true);
-            
+
             // Add custom headers if provided
             if (headers != null) {
                 for (Map.Entry<String, String> header : headers.entrySet()) {
                     connection.setRequestProperty(header.getKey(), header.getValue());
                 }
             }
-            
+
             // Write JSON body
             if (jsonBody != null && !jsonBody.isEmpty()) {
                 try (OutputStream os = connection.getOutputStream()) {
@@ -222,37 +222,37 @@ public class ApiClient {
                     os.write(input, 0, input.length);
                 }
             }
-            
+
             return executeRequest(connection);
-            
+
         } catch (IOException e) {
             throw new ApiException("Failed to execute POST request: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Executes the HTTP request and returns the response as JSONArray.
      */
     private org.json.JSONArray executeRequestAsArray(HttpURLConnection connection) throws IOException, ApiException {
         int responseCode = connection.getResponseCode();
-        
+
         InputStream inputStream;
         if (responseCode >= 200 && responseCode < 300) {
             inputStream = connection.getInputStream();
         } else {
             inputStream = connection.getErrorStream();
         }
-        
+
         if (inputStream == null) {
             String errorMsg = getErrorMessageForHttpCode(responseCode);
             throw new ApiException(errorMsg, responseCode);
         }
-        
+
         // Read response
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(inputStream, StandardCharsets.UTF_8)
         );
-        
+
         StringBuilder response = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) {
@@ -260,7 +260,7 @@ public class ApiClient {
         }
         reader.close();
         connection.disconnect();
-        
+
         // Check for errors
         if (responseCode < 200 || responseCode >= 300) {
             String errorMessage = getErrorMessageForHttpCode(responseCode);
@@ -278,7 +278,7 @@ public class ApiClient {
             }
             throw new ApiException(errorMessage, responseCode);
         }
-        
+
         // Parse JSON array response
         try {
             return new org.json.JSONArray(response.toString());
@@ -287,30 +287,30 @@ public class ApiClient {
             throw new ApiException("Invalid JSON array response: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Executes the HTTP request and returns the response as JSONObject.
      */
     private JSONObject executeRequest(HttpURLConnection connection) throws IOException, ApiException {
         int responseCode = connection.getResponseCode();
-        
+
         InputStream inputStream;
         if (responseCode >= 200 && responseCode < 300) {
             inputStream = connection.getInputStream();
         } else {
             inputStream = connection.getErrorStream();
         }
-        
+
         if (inputStream == null) {
             String errorMsg = getErrorMessageForHttpCode(responseCode);
             throw new ApiException(errorMsg, responseCode);
         }
-        
+
         // Read response
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(inputStream, StandardCharsets.UTF_8)
         );
-        
+
         StringBuilder response = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) {
@@ -318,7 +318,7 @@ public class ApiClient {
         }
         reader.close();
         connection.disconnect();
-        
+
         // Check for errors
         if (responseCode < 200 || responseCode >= 300) {
             String errorMessage = getErrorMessageForHttpCode(responseCode);
@@ -337,7 +337,7 @@ public class ApiClient {
             }
             throw new ApiException(errorMessage, responseCode);
         }
-        
+
         // Parse JSON response
         try {
             return new JSONObject(response.toString());
@@ -346,18 +346,18 @@ public class ApiClient {
             throw new ApiException("Invalid JSON response: " + e.getMessage(), e);
         }
     }
-    
+
     /**
      * Checks if an error is retryable (network errors, timeouts, 5xx server errors).
      */
     private boolean isRetryableError(IOException e) {
         String message = e.getMessage().toLowerCase();
-        return message.contains("timeout") || 
-               message.contains("connection") || 
+        return message.contains("timeout") ||
+               message.contains("connection") ||
                message.contains("network") ||
                message.contains("refused");
     }
-    
+
     /**
      * Gets a user-friendly error message for HTTP status codes.
      */
@@ -393,18 +393,18 @@ public class ApiClient {
                 }
         }
     }
-    
+
     /**
      * Builds the full URL from endpoint and query parameters.
      */
     private String buildUrl(String endpoint, Map<String, String> queryParams) {
         StringBuilder urlBuilder = new StringBuilder();
-        
+
         // Add base URL
         if (baseUrl != null && !baseUrl.isEmpty()) {
             urlBuilder.append(baseUrl);
         }
-        
+
         // Add endpoint (ensure it starts with /)
         if (endpoint != null && !endpoint.isEmpty()) {
             if (!endpoint.startsWith("/")) {
@@ -412,7 +412,7 @@ public class ApiClient {
             }
             urlBuilder.append(endpoint);
         }
-        
+
         // Add query parameters
         if (queryParams != null && !queryParams.isEmpty()) {
             urlBuilder.append("?");
@@ -434,33 +434,60 @@ public class ApiClient {
                 first = false;
             }
         }
-        
+
         return urlBuilder.toString();
     }
-    
+    public JSONObject patch(String endpoint, JSONObject jsonBody) throws ApiException {
+        try {
+            String urlString = buildUrl(endpoint, null);
+            URL url = new URL(urlString);
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("PATCH");
+            connection.setConnectTimeout(CONNECT_TIMEOUT);
+            connection.setReadTimeout(READ_TIMEOUT);
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setDoOutput(true);
+
+            if (jsonBody != null) {
+                try (OutputStream os = connection.getOutputStream()) {
+                    byte[] input = jsonBody.toString().getBytes(StandardCharsets.UTF_8);
+                    os.write(input, 0, input.length);
+                }
+            }
+
+            return executeRequest(connection);
+
+        } catch (IOException e) {
+            throw new ApiException("Failed to execute PATCH request: " + e.getMessage(), e);
+        }
+    }
+
+
     /**
      * Custom exception for API errors.
      */
     public static class ApiException extends Exception {
         private int httpCode = -1;
-        
+
         public ApiException(String message) {
             super(message);
         }
-        
+
         public ApiException(String message, Throwable cause) {
             super(message, cause);
         }
-        
+
         public ApiException(String message, int httpCode) {
             super(message);
             this.httpCode = httpCode;
         }
-        
+
         public int getHttpCode() {
             return httpCode;
         }
-        
+
         public boolean hasHttpCode() {
             return httpCode > 0;
         }
