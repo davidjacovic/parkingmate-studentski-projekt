@@ -1,4 +1,5 @@
 const Event = require('../models/eventModel');
+const ParkingLocationModel = require('../models/parkingLocationModel');
 
 // Kreira novi dogodak
 exports.create = async (req, res) => {
@@ -56,6 +57,10 @@ exports.create = async (req, res) => {
         });
 
         const savedEvent = await newEvent.save();
+        const parsed = parseLatLon(location);
+        if (parsed) {
+            await tryUpdateParkingFromEvent({ ...parsed, eventType });
+        }
 
         res.status(201).json({
             success: true,
@@ -208,3 +213,63 @@ exports.updateStatus = async (req, res) => {
     }
 };
 
+function parseLatLon(locationStr) {
+    // očekuje "lat,lon"
+    const parts = (locationStr || "").split(",");
+    if (parts.length !== 2) return null;
+
+    const lat = Number(parts[0].trim());
+    const lon = Number(parts[1].trim());
+
+    if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+    return { lat, lon };
+}
+
+// procenti su "fake" procene u odnosu na total
+function calcAvailableByEvent(total, eventType) {
+    if (!total || total <= 0) return null;
+
+    switch (eventType) {
+        case "PARKING_FULL":
+            return 0;
+
+        case "LOW_AVAILABILITY":
+            return Math.max(1, Math.ceil(total * 0.15)); // 15% slobodno
+
+        case "PARKING_AVAILABLE":
+            return Math.max(1, Math.ceil(total * 0.70)); // 70% slobodno
+
+        default:
+            return null;
+    }
+}
+
+async function tryUpdateParkingFromEvent({ lat, lon, eventType }) {
+    try {
+        const maxDistanceMeters = 30;
+
+        const parking = await ParkingLocationModel.findOne({
+            location: {
+                $near: {
+                    $geometry: { type: "Point", coordinates: [lon, lat] }, // [lng, lat]
+                    $maxDistance: maxDistanceMeters
+                }
+            }
+        });
+
+        if (!parking) return;
+
+        const total = parking.total_regular_spots || 0;
+        const newAvailable = calcAvailableByEvent(total, eventType);
+        if (newAvailable == null) return;
+
+        parking.available_regular_spots = newAvailable;
+        parking.modified = new Date();
+        await parking.save();
+
+        console.log(`✅ Parking availability updated from event: ${parking._id} -> available_regular_spots=${newAvailable}`);
+    } catch (e) {
+        // bitno: NIKAD ne ruši event flow
+        console.error("⚠️ Event->Parking update failed:", e.message);
+    }
+}
