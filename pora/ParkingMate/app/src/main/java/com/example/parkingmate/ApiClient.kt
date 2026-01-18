@@ -374,5 +374,56 @@ object ApiClient {
             }
         })
     }
+    fun saveParkingLocationByAddress(
+        name: String,
+        address: String,
+        lat: Double,
+        lon: Double,
+        total: Int,
+        free: Int,
+        // TODO: ako imaš auth token, dodaj parametar token: String
+        callback: (Boolean, String) -> Unit
+    ) {
+        val bodyMap = hashMapOf<String, Any>(
+            "name" to name,
+            "address" to address,
+            "location" to hashMapOf(
+                "type" to "Point",
+                "coordinates" to listOf(lon, lat) // [lng, lat]
+            ),
+            "total_regular_spots" to total,
+            "available_regular_spots" to free
+        )
+
+        val json = gson.toJson(bodyMap)
+        val reqBody = json.toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+
+        val requestBuilder = Request.Builder()
+            .url("${getBaseUrl()}/parkingLocations")
+            .post(reqBody)
+
+        // Ako ima auth token:
+        // requestBuilder.addHeader("Authorization", "Bearer $token")
+
+        val request = requestBuilder.build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("SAVE_PARKING_LOC", "Failed: ${e.message}")
+                callback(false, e.message ?: "Network error")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val resp = response.body?.string() ?: ""
+                if (response.isSuccessful) {
+                    Log.d("SAVE_PARKING_LOC", "Success: $resp")
+                    callback(true, resp)
+                } else {
+                    Log.e("SAVE_PARKING_LOC", "Error ${response.code}: $resp")
+                    callback(false, "Server error ${response.code}: $resp")
+                }
+            }
+        })
+    }
 
 }

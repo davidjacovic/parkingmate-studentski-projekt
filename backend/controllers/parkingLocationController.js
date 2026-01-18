@@ -79,60 +79,92 @@ module.exports = {
   try {
     const data = req.body;
 
-    // 1) napravi instancu iz forme (ime/adresa/lokacija)
-    const parking_location = new Parking_locationModel({
+    // minimalna validacija
+    if (!data.name || !data.address) {
+      return res.status(400).json({ message: "name and address are required" });
+    }
+    if (!data.location || !data.location.coordinates || data.location.coordinates.length !== 2) {
+      return res.status(400).json({ message: "location.coordinates [lng,lat] is required" });
+    }
+
+    const [lng, lat] = data.location.coordinates.map(Number);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ message: "Invalid coordinates. Must be numbers [lng,lat]." });
+    }
+
+    // ✅ 1) probaj da nadješ postojeći parking po ISTOJ LOKACIJI (u radijusu)
+    const maxDistanceMeters = 20; // promeni ako hoćeš 10, 30...
+    let existing = await Parking_locationModel.findOne({
+      location: {
+        $near: {
+          $geometry: { type: "Point", coordinates: [lng, lat] },
+          $maxDistance: maxDistanceMeters
+        }
+      }
+    });
+
+    if (existing) {
+      // ✅ UPDATE (ne pravimo novi)
+      existing.name = data.name;
+      existing.address = data.address;
+
+      // (opciono) možeš i da osvežiš koordinate, ali nije obavezno
+      existing.location = {
+        type: "Point",
+        coordinates: [lng, lat]
+      };
+
+      // samo regular polja koja želiš
+      if (data.total_regular_spots !== undefined) {
+        existing.total_regular_spots = data.total_regular_spots;
+      }
+      if (data.available_regular_spots !== undefined) {
+        existing.available_regular_spots = data.available_regular_spots;
+      }
+
+      // vreme
+      existing.modified = new Date();
+
+      await existing.save();
+      convertDecimalCoordinates(existing);
+
+      return res.status(200).json({
+        success: true,
+        action: "updated",
+        data: existing
+      });
+    }
+
+    // ✅ CREATE (ako nema u blizini)
+    const created = await Parking_locationModel.create({
       name: data.name,
       address: data.address,
       location: {
-        type: 'Point',
-        coordinates: data.location.coordinates // [lng, lat]
+        type: "Point",
+        coordinates: [lng, lat]
       },
-      description: data.description,
-      hidden: data.hidden,
+      total_regular_spots: data.total_regular_spots,
+      available_regular_spots: data.available_regular_spots,
       created: new Date(),
-      modified: new Date(),
-
-      // ostala polja možeš ostaviti kako već radiš
-      total_invalid_spots: data.total_invalid_spots,
-      total_bus_spots: data.total_bus_spots,
-      available_invalid_spots: data.available_invalid_spots,
-      available_bus_spots: data.available_bus_spots
+      modified: new Date()
+      // ostalo ne šalješ => ostaje null/undefined
     });
 
-    // 2) ako je poslata slika, uradi ML i popuni polja
-    if (req.file) {
-      const imagePath = req.file.path;
+    convertDecimalCoordinates(created);
 
-      const analysisResult = await mlInferenceService.analyzeImage(imagePath, {});
-      const formatted = mlInferenceService.formatResult(analysisResult);
-
-      const free = Number(formatted.free_spaces ?? formatted.free ?? 0);
-      const occupied = Number(formatted.occupied_spaces ?? formatted.occupied ?? 0);
-      const total = free + occupied;
-
-      parking_location.available_regular_spots = free;
-      parking_location.total_regular_spots = total;
-    }
-
-    // 3) snimi u bazu
-    const saved = await parking_location.save();
-
-    // 4) (opciono) log kao što već radiš
-    const log = new ParkingLog({
-      parkingLocationId: saved._id,
-      available_regular_spots: saved.available_regular_spots,
-      available_invalid_spots: saved.available_invalid_spots,
-      available_bus_spots: saved.available_bus_spots
+    return res.status(201).json({
+      success: true,
+      action: "created",
+      data: created
     });
-    log.save().catch(() => {});
-
-    convertDecimalCoordinates(saved);
-    return res.status(201).json(saved);
 
   } catch (error) {
-    return res.status(500).json({ message: 'Server error', error: error.message });
+    console.error("parking_location create error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 },
+
+
 
 
     update: async function (req, res) {

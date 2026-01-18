@@ -37,6 +37,11 @@ class SensorPickImageActivity : AppCompatActivity() {
     private var selectedImageUri: Uri? = null
     private var cameraTempFile: File? = null
 
+    private var mlFree: Int? = null
+    private var mlOccupied: Int? = null
+    private var mlTotal: Int? = null
+
+
     // Permissions
     private val requestPermissions = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -152,9 +157,14 @@ class SensorPickImageActivity : AppCompatActivity() {
 
     private fun validateAndFakeSave() {
         val name = binding.etName.text.toString().trim()
+        val address = binding.etAddress.text.toString().trim()
 
         if (name.isEmpty()) {
             Toast.makeText(this, "Name is required", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (address.isEmpty()) {
+            Toast.makeText(this, "Address is required", Toast.LENGTH_SHORT).show()
             return
         }
         if (selectedLat == null || selectedLon == null) {
@@ -166,9 +176,33 @@ class SensorPickImageActivity : AppCompatActivity() {
             return
         }
 
-        // ✅ u ovom tasku NE šaljemo nigde — samo potvrda
-        Toast.makeText(this, "OK ✅ Saved locally (dummy). Next task: backend save.", Toast.LENGTH_LONG).show()
+        val free = mlFree
+        val total = mlTotal
+        if (free == null || total == null) {
+            Toast.makeText(this, "Pick image and wait for ML analysis first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        //  PRAVI SAVE NA BACKEND
+        ApiClient.saveParkingLocationByAddress(
+            name = name,
+            address = address,
+            lat = selectedLat!!,
+            lon = selectedLon!!,
+            total = total,
+            free = free
+        ) { ok, msg ->
+            runOnUiThread {
+                if (ok) {
+                    Toast.makeText(this, "Saved ✅ (created / updated)", Toast.LENGTH_LONG).show()
+                    finish()
+                } else {
+                    Toast.makeText(this, "Save failed: $msg", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
+
 
     private fun setSelectedLocation(lat: Double, lon: Double, tryReverseGeocode: Boolean) {
         selectedLat = lat
@@ -283,6 +317,10 @@ class SensorPickImageActivity : AppCompatActivity() {
 
                         val total = free + occupied
                         val status = if (ok) "ok" else "error"
+
+                        mlFree = free
+                        mlOccupied = occupied
+                        mlTotal = total
 
 
                         binding.tvMlResult.text =
