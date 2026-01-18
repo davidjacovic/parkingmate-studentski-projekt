@@ -151,14 +151,10 @@ public class MapScreen extends BaseScreen {
     private float eventPanelHeight;
     private float eventPanelX;
     private float eventPanelY;
-
-
-
-
-
     private Marker hoveredMarker = null;
     private ParkingHoverTooltip hoverTooltip;
     private InputMultiplexer inputMultiplexer;
+
 
 
 
@@ -363,13 +359,13 @@ public class MapScreen extends BaseScreen {
         Gdx.app.log("MapScreen", "=== INITIALIZING SIMULATION BUTTON ===");
 
         try {
-            simulationButtonTexture = new Texture(Gdx.files.internal("markers/simulation.png"));
+            simulationButtonTexture = new Texture(Gdx.files.internal("ui/simulation_button.png"));
         } catch (Exception e) {
             createDefaultSimulationButton();
         }
 
         try {
-            simulationButtonActiveTexture = new Texture(Gdx.files.internal("markers/simulation.png"));
+            simulationButtonActiveTexture = new Texture(Gdx.files.internal("ui/simulation_button.png"));
         } catch (Exception e) {
             simulationButtonActiveTexture = simulationButtonTexture;
         }
