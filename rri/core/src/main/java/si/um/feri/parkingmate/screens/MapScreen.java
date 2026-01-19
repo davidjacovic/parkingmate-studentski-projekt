@@ -1820,10 +1820,7 @@ public class MapScreen extends BaseScreen {
                 beginTile.x,
                 beginTile.y
             );
-
             Texture icon = getEventTexture(e.getEventType());
-            if (icon == null) continue;
-
             float size = 64f;
             spriteBatch.draw(
                 icon,
@@ -1857,17 +1854,18 @@ public class MapScreen extends BaseScreen {
     }
 
     private Texture getEventTexture(String type) {
+        if (type == null) return eventParkingFree;
+
         switch (type) {
             case "PARKING_FULL":
                 return eventParkingFull;
             case "PARKING_FREE":
                 return eventParkingFree;
-            case "ACCIDENT":
-                return eventAccident;
             default:
-                return null;
+                return eventParkingFree;
         }
     }
+
 
 
 
