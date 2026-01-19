@@ -151,14 +151,16 @@ public class MapScreen extends BaseScreen {
     private float eventPanelHeight;
     private float eventPanelX;
     private float eventPanelY;
-
-
-
-
-
     private Marker hoveredMarker = null;
     private ParkingHoverTooltip hoverTooltip;
     private InputMultiplexer inputMultiplexer;
+    private boolean filterOnlyFree = false;
+    private float filterFreeButtonX;
+    private float filterFreeButtonY;
+    private float filterFreeButtonSize = 48f;
+    private Texture filterFreeButtonTexture;
+
+
 
 
 
@@ -312,6 +314,7 @@ public class MapScreen extends BaseScreen {
 
         // Initialize simulation button
         initializeSimulationButton();
+        initializeFreeButton();
         hoverTooltip = new ParkingHoverTooltip(font);
 
         eventParkingFull = new Texture("markers/warning.png");
@@ -363,13 +366,13 @@ public class MapScreen extends BaseScreen {
         Gdx.app.log("MapScreen", "=== INITIALIZING SIMULATION BUTTON ===");
 
         try {
-            simulationButtonTexture = new Texture(Gdx.files.internal("markers/simulation.png"));
+            simulationButtonTexture = new Texture(Gdx.files.internal("ui/simulation_button.png"));
         } catch (Exception e) {
             createDefaultSimulationButton();
         }
 
         try {
-            simulationButtonActiveTexture = new Texture(Gdx.files.internal("markers/simulation.png"));
+            simulationButtonActiveTexture = new Texture(Gdx.files.internal("ui/simulation_button.png"));
         } catch (Exception e) {
             simulationButtonActiveTexture = simulationButtonTexture;
         }
@@ -380,6 +383,24 @@ public class MapScreen extends BaseScreen {
 
         Gdx.app.log("MapScreen", "Simulation button at: " + simulationButtonX + ", " + simulationButtonY);
     }
+
+    private void initializeFreeButton() {
+        Gdx.app.log("MapScreen", "=== INITIALIZING FREE FILTER BUTTON ===");
+
+        filterFreeButtonTexture = new Texture(Gdx.files.internal("ui/filter_free.png"));
+
+        filterFreeButtonSize = 48f;
+
+        filterFreeButtonX = navButtonMargin;
+        filterFreeButtonY = simulationButtonY - filterFreeButtonSize - navButtonMargin;
+
+        Gdx.app.log(
+            "MapScreen",
+            "Free filter button at: " + filterFreeButtonX + ", " + filterFreeButtonY
+        );
+    }
+
+
 
     /**
      * Create default simulation button (blue square with play icon).
@@ -847,6 +868,13 @@ public class MapScreen extends BaseScreen {
                         return true;
                     }
                 }
+
+                if (isFilterButtonClicked(screenX, gdxY)) {
+                    filterOnlyFree = !filterOnlyFree;
+                    Gdx.app.log("MapScreen", "Filter FREE = " + filterOnlyFree);
+                    return true;
+                }
+
                 handleEventClick(screenX, screenY);
                 handleMarkerClick(screenX, screenY);
 
@@ -1040,6 +1068,8 @@ public class MapScreen extends BaseScreen {
             infoPanel.render();
             eventPanel.render();
             drawNavigationButton();
+            drawFilterButton();
+
             // Draw hover panel if visble
             hoverTooltip.render();
         }
@@ -1484,6 +1514,32 @@ public class MapScreen extends BaseScreen {
         spriteBatch.end();
     }
 
+    private void drawFilterButton() {
+        if (spriteBatch == null || filterFreeButtonTexture == null) return;
+
+        spriteBatch.setProjectionMatrix(
+            new Matrix4().setToOrtho2D(
+                0, 0,
+                Gdx.graphics.getWidth(),
+                Gdx.graphics.getHeight()
+            )
+        );
+
+        spriteBatch.begin();
+
+        spriteBatch.draw(
+            filterFreeButtonTexture,
+            filterFreeButtonX,
+            filterFreeButtonY,
+            filterFreeButtonSize,
+            filterFreeButtonSize
+        );
+
+        spriteBatch.end();
+    }
+
+
+
     /**
      * Set initial car position at camera center
      */
@@ -1823,8 +1879,10 @@ public class MapScreen extends BaseScreen {
         spriteBatch.begin();
 
         for (Marker marker : markers) {
-            // If info panel is open for this marker, still show it
-            // but with slightly different style
+            if (filterOnlyFree && marker.getAvailableSpots() <= 0) {
+                continue;
+            }
+
             boolean isSelectedInInfoPanel = infoPanel.isVisible() &&
                 infoPanel.getSelectedMarker() == marker;
 
@@ -2028,6 +2086,13 @@ public class MapScreen extends BaseScreen {
             camera.position.y = MapConstants.MAP_HEIGHT / 2f;
         }
     }
+    private boolean isFilterButtonClicked(float x, float y) {
+        return x >= filterFreeButtonX &&
+            x <= filterFreeButtonX + filterFreeButtonSize &&
+            y >= filterFreeButtonY &&
+            y <= filterFreeButtonY + filterFreeButtonSize;
+    }
+
 
 
     /**
