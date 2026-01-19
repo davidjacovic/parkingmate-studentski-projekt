@@ -42,7 +42,12 @@ class SimulationActivity : AppCompatActivity() {
 
         // Učitava sačuvane simulacije (pretpostavka: Simulation sad ima polje total:Int)
         val savedSimulations = dataManager.loadSimulations()
-        simulations.addAll(savedSimulations)
+        val resetSimulations = savedSimulations.map { it.copy(isActive = false) }
+        dataManager.saveSimulations(resetSimulations)
+
+        // prikaži resetovanu listu
+        simulations.clear()
+        simulations.addAll(resetSimulations)
 
         adapter = SimulationAdapter(
             simulations = simulations,
@@ -149,7 +154,6 @@ class SimulationActivity : AppCompatActivity() {
         sendSimulatedDataToBackend(simulation)
     }
 
-    // ✅ NOVO: total je uvek iz simulation.total, type je samo FREE_SPACES ili OCCUPIED_SPACES
     private fun sendSimulatedDataToBackend(simulation: Simulation) {
         val coords = simulation.location.split(",")
         if (coords.size != 2) return

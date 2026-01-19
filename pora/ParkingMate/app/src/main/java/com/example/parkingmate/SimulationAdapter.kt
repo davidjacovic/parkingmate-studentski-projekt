@@ -61,7 +61,7 @@ class SimulationAdapter(
         val context = holder.itemView.context
         if (simulation.isActive) {
             holder.card.setCardBackgroundColor(
-                ContextCompat.getColor(context, android.R.color.holo_green_light)
+                ContextCompat.getColor(context, R.color.primary_blue)
             )
         } else {
             holder.card.setCardBackgroundColor(

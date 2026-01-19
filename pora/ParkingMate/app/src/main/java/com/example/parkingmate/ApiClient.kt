@@ -26,10 +26,10 @@ object ApiClient {
 
     // URL adrese za emulator i fizički uređaj
     const val EMULATOR_URL = "http://10.0.2.2:3002"
-    //const val PHONE_URL = "http://192.168.0.12:3002"
+    const val PHONE_URL = "http://172.20.10.8:3002"
 
     // Određuje bazni URL na osnovu tipa uređaja
-    fun getBaseUrl(): String = EMULATOR_URL
+    fun getBaseUrl(): String = PHONE_URL
     /*fun getBaseUrl(): String {
         return if (android.os.Build.FINGERPRINT.contains("generic")) {
             EMULATOR_URL
