@@ -8,6 +8,10 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Rectangle;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
 import si.um.feri.parkingmate.model.Event;
 
 /**
@@ -43,10 +47,11 @@ public class EventPanel {
     private float closeButtonSize = 20f;
 
     // Colors
-    private Color backgroundColor = new Color(0f, 0f, 0f, 0.88f);
-    private Color titleColor = Color.WHITE;
-    private Color labelColor = new Color(0.75f, 0.75f, 0.75f, 1f);
-    private Color valueColor = Color.WHITE;
+    private Color backgroundColor = new Color(1f, 1f, 1f, 0.95f);
+
+    private Color titleColor = Color.BLACK;
+    private Color labelColor = new Color(0.35f, 0.35f, 0.35f, 1f);
+    private Color valueColor = Color.BLACK;
 
     private enum AnimationState {
         SHOWING,
@@ -185,10 +190,16 @@ public class EventPanel {
         font.getData().setScale(0.38f);
 
         // TYPE
-        drawLine("TYPE", selectedEvent.getEventType(), cx, curY);
+        // EVENT TYPE
+        drawLine(
+            "TYPE",
+            selectedEvent.getEventType(),
+            cx,
+            curY
+        );
         curY -= lineHeight;
 
-        // MESSAGE
+// MESSAGE
         drawMultiline(
             "MESSAGE",
             selectedEvent.getMessage(),
@@ -197,13 +208,32 @@ public class EventPanel {
         );
         curY -= 80;
 
-        // TIME
+        // TIMESTAMP
         drawLine(
             "TIME",
-            selectedEvent.getTimestamp().toString(),
+            formatInstant(selectedEvent.getTimestamp())
+            ,
             cx,
             curY
         );
+        curY -= lineHeight;
+
+        // LOCATION (LAT / LNG)
+        drawLine(
+            "LAT",
+            String.format("%.6f", selectedEvent.getLat()),
+            cx,
+            curY
+        );
+        curY -= lineHeight;
+
+        drawLine(
+            "LNG",
+            String.format("%.6f", selectedEvent.getLng()),
+            cx,
+            curY
+        );
+        curY -= lineHeight;
 
         // CLOSE BUTTON
         font.getData().setScale(0.45f);
@@ -252,4 +282,11 @@ public class EventPanel {
         shapeRenderer.dispose();
         spriteBatch.dispose();
     }
+    private String formatInstant(Instant instant) {
+        return DateTimeFormatter
+            .ofPattern("dd.MM.yyyy HH:mm")
+            .withZone(ZoneId.systemDefault())
+            .format(instant);
+    }
+
 }
