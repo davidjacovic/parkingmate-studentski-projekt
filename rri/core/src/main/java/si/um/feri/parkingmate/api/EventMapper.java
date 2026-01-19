@@ -17,7 +17,10 @@ public class EventMapper {
         String message = json.optString("message", "");
 
         // eventType ostaje STRING (PARKING_FULL, PARKING_FREE...)
-        String eventType = json.optString("eventType", "UNKNOWN");
+        String eventType = json
+            .optString("eventType", "UNKNOWN")
+            .trim()
+            .toUpperCase();
 
         // timestamp
         Instant timestamp = Instant.parse(
